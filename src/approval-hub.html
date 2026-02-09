@@ -577,14 +577,14 @@
         }
 
         .btn-confirm-accept {
-            background: #2dba4e;
-            color: #0a0a0a;
-            border-color: #2dba4e;
+            background: #55dd88;
+            color: #ffffff;
+            border-color: #55dd88;
         }
 
         .btn-confirm-accept:hover {
-            background: #35c95a;
-            border-color: #35c95a;
+            background: #66ee99;
+            border-color: #66ee99;
         }
         
         .header-right {
@@ -835,7 +835,7 @@
             </div>
 
             <div class="accept-reason" id="acceptPanel" style="display:none;">
-                <label for="acceptText">Optional comment (only sent to you if provided):</label>
+                <label for="acceptText">Optional comment (only sent to Mariam if provided):</label>
                 <textarea id="acceptText" placeholder="Optional: add context or a note about why you approved."></textarea>
                 <div class="accept-actions">
                     <button class="btn btn-cancel" onclick="cancelAccept()">Cancel</button>
@@ -1043,8 +1043,9 @@
             }, 3000);
         }
 
-        // API Configuration - use relative URLs to work with ngrok
-        const API_BASE = '/api';
+        // API Configuration
+        // For static hosting, set window.APP_CONFIG = { apiBase: "https://<backend>.up.railway.app/api" }
+        const API_BASE = (window.APP_CONFIG && window.APP_CONFIG.apiBase) || '/api';
         
         // Load emails from backend
         async function loadEmails() {
@@ -1204,6 +1205,6 @@
         
     </script>
 
-    <div class="version-footer">Approval Hub 2026-01-30</div>
+    <div class="version-footer">Approval Hub 2026-02-08</div>
 </body>
 </html>

@@ -108,9 +108,14 @@ current_email_id = None  # Track which email is currently being shown
 # Flask app for approval hub
 app = Flask(__name__, static_folder='.', template_folder='templates')
 app.secret_key = os.getenv('SECRET_KEY', 'mlfa-email-hub-2024')  # Change this in production
-app.config['SESSION_COOKIE_SECURE'] = False  # Set to True in production with HTTPS
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-CORS(app, supports_credentials=True)
+app.config['SESSION_COOKIE_SECURE'] = os.getenv('SESSION_COOKIE_SECURE', 'false').strip().lower() == 'true'
+app.config['SESSION_COOKIE_SAMESITE'] = os.getenv('SESSION_COOKIE_SAMESITE', 'Lax')
+allowed_origins = os.getenv('ALLOWED_ORIGINS', '').strip()
+if allowed_origins:
+    origins = [o.strip() for o in allowed_origins.split(',') if o.strip()]
+    CORS(app, supports_credentials=True, origins=origins)
+else:
+    CORS(app, supports_credentials=True)
 
 # Simple password (provided via ADMIN_PASSWORD_HASH in environment)
 ADMIN_PASSWORD_HASH = os.getenv('ADMIN_PASSWORD_HASH')
