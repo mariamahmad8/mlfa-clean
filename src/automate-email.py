@@ -2699,7 +2699,8 @@ def start_web_server():
     """Start the Flask web server in a separate thread"""
     def run_server():
         print("🌐 Starting approval hub at http://localhost:5000")
-        app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
+        port = int(os.getenv("PORT", "5000"))
+        app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
     
     server_thread = threading.Thread(target=run_server, daemon=True)
     server_thread.start()
