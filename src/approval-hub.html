@@ -11,44 +11,59 @@
             box-sizing: border-box;
         }
 
-        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Inter:wght@300;400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Inter:wght@300;400;500;600&family=Roboto+Mono:wght@300;400;500&display=swap');
         
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: #0d1117;
-            color: #f0f6fc;
+            background: #0a0a0a;
+            color: #ffffff;
             min-height: 100vh;
             padding: 0;
             margin: 0;
             font-weight: 400;
-            font-size: 14px;
-            line-height: 1.5;
+            font-size: 15px;
+            line-height: 1.6;
+        }
+
+        .version-footer {
+            text-align: center;
+            font-size: 11px;
+            color: #666666;
+            margin: 0 0 28px 0; /* sit a little higher above page bottom */
         }
 
         .header {
-            padding: 24px 20px;
-            background: #161b22;
-            border-bottom: 1px solid #30363d;
+            padding: 20px 40px;
+            background: #1a1a1a;
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid #2a2a2a;
             text-align: center;
-            margin-bottom: 24px;
+            margin-bottom: 0;
             position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
 
         .header h1 {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 18px;
-            font-weight: 500;
-            color: #58a6ff;
+            font-family: 'Inter', sans-serif;
+            font-size: 12px;
+            font-weight: 600;
+            color: #666666;
             margin: 0;
-            letter-spacing: -0.025em;
+            letter-spacing: 0.08em;
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            text-transform: uppercase;
         }
 
         .container {
-            max-width: 1600px;
+            max-width: 1800px;
             margin: 0 auto;
             display: flex;
-            gap: 16px;
-            padding: 0 20px 20px 20px;
+            gap: 24px;
+            padding: 40px;
             height: calc(100vh - 100px);
         }
 
@@ -72,11 +87,11 @@
         }
 
         .email-list {
-            flex: 0 0 280px;
-            background: #161b22;
-            border-radius: 6px;
-            padding: 16px;
-            border: 1px solid #30363d;
+            flex: 0 0 350px;
+            background: #1a1a1a;
+            border-radius: 12px;
+            padding: 24px;
+            border: 1px solid #2a2a2a;
             height: 100%;
             overflow-y: auto;
             display: flex;
@@ -92,62 +107,88 @@
         }
 
         .email-list h2 {
-            margin-bottom: 16px;
-            color: #f0f6fc;
-            font-size: 14px;
+            margin-bottom: 20px;
+            color: #666666;
+            font-size: 10px;
             font-weight: 600;
             font-family: 'Inter', sans-serif;
             text-transform: uppercase;
             letter-spacing: 0.1em;
-            opacity: 0.8;
         }
 
         .email-item {
-            padding: 12px;
-            margin-bottom: 6px;
-            background: #21262d;
-            border-radius: 4px;
+            padding: 14px;
+            margin-bottom: 10px;
+            background: #222222;
+            border-radius: 8px;
             cursor: pointer;
-            transition: all 0.15s ease;
-            border: 1px solid #30363d;
+            transition: all 0.2s ease;
+            border: 1px solid #2a2a2a;
             font-size: 13px;
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'Roboto Mono', monospace;
             font-weight: 400;
-            color: #e6edf3;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+            color: #ffffff;
+            white-space: normal;
+            word-wrap: break-word;
+            line-height: 1.6;
+            position: relative;
+            padding-right: 30px;
         }
 
         .email-item:hover {
-            background: #30363d;
-            border-color: #58a6ff;
+            background: #2a2a2a;
+            border-color: #3a3a3a;
         }
 
         .email-item.selected {
-            background: #1c2128;
-            border-color: #58a6ff;
-            color: #58a6ff;
+            background: #2a2a2a;
+            border-color: #3a3a3a;
+            color: #ffffff;
+        }
+
+        .dismiss-btn {
+            position: absolute;
+            right: 6px;
+            top: 6px;
+            width: 20px;
+            height: 20px;
+            border: 1px solid transparent;
+            border-radius: 4px;
+            background: transparent;
+            color: #7d8590;
+            font-weight: 700;
+            line-height: 18px;
+            text-align: center;
+            cursor: pointer;
+            padding: 0;
+            transition: all 0.2s ease;
+        }
+
+        .dismiss-btn:hover {
+            background: rgba(248, 81, 73, 0.15);
+            color: #f85149;
+            border-color: rgba(248, 81, 73, 0.3);
+            transform: scale(1.1);
         }
 
         .email-preview {
             flex: 1;
-            background: #161b22;
-            border-radius: 6px;
+            background: #1a1a1a;
+            border-radius: 12px;
             padding: 20px;
-            border: 1px solid #30363d;
+            border: 1px solid #2a2a2a;
             height: 100%;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
         }
-        
+
         .email-original {
             flex: 1;
-            background: #161b22;
-            border-radius: 6px;
+            background: #1a1a1a;
+            border-radius: 12px;
             padding: 20px;
-            border: 1px solid #30363d;
+            border: 1px solid #2a2a2a;
             height: 100%;
             overflow-y: auto;
             display: flex;
@@ -162,46 +203,46 @@
         }
         
         .email-preview h3, .email-original h3 {
-            margin: 0 0 16px 0;
-            color: #f0f6fc;
-            font-size: 14px;
+            margin: 0 0 14px 0;
+            color: #666666;
+            font-size: 9px;
             font-weight: 600;
             font-family: 'Inter', sans-serif;
             text-transform: uppercase;
             letter-spacing: 0.1em;
-            border-bottom: 1px solid #30363d;
-            padding-bottom: 12px;
-            opacity: 0.8;
+            border-bottom: none;
+            padding-bottom: 0;
         }
         
         .original-content {
-            background: #0d1117;
-            padding: 16px;
-            border-radius: 4px;
-            border: 1px solid #30363d;
-            font-family: 'JetBrains Mono', monospace;
+            background: transparent;
+            padding: 0;
+            border-radius: 0;
+            border: none;
+            font-family: 'Roboto Mono', monospace;
             font-size: 13px;
             line-height: 1.6;
-            color: #e6edf3;
+            color: #ffffff;
             white-space: pre-wrap;
             flex: 1;
             overflow-y: auto;
+            animation: fadeIn 0.3s ease-in;
         }
 
         .email-header {
-            margin-bottom: 16px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid #30363d;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #2a2a2a;
         }
 
         .email-meta {
             font-family: 'JetBrains Mono', monospace;
-            font-size: 12px;
+            font-size: 13px;
             font-weight: 400;
-            color: #7d8590;
-            margin-bottom: 16px;
-            padding: 8px 0;
-            border-bottom: 1px solid #30363d;
+            color: #ffffff;
+            margin-bottom: 12px;
+            padding: 0;
+            border-bottom: none;
         }
 
         .email-content {
@@ -209,55 +250,78 @@
             padding: 0;
             border: none;
             margin-bottom: 20px;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
         
         .email-details-table {
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 20px;
-            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
         }
-        
+
+        .insight-row {
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #2a2a2a;
+        }
+
+        .insight-row:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
         .email-details-table td {
-            padding: 12px 0;
-            border-bottom: 1px solid #30363d;
+            padding: 0;
+            border-bottom: none;
             vertical-align: top;
+            display: block;
         }
-        
-        .email-details-table td.label {
+
+        .email-details-table .label {
             font-family: 'Inter', sans-serif;
-            font-weight: 500;
-            color: #7d8590;
-            width: 180px;
+            font-weight: 600;
+            color: #666666;
             background: transparent;
             text-align: left;
-            font-size: 13px;
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 6px;
         }
-        
-        .email-details-table td.value {
-            font-family: 'JetBrains Mono', monospace;
+
+        .email-details-table .value {
+            font-family: 'Roboto Mono', monospace;
             font-weight: 400;
-            color: #f0f6fc;
+            color: #ffffff;
             background: transparent;
             text-align: left;
             word-wrap: break-word;
-            max-width: 350px;
             font-size: 13px;
+            line-height: 1.6;
         }
 
         @media (max-width: 768px) {
-            .email-details-table td.label {
-                width: 120px;
-                font-size: 12px;
+            .email-details-table .label {
+                font-size: 9px;
             }
-            .email-details-table td.value {
-                font-size: 12px;
-                max-width: 250px;
+            .email-details-table .value {
+                font-size: 13px;
             }
-        }
-        
-        .email-details-table tr:last-child td {
-            border-bottom: none;
         }
         
         .status-info {
@@ -278,61 +342,67 @@
 
         .action-buttons {
             display: flex;
-            gap: 12px;
-            justify-content: flex-start;
+            gap: 10px;
+            justify-content: flex-end;
             margin-top: auto;
-            padding-top: 16px;
+            padding: 16px 0 0 0;
+            border-top: 1px solid #2a2a2a;
+            position: sticky;
+            bottom: 0;
+            background: #1a1a1a;
+            padding-top: 12px;
         }
 
         .btn {
-            padding: 8px 16px;
+            padding: 7px 14px;
             border: 1px solid;
             border-radius: 4px;
             cursor: pointer;
             font-weight: 500;
-            font-size: 13px;
+            font-size: 11px;
             font-family: 'Inter', sans-serif;
-            transition: all 0.15s ease;
+            transition: all 0.2s ease;
             text-transform: none;
             letter-spacing: 0;
-            min-width: 70px;
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
+        .btn:active {
+            transform: scale(0.98);
+        }
+
         @media (max-width: 768px) {
             .action-buttons {
                 gap: 8px;
-                flex-wrap: wrap;
             }
             .btn {
                 padding: 6px 12px;
-                font-size: 12px;
-                min-width: 60px;
+                font-size: 11px;
             }
         }
 
         .btn-reject {
-            background: #da3633;
-            color: #f0f6fc;
-            border-color: #da3633;
+            background: #ff5555;
+            color: #ffffff;
+            border-color: #ff5555;
         }
 
         .btn-reject:hover {
-            background: #b62324;
-            border-color: #b62324;
+            background: #ff6666;
+            border-color: #ff6666;
         }
 
         .btn-accept {
-            background: #238636;
-            color: #f0f6fc;
-            border-color: #238636;
+            background: #55dd88;
+            color: #ffffff;
+            border-color: #55dd88;
         }
 
         .btn-accept:hover {
-            background: #2ea043;
-            border-color: #2ea043;
+            background: #66ee99;
+            border-color: #66ee99;
         }
 
         .json-key {
@@ -394,107 +464,310 @@
         
         .reject-reason {
             margin-top: 16px;
-            padding: 16px;
-            background: #161b22;
-            border-radius: 4px;
-            border: 1px solid #30363d;
+            padding: 14px;
+            background: #222222;
+            border-radius: 6px;
+            border: 1px solid #2a2a2a;
         }
-        
+
         .reject-reason label {
             display: block;
             margin-bottom: 8px;
-            color: #e6edf3;
+            color: #9a9a9a;
             font-weight: 500;
             font-family: 'Inter', sans-serif;
-            font-size: 13px;
+            font-size: 11px;
         }
-        
+
         .reject-reason textarea {
             width: 100%;
-            min-height: 80px;
-            padding: 12px;
-            background: #0d1117;
-            border: 1px solid #30363d;
+            min-height: 70px;
+            padding: 10px;
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
             border-radius: 4px;
-            color: #e6edf3;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 13px;
+            color: #9a9a9a;
+            font-family: 'Inter', sans-serif;
+            font-size: 11px;
             resize: vertical;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
         }
-        
+
         .reject-reason textarea::placeholder {
-            color: #7d8590;
+            color: #555555;
         }
-        
+
         .reject-reason textarea:focus {
             outline: none;
-            border-color: #58a6ff;
+            border-color: #3a3a3a;
         }
-        
+
         .reject-actions {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             justify-content: flex-end;
         }
-        
+
         .btn-cancel {
-            background: #21262d;
-            color: #f0f6fc;
-            border-color: #30363d;
+            background: transparent;
+            color: #8a8a8a;
+            border-color: #3a3a3a;
         }
-        
+
         .btn-cancel:hover {
-            background: #30363d;
-            border-color: #8b949e;
+            background: #2a2a2a;
+            border-color: #4a4a4a;
         }
-        
+
         .btn-confirm-reject {
-            background: #da3633;
-            color: #f0f6fc;
-            border-color: #da3633;
+            background: #ff5555;
+            color: #ffffff;
+            border-color: #ff5555;
         }
-        
+
         .btn-confirm-reject:hover {
-            background: #b62324;
-            border-color: #b62324;
+            background: #ff6666;
+            border-color: #ff6666;
+        }
+
+        .accept-reason {
+            margin-top: 16px;
+            padding: 14px;
+            background: #222222;
+            border-radius: 6px;
+            border: 1px solid #2a2a2a;
+        }
+
+        .accept-reason label {
+            display: block;
+            margin-bottom: 8px;
+            color: #9a9a9a;
+            font-weight: 500;
+            font-family: 'Inter', sans-serif;
+            font-size: 11px;
+        }
+
+        .accept-reason textarea {
+            width: 100%;
+            min-height: 70px;
+            padding: 10px;
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            border-radius: 4px;
+            color: #9a9a9a;
+            font-family: 'Inter', sans-serif;
+            font-size: 11px;
+            resize: vertical;
+            margin-bottom: 10px;
+        }
+
+        .accept-reason textarea::placeholder {
+            color: #555555;
+        }
+
+        .accept-reason textarea:focus {
+            outline: none;
+            border-color: #3a3a3a;
+        }
+
+        .accept-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        .btn-confirm-accept {
+            background: #2dba4e;
+            color: #0a0a0a;
+            border-color: #2dba4e;
+        }
+
+        .btn-confirm-accept:hover {
+            background: #35c95a;
+            border-color: #35c95a;
         }
         
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 10;
+        }
+
         .btn-logout {
-            position: absolute;
-            top: 50%;
-            right: 20px;
-            transform: translateY(-50%);
-            padding: 6px 12px;
-            background: #21262d;
-            color: #f0f6fc;
-            border: 1px solid #30363d;
+            padding: 7px 14px;
+            background: transparent;
+            color: #8a8a8a;
+            border: 1px solid #3a3a3a;
             border-radius: 4px;
             cursor: pointer;
             font-family: 'Inter', sans-serif;
+            font-size: 11px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .btn-logout:hover {
+            background: #2a2a2a;
+            border-color: #4a4a4a;
+            color: #b0b0b0;
+        }
+
+        .btn-approve-all {
+            background: transparent;
+            color: #9a9a9a;
+            border-color: #3a3a3a;
+        }
+
+        .btn-approve-all:hover {
+            background: rgba(154, 154, 154, 0.1);
+            border-color: #9a9a9a;
+        }
+
+        .inbox-selector {
+            position: relative;
+            display: flex;
+            gap: 0;
+            z-index: 10;
+        }
+
+        .inbox-btn {
+            padding: 10px 20px;
+            background: transparent;
+            color: #666666;
+            border: none;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .inbox-btn:hover {
+            color: #8a8a8a;
+        }
+
+        .inbox-btn.active {
+            color: #b0b0b0;
+            border-bottom-color: #4a4a4a;
+        }
+
+        .automation-toggle {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .automation-toggle label {
+            font-family: 'Inter', sans-serif;
             font-size: 12px;
             font-weight: 500;
-            transition: all 0.15s ease;
+            color: #8a8a8a;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
-        
-        .btn-logout:hover {
-            background: #30363d;
-            border-color: #8b949e;
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 20px;
         }
-        
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #2a2a2a;
+            border: 1px solid #3a3a3a;
+            transition: 0.3s;
+            border-radius: 20px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 2px;
+            bottom: 2px;
+            background-color: #6a6a6a;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: #3a3a3a;
+            border-color: #55dd88;
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(20px);
+            background-color: #55dd88;
+        }
+
+        .toggle-slider:hover {
+            border-color: #4a4a4a;
+        }
+
         @media (max-width: 768px) {
-            .btn-logout {
+            .header {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .header h1 {
                 position: static;
                 transform: none;
-                margin-top: 12px;
+            }
+
+            .inbox-selector {
+                justify-content: center;
+            }
+
+            .header-right {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .automation-toggle {
+                justify-content: center;
             }
         }
     </style>
 </head>
 <body>
     <div class="header">
+        <div class="inbox-selector">
+            <button class="inbox-btn active">info@mlfa.org</button>
+            <button class="inbox-btn">Arshia</button>
+            <button class="inbox-btn">Legal</button>
+        </div>
         <h1>Approval Hub for info@mlfa.org</h1>
-        <button class="btn-logout" onclick="logout()">Logout</button>
+        <div class="header-right">
+            <div class="automation-toggle">
+                <label>
+                    Full Automation
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="automationToggle">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </label>
+            </div>
+            <button class="btn-logout btn-approve-all" onclick="approveAll()">Approve All</button>
+            <button class="btn-logout" onclick="logout()">Logout</button>
+        </div>
     </div>
 
     <div class="container">
@@ -509,40 +782,40 @@
             </div>
             
             <div class="email-content" id="emailContent">
-                <table class="email-details-table">
-                    <tr>
-                        <td class="label">Sender Name:</td>
-                        <td class="value" id="senderName"></td>
-                    </tr>
-                    <tr>
-                        <td class="label">Category:</td>
-                        <td class="value" id="category"></td>
-                    </tr>
-                    <tr>
-                        <td class="label">Recipients:</td>
-                        <td class="value" id="recipients"></td>
-                    </tr>
-                    <tr>
-                        <td class="label">Needs Personal Reply:</td>
-                        <td class="value" id="needsReply"></td>
-                    </tr>
-                    <tr>
-                        <td class="label">Reason:</td>
-                        <td class="value" id="reason"></td>
-                    </tr>
-                    <tr>
-                        <td class="label">Escalation Required:</td>
-                        <td class="value" id="escalation"></td>
-                    </tr>
-                </table>
-                
+                <div class="email-details-table">
+                    <div class="insight-row">
+                        <div class="label">Sender Name</div>
+                        <div class="value" id="senderName"></div>
+                    </div>
+                    <div class="insight-row">
+                        <div class="label">Category</div>
+                        <div class="value" id="category"></div>
+                    </div>
+                    <div class="insight-row">
+                        <div class="label">Recipients</div>
+                        <div class="value" id="recipients"></div>
+                    </div>
+                    <div class="insight-row">
+                        <div class="label">Needs Personal Reply</div>
+                        <div class="value" id="needsReply"></div>
+                    </div>
+                    <div class="insight-row">
+                        <div class="label">Reason</div>
+                        <div class="value" id="reason"></div>
+                    </div>
+                    <div class="insight-row">
+                        <div class="label">Escalation Required</div>
+                        <div class="value" id="escalation"></div>
+                    </div>
+                </div>
+
                 <div class="status-info" style="display: none;">
                     <p><strong>Status:</strong> Email has been processed and marked as read</p>
                 </div>
             </div>
 
             <div class="action-buttons">
-                <button class="btn btn-reject" onclick="handleAction('reject')">
+                <button class="btn btn-reject" onclick="showRejectPanel()">
                     Reject
                     <div class="loading-spinner" id="rejectSpinner"></div>
                 </button>
@@ -550,6 +823,24 @@
                     Accept
                     <div class="loading-spinner" id="acceptSpinner"></div>
                 </button>
+            </div>
+
+            <div class="reject-reason" id="rejectPanel" style="display:none;">
+                <label for="rejectText">Provide details about what's wrong or misclassified:</label>
+                <textarea id="rejectText" placeholder="Example: This is a donor inquiry, not legal. The sender asked about donating."></textarea>
+                <div class="reject-actions">
+                    <button class="btn btn-cancel" onclick="cancelReject()">Cancel</button>
+                    <button class="btn btn-confirm-reject" onclick="confirmReject()">Confirm Reject</button>
+                </div>
+            </div>
+
+            <div class="accept-reason" id="acceptPanel" style="display:none;">
+                <label for="acceptText">Optional comment (only sent to you if provided):</label>
+                <textarea id="acceptText" placeholder="Optional: add context or a note about why you approved."></textarea>
+                <div class="accept-actions">
+                    <button class="btn btn-cancel" onclick="cancelAccept()">Cancel</button>
+                    <button class="btn btn-confirm-accept" onclick="confirmAccept()">Confirm Accept</button>
+                </div>
             </div>
             
         </div>
@@ -612,50 +903,128 @@
                 return;
             }
             
-            const spinner = document.getElementById(action + 'Spinner');
+            if (action === 'accept') {
+                showAcceptPanel();
+                return;
+            }
+            if (action === 'reject') {
+                showRejectPanel();
+                return;
+            }
+            showNotification(`Unknown action: ${action}`, 'error');
+        }
+
+        function showRejectPanel() {
+            document.getElementById('rejectPanel').style.display = 'block';
+            document.getElementById('rejectText').focus();
+        }
+
+        function cancelReject() {
+            document.getElementById('rejectPanel').style.display = 'none';
+            document.getElementById('rejectText').value = '';
+        }
+
+        function showAcceptPanel() {
+            document.getElementById('acceptPanel').style.display = 'block';
+            document.getElementById('acceptText').focus();
+        }
+
+        function cancelAccept() {
+            document.getElementById('acceptPanel').style.display = 'none';
+            document.getElementById('acceptText').value = '';
+        }
+
+        async function confirmAccept() {
+            const selected = document.querySelector('.email-item.selected');
+            if (!selected) {
+                showNotification('No email selected', 'error');
+                return;
+            }
+            const idx = Array.from(document.querySelectorAll('.email-item')).indexOf(selected);
+            const currentEmail = emailData[idx];
+            const comment = (document.getElementById('acceptText').value || '').trim();
+
+            const spinner = document.getElementById('acceptSpinner');
             const button = spinner.parentElement;
-            
-            // Show loading state
             spinner.style.display = 'inline-block';
             button.disabled = true;
-            
             try {
-                let response;
-                if (action === 'accept') {
-                    response = await fetch(`${API_BASE}/emails/${currentEmail.id}/approve`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        credentials: 'include'  // Include session cookies
-                    });
-                } else if (action === 'reject') {
-                    response = await fetch(`${API_BASE}/emails/${currentEmail.id}/reject`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ reason: 'Rejected via approval hub' }),
-                        credentials: 'include'  // Include session cookies
-                    });
+                const response = await fetch(`${API_BASE}/emails/${currentEmail.id}/approve`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ comment }),
+                    credentials: 'include'
+                });
+                if (response.status === 401) {
+                    window.location.href = '/login';
+                    return;
                 }
-                
-                const result = await response.json();
-                
+                const ct = response.headers.get('content-type') || '';
+                const result = ct.includes('application/json') ? await response.json() : { status: 'error', message: 'Unexpected response' };
                 if (response.ok && result.status === 'success') {
-                    const message = action === 'accept' ? 'Email approved successfully!' : 'Email rejected successfully!';
-                    const type = action === 'accept' ? 'success' : 'error';
-                    showNotification(message, type);
-                    // Remove from list and reload
-                    setTimeout(() => {
-                        loadEmails();
-                    }, 1000);
+                    showNotification('Email approved successfully!', 'success');
+                    if (result.warning) {
+                        showNotification(result.warning, 'error');
+                    }
+                    document.getElementById('acceptPanel').style.display = 'none';
+                    document.getElementById('acceptText').value = '';
+                    setTimeout(() => loadEmails(), 800);
                 } else {
-                    throw new Error(result.message || `Failed to ${action} email`);
+                    throw new Error(result.message || 'Failed to approve email');
                 }
-            } catch (error) {
-                console.error(`Error ${action}ing email:`, error);
-                showNotification(`Failed to ${action} email: ${error.message}`, 'error');
+            } catch (err) {
+                console.error('Error approving email:', err);
+                showNotification(`Failed to approve email: ${err.message}`, 'error');
+            } finally {
+                spinner.style.display = 'none';
+                button.disabled = false;
+            }
+        }
+
+        async function confirmReject() {
+            const selected = document.querySelector('.email-item.selected');
+            if (!selected) {
+                showNotification('No email selected', 'error');
+                return;
+            }
+            const idx = Array.from(document.querySelectorAll('.email-item')).indexOf(selected);
+            const currentEmail = emailData[idx];
+            const reason = (document.getElementById('rejectText').value || '').trim();
+
+            const spinner = document.getElementById('rejectSpinner');
+            const button = spinner.parentElement;
+            spinner.style.display = 'inline-block';
+            button.disabled = true;
+            try {
+                const response = await fetch(`${API_BASE}/emails/${currentEmail.id}/reject`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ reason: reason || 'Rejected via approval hub' }),
+                    credentials: 'include'
+                });
+                if (response.status === 401) {
+                    window.location.href = '/login';
+                    return;
+                }
+                const ct = response.headers.get('content-type') || '';
+                const result = ct.includes('application/json') ? await response.json() : { status: 'error', message: 'Unexpected response' };
+                if (response.ok && result.status === 'success') {
+                    showNotification('Email rejected and forwarded for review', 'error');
+                    document.getElementById('rejectPanel').style.display = 'none';
+                    document.getElementById('rejectText').value = '';
+                    setTimeout(() => loadEmails(), 800);
+                } else {
+                    throw new Error(result.message || 'Failed to reject email');
+                }
+            } catch (err) {
+                console.error('Error rejecting email:', err);
+                showNotification(`Failed to reject email: ${err.message}`, 'error');
             } finally {
                 spinner.style.display = 'none';
                 button.disabled = false;
@@ -681,28 +1050,31 @@
         async function loadEmails() {
             try {
                 const response = await fetch(`${API_BASE}/emails`, {
+                    headers: { 'Accept': 'application/json' },
                     credentials: 'include'  // Include session cookies
                 });
-                if (!response.ok) throw new Error('Failed to fetch emails');
-                
+                if (response.status === 401) {
+                    window.location.href = '/login';
+                    return;
+                }
+                const ct = response.headers.get('content-type') || '';
+                if (!ct.includes('application/json')) {
+                    const text = await response.text();
+                    throw new Error(text.slice(0, 200) || 'Failed to fetch emails');
+                }
                 const emails = await response.json();
                 emailData.length = 0; // Clear existing data
                 emailData.push(...emails);
                 
-                // Update email list in UI
-                updateEmailList();
-                
-                // Select first email if available
-                if (emails.length > 0) {
-                    selectEmail(0);
-                }
+                // Update email list in UI and select first
+                updateEmailList(0);
             } catch (error) {
                 console.error('Error loading emails:', error);
                 showNotification('Failed to load emails from server', 'error');
             }
         }
         
-        function updateEmailList() {
+        function updateEmailList(selectedIndexToKeep = null) {
             const emailListContainer = document.querySelector('.email-list');
             
             // Clear existing items except the header
@@ -723,7 +1095,7 @@
             // Add email items
             emailData.forEach((email, index) => {
                 const emailItem = document.createElement('div');
-                emailItem.className = `email-item ${index === 0 ? 'selected' : ''}`;
+                emailItem.className = 'email-item';
                 emailItem.onclick = () => selectEmail(index);
                 
                 // Extract subject from meta or use reason
@@ -735,13 +1107,54 @@
                     subject = subject.substring(0, 22) + '...';
                 }
                 
-                emailItem.textContent = subject;
+                emailItem.innerHTML = `
+                    <span class="subject">${subject}</span>
+                    <button class="dismiss-btn" title="Dismiss" aria-label="Dismiss" onclick="event.stopPropagation(); dismissEmail(${index});">&times;</button>`;
                 emailListContainer.appendChild(emailItem);
             });
             
-            // Auto-select first email if available
-            if (emailData.length > 0) {
-                selectEmail(0);
+            // Restore selection if requested
+            if (selectedIndexToKeep !== null && selectedIndexToKeep >= 0 && selectedIndexToKeep < emailData.length) {
+                selectEmail(selectedIndexToKeep);
+            }
+        }
+
+        async function dismissEmail(index) {
+            // Optimistic UI: remove immediately, then try to notify server.
+            if (index < 0 || index >= emailData.length) return;
+            const id = emailData[index]?.id;
+            const wasSelected = document.querySelectorAll('.email-item')[index]?.classList.contains('selected');
+            // Remove locally first
+            emailData.splice(index, 1);
+            let nextIndex = null;
+            if (wasSelected) {
+                if (emailData.length === 0) {
+                    nextIndex = null;
+                } else if (index < emailData.length) {
+                    nextIndex = index;
+                } else {
+                    nextIndex = emailData.length - 1;
+                }
+            } else {
+                const selectedEl = document.querySelector('.email-item.selected');
+                if (selectedEl) {
+                    const currentSelectedIndex = Array.from(document.querySelectorAll('.email-item')).indexOf(selectedEl);
+                    nextIndex = currentSelectedIndex > index ? currentSelectedIndex - 1 : currentSelectedIndex;
+                }
+            }
+            updateEmailList(nextIndex);
+            showNotification('Dismissed. It will not reappear.', 'success');
+
+            // Best-effort server call; ignore any failures
+            if (!id) return;
+            try {
+                await fetch(`${API_BASE}/emails/${id}/dismiss`, {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json' },
+                    credentials: 'include'
+                });
+            } catch (e) {
+                console.debug('Dismiss background call failed (ignored):', e);
             }
         }
         
@@ -750,15 +1163,47 @@
             console.log('Initializing MLFA Approval Hub...');
             loadEmails();
             
-            // Refresh emails every 10 seconds for real-time updates
-            setInterval(loadEmails, 10000);
+            // Auto-refresh disabled to preserve selection and avoid jumping
+            // setInterval(loadEmails, 10000);
         });
         
         // Logout function
         function logout() {
             window.location.href = '/logout';
         }
+
+        async function approveAll() {
+            const btns = document.querySelectorAll('.btn-logout');
+            const thisBtn = Array.from(btns).find(b => b.textContent.trim().toLowerCase().includes('approve all'));
+            if (thisBtn) thisBtn.disabled = true;
+            try {
+                const response = await fetch(`${API_BASE}/emails/approve_all`, {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json' },
+                    credentials: 'include'
+                });
+                if (response.status === 401) {
+                    window.location.href = '/login';
+                    return;
+                }
+                const result = await response.json();
+                if (response.ok && result.status === 'success') {
+                    const count = result.approved || 0;
+                    showNotification(`Approved ${count} email(s)`, 'success');
+                    loadEmails();
+                } else {
+                    throw new Error(result.message || 'Failed to approve all');
+                }
+            } catch (e) {
+                console.error('Approve all failed:', e);
+                showNotification(`Approve all failed: ${e.message}`, 'error');
+            } finally {
+                if (thisBtn) thisBtn.disabled = false;
+            }
+        }
         
     </script>
+
+    <div class="version-footer">Approval Hub 2026-01-30</div>
 </body>
 </html>

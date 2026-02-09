@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MLFA Email Hub - Login</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Inter:wght@300;400;500;600&display=swap');
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0a0a0a; color: #9a9a9a; min-height: 100vh;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0; font-size: 13px; line-height: 1.5;
+        }
+        .login-container { width: 100%; max-width: 400px; padding: 20px; }
+        .login-header { text-align: center; margin-bottom: 32px; }
+        .login-header h1 {
+            font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600;
+            color: #666666; margin: 0; letter-spacing: 0.08em; text-transform: uppercase;
+        }
+        .login-box {
+            background: #1a1a1a; padding: 32px; border-radius: 12px;
+            border: 1px solid #2a2a2a; width: 100%;
+        }
+        .login-box input[type="password"] {
+            width: 100%; padding: 12px; margin-bottom: 16px; background: #222222;
+            border: 1px solid #2a2a2a; border-radius: 6px; color: #9a9a9a;
+            font-size: 13px; font-family: 'Inter', sans-serif; transition: border-color 0.15s ease;
+        }
+        .login-box input[type="password"]:focus { outline: none; border-color: #3a3a3a; }
+        .login-box input[type="password"]::placeholder { color: #555555; font-family: 'Inter', sans-serif; }
+        .login-box button {
+            width: 100%; padding: 10px 16px; background: #44aa77; border: 1px solid #44aa77;
+            border-radius: 6px; color: #ffffff; font-size: 12px; font-weight: 500; cursor: pointer;
+            font-family: 'Inter', sans-serif; transition: all 0.2s ease; display: flex; align-items: center;
+            justify-content: center; min-height: 36px;
+        }
+        .login-box button:hover { background: #55bb88; border-color: #55bb88; }
+        .error {
+            color: #cc4444; margin-bottom: 16px; font-size: 12px; font-family: 'Inter', sans-serif;
+            text-align: center; padding: 10px 12px; background: #222222; border: 1px solid #cc4444; border-radius: 6px;
+        }
+        @media (max-width: 768px) { .login-container { padding: 16px; } .login-box { padding: 24px; } }
+    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Approval Hub Login</title>
+    <meta name="color-scheme" content="dark light" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="icon" href="data:,">
+    <meta name="description" content="Login to MLFA Approval Hub">
+    <meta name="theme-color" content="#0a0a0a" />
+    <meta name="format-detection" content="telephone=no">
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <h1>Approval Hub for info@mlfa.org</h1>
+        </div>
+        <div class="login-box">
+            {% if error %}
+            <div class="error">{{ error }}</div>
+            {% endif %}
+            <form method="post">
+                <input type="password" name="password" placeholder="enter password" required autofocus>
+                <button type="submit">Login</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
+
