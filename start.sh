@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 set -euo pipefail
-python src/automate-email.py
+python3 src/automate-email.py
