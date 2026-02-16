@@ -84,6 +84,7 @@ EMAILS_TO_FORWARD = [
     'aisha.ukiu@mlfa.org',
     'shawn@strategichradvisory.com',
     'mediarequests@mlfa.org',
+    'maryam.libdi@mlfa.org'
 ]
 NONREAD_CATEGORIES = {"marketing"}  # Keep these unread
 SKIP_CATEGORIES = {'spam', 'cold_outreach', 'irrelevant_other'}
@@ -821,7 +822,7 @@ def classify_email(subject, body):
         Nobody/No recipients. 
 
     - **Volunteer inquiries** → If someone is **offering to volunteer** their time or skills to MLFA **or** is **asking about volunteering** (for themselves or on behalf of someone else), categorize as `"volunteer"`. Forward to:
-    aisha.ukiu@mlfa.org
+    maryam.libdi@mlfa.org
 
     - **Job applications** → If someone is **applying for a paid job**, sending a resume, or asking about open employment positions, categorize as `"job_application"`. Forward to:
     shawn@strategichradvisory.com
@@ -1817,7 +1818,7 @@ def handle_emails(categories, result, recipients_set, msg, name_sender):
             recipients_set.update([f"{EMAILS_TO_FORWARD[2]}", f"{EMAILS_TO_FORWARD[3]}"])
 
         elif category == "volunteer":
-            recipients_set.update([f"{EMAILS_TO_FORWARD[5]}"])
+            recipients_set.update([f"{EMAILS_TO_FORWARD[8]}"])
 
         elif category == "internship":
             recipients_set.update([f"{EMAILS_TO_FORWARD[5]}"])
