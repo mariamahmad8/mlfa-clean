@@ -87,7 +87,7 @@ EMAILS_TO_FORWARD = [
     'maryam.libdi@mlfa.org'
 ]
 NONREAD_CATEGORIES = {"marketing"}  # Keep these unread
-SKIP_CATEGORIES = {'spam', 'cold_outreach', 'irrelevant_other'}
+SKIP_CATEGORIES = {'cold_outreach', 'irrelevant_other'}
 
 # Exact email addresses to silently skip processing (lowercase)
 BLOCKED_SENDERS = [
@@ -817,7 +817,7 @@ def classify_email(subject, body):
         This includes **genuine follow-up emails** that relate to a prior valid conversation with MLFA (e.g., “Following up on my partnership proposal,” or “Checking in about our meeting last week”).=
         The model must use the **context provided** — including quoted or prior messages — to assess whether the follow-up continues a **legitimate and relevant** thread. This means that if prior emails are available (as part of the thread context), they must be analyzed to decide if the new message is a meaningful continuation or just noise.
         **Not all follow-ups qualify:**
-            - If the previous thread or earlier messages were categorized as `"spam"`, `"cold_outreach"`, `"marketing"`, `"out_of_office"`, `"irrelevant_other"`, **or any test, placeholder, or nonsense content**, then a follow-up on that thread should **not** be marked as `"organizational"`.
+            - If the previous thread or earlier messages were categorized as `"cold_outreach"`, `"marketing"`, `"out_of_office"`, `"irrelevant_other"`, **or any test, placeholder, or nonsense content**, then a follow-up on that thread should **not** be marked as `"organizational"`.
             - In such cases, classify based on the *current message’s actual content or purpose* (e.g., `"irrelevant_other"` if still meaningless).
             - A message like “Just following up on my last email” **only counts as organizational** if the last email was legitimate and relevant to MLFA’s work.
 
@@ -854,13 +854,11 @@ def classify_email(subject, body):
     - Pure Hands (also written as "PureHands", "Pure Hands, Inc.", or emails from domains including purehands.org or purehands.ccsend.com)
 
     For emails from this trusted partner:
-    - The categories "cold_outreach", "spam", and "irrelevant_other" are NOT permitted.
+    - The categories "cold_outreach" and "irrelevant_other" are NOT permitted.
     - Mass-email indicators (e.g., Constant Contact formatting, mailing lists, or the presence of "unsubscribe") must be ignored.
 
     Trusted partner status applies ONLY to the explicitly listed organization above.
 
-
-    - **Spam** → Obvious scams, phishing, AI-generated nonsense, or malicious intent. Move to Junk.
 
     - **Statements / receipts / statements** → Categorize as `"statements"` if the email contains receipts, billing statements, proofs of purchase, or expense documentation.
     This explicitly includes:
@@ -873,7 +871,7 @@ def classify_email(subject, body):
     -If it contains attachments or the words "please let me know if you receive this" that is likely a reply to an ongoing/existing conversation, even if it is sent independently and not as part of a thread. 
     - Does not meet the criteria for any other category, AND
     -It is a message to "Rachel" or "Rachel Smith" "Ms. Smith" (some form of that), or it says some form of "hi" but with a SPECIFIC NAME after it (just because it has an extra name though doesn't mean its automatically general communications). 
-    - Is coherent, doesn't seem like cold outreach, but seems to be apart of some conversation, or serves a legitimate conversational or administrative purpose (e.g., clarifications, acknowledgments, coordination, brief responses, logistics). Do NOT use `"general_communication"` for spam, marketing, cold outreach, automated messages, test emails, or content with no meaningful purpose. If none of the above apply, classify as `"irrelevant_other"`.
+    - Is coherent, doesn't seem like cold outreach, but seems to be apart of some conversation, or serves a legitimate conversational or administrative purpose (e.g., clarifications, acknowledgments, coordination, brief responses, logistics). Do NOT use `"general_communication"` for marketing, cold outreach, automated messages, test emails, or content with no meaningful purpose. If none of the above apply, classify as `"irrelevant_other"`.
        
     - **Cold outreach** → Any **unsolicited sales email** that lacks clear tailoring to MLFA's work. Categorize as `"cold_outreach"` if:
         - The sender shows **no meaningful awareness** of MLFA's mission
@@ -889,7 +887,9 @@ def classify_email(subject, body):
         Cold outreach must always be the ONLY category.
 
 
-    - **Irrelevant (other)** → Anything that doesn't match the above and is unrelated to MLFA’s mission — e.g., misdirected emails, general inquiries, or off-topic messages. Mark as read and ignore.
+    - **Irrelevant (other)** → Anything that doesn't match the above and is unrelated to MLFA’s mission 
+        -Obvious scams, spam, phishing, AI-generated nonsense, or malicious intent. 
+        — e.g., misdirected emails, general inquiries, or off-topic messages. Mark as read and ignore.
 
     IMPORTANT GUIDELINES:
     1. Focus on **relevance and specificity**, not just keywords. The more the sender understands MLFA, the more likely it is to be legitimate.
@@ -906,7 +906,7 @@ def classify_email(subject, body):
     - `"marketing"` vs `"cold_outreach"`: choose only one based on tailoring (see rules above).
 
     Return a JSON object with:
-    - `categories`: array from ["legal","violation_notice","donor","sponsorship","fellowship","organizational","volunteer","job_application","internship","media","marketing","out_of_office","spam","cold_outreach","irrelevant_other", “statements”, “general_communication”, "delete_internal", "jail_mail", "financial_aid"]
+    - `categories`: array from ["legal","violation_notice","donor","sponsorship","fellowship","organizational","volunteer","job_application","internship","media","marketing","out_of_office","cold_outreach","irrelevant_other", “statements”, “general_communication”, "delete_internal", "jail_mail", "financial_aid"]
     - `all_recipients`: list of MLFA email addresses (may be empty)
     - `needs_personal_reply`: boolean per the Escalation section
     - `reason`: dictionary mapping each category to a brief justification
@@ -1728,7 +1728,7 @@ def handle_new_email(msg, result):
 
 def ensure_folder_path(path_parts):
     """Ensure a nested folder path exists under Inbox and return it.
-    path_parts is a list like ["Irrelevant", "Spam"].
+    path_parts is a list like ["Irrelevant"].
     """
     try:
         current = mailbox.inbox_folder()
@@ -1886,9 +1886,6 @@ def handle_emails(categories, result, recipients_set, msg, name_sender):
             # Route general communications to the General Communication folder
             pass
 
-        elif category == "spam":
-            pass
-
         elif category == "cold_outreach":
             pass
 
@@ -1910,7 +1907,6 @@ def handle_emails(categories, result, recipients_set, msg, name_sender):
             "media",
             "statements",
             "general_communication",
-            "spam",
             "cold_outreach",
             "irrelevant_other",
         ]
@@ -1928,7 +1924,6 @@ def handle_emails(categories, result, recipients_set, msg, name_sender):
             "media": ["Media"],
             "statements": ["Statements"],
             "general_communication": ["General Communication"],
-            "spam": ["Irrelevant", "Spam"],
             "cold_outreach": ["Irrelevant", "Cold_Outreach"],
             "irrelevant_other": ["Irrelevant", "Other"],
         }
@@ -1965,7 +1960,7 @@ def tag_email(msg, categories, replyTag):
         if replyTag:
             new_tags.add(f"PAIRActioned/replied/{c}")
         else:
-            if c in ('spam', 'cold_outreach', 'newsletter'):
+            if c in ('cold_outreach', 'newsletter'):
                 new_tags.add(f"PAIRActioned/irrelevant/{c}")
             else:
                 new_tags.add(f"PAIRActioned/{c}")
