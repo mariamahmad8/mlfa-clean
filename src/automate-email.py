@@ -802,10 +802,13 @@ def classify_email(subject, body):
     - **Donor-related inquiries** → Categorize as `"donor"` only if the **sender is a donor** or is asking about a **specific donation**, such as issues with payment, receipts, or donation follow-ups. Forward to:
     Mujahid.rasul@mlfa.org, Syeda.sadiqa@mlfa.org
     IMPORTANT DISTINCTION:
-    If the sender is asking MLFA FOR money, funding, sponsorship, or financial support, the email must be categorized as `"sponsorship"`, NOT `"donor"`, regardless of donor-related keywords used.
-    If an email could otherwise appear donor-related but the intent is requesting financial support from MLFA, override `"donor"` and classify as `"sponsorship"`.
+    If the sender is asking MLFA FOR money, funding, sponsorship, the email must be categorized as `"sponsorship"`, NOT `"donor"`, regardless of donor-related keywords used.
+    If an email could otherwise appear donor-related but the intent is requesting financial support from MLFA, override `"donor"` and classify as `"financial_aid"`.
 
-    - **Sponsorship requests** → If someone is **requesting sponsorship, fundraiser, financial support from MLFA**, categorize as `"sponsorship"`. 
+    - **Sponsorship requests** → If someone is **requesting sponsorship, fundraiser, from MLFA**, categorize as `"sponsorship"`. 
+
+    - **Financial_Aid** -> if someone is requesting ANY sort of financial support, it is NOT sponsorship, rather it is categorized as `"financial_aid"`.
+
 
     - **Fellowship inquiries** → If someone is **applying for, asking about, or offering a fellowship** (legal, advocacy, or nonprofit-focused), categorize as `"fellowship"`. Forward to:
     aisha.ukiu@mlfa.org
@@ -903,7 +906,7 @@ def classify_email(subject, body):
     - `"marketing"` vs `"cold_outreach"`: choose only one based on tailoring (see rules above).
 
     Return a JSON object with:
-    - `categories`: array from ["legal","violation_notice","donor","sponsorship","fellowship","organizational","volunteer","job_application","internship","media","marketing","out_of_office","spam","cold_outreach","irrelevant_other", “statements”, “general_communication”, "delete_internal", "jail_mail"]
+    - `categories`: array from ["legal","violation_notice","donor","sponsorship","fellowship","organizational","volunteer","job_application","internship","media","marketing","out_of_office","spam","cold_outreach","irrelevant_other", “statements”, “general_communication”, "delete_internal", "jail_mail", "financial_aid"]
     - `all_recipients`: list of MLFA email addresses (may be empty)
     - `needs_personal_reply`: boolean per the Escalation section
     - `reason`: dictionary mapping each category to a brief justification
@@ -1803,6 +1806,25 @@ def handle_emails(categories, result, recipients_set, msg, name_sender):
                     The MLFA Team</p>
                 """
             reply_message.send()
+
+        elif category == "financial_aid":
+            reply_message = msg.reply(to_all=False)
+            reply_message.body_type = "HTML"
+            reply_message.body = f"""
+                    <p>Assalamu alaikum,</p>
+                    <p>Thank you for reaching out to the Muslim Legal Fund of America (MLFA).</p>
+                    <p>We would like to clarify that our organization does not provide direct personal financial assistance. Rather, MLFA supports and funds legal representation in select cases that impact the civil liberties and constitutional rights of Muslims in America. For this reason, we are not able to offer the type of financial assistance you are requesting.
+                    </p>
+                    <p>If you have a legal matter that you would like us to consider, you may complete an official inquiry for our attorneys to review:<br>
+                    <a href=\"https://mlfa.org/application-for-legal-assistance/\">https://mlfa.org/application-for-legal-assistance/</a></p>
+
+                    <p>We sincerely hope that you are able to find the resources and support you need, and we pray for ease and better days ahead.</p>
+
+                    <p>Sincerely,<br>
+                    The Muslim Legal Fund of America</p>
+                """
+            reply_message.send()
+
 
         elif category == "violation_notice":
             # Forward legal/DMCA/policy violation notices to Arshia and Maria, then file
