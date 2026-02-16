@@ -864,8 +864,8 @@ def classify_email(subject, body):
 
     - **Statements / receipts / statements** → Categorize as `"statements"` if the email contains receipts, billing statements, proofs of purchase, or expense documentation.
     This explicitly includes:
-    - Staples receipts. Anything from staples but be put in this category
-    - SBA statements or SBA-related documentation
+    -Staples receipts or invoices that include: A dollar amount, Payment confirmation, Invoice total, Tax breakdown, Billing summary, PDF receipt attachment
+    Do NOT categorize as "statements" if the email is: A shipping notification, An order confirmation without pricing, A tracking update, A promotional email, SBA statements or SBA-related documentation
     Forward all `"statements"` emails to:
     Syeda.sadiqa@mlfa.org
 
