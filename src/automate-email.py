@@ -817,7 +817,7 @@ def classify_email(subject, body):
         This includes **genuine follow-up emails** that relate to a prior valid conversation with MLFA (e.g., “Following up on my partnership proposal,” or “Checking in about our meeting last week”).=
         The model must use the **context provided** — including quoted or prior messages — to assess whether the follow-up continues a **legitimate and relevant** thread. This means that if prior emails are available (as part of the thread context), they must be analyzed to decide if the new message is a meaningful continuation or just noise.
         **Not all follow-ups qualify:**
-            - If the previous thread or earlier messages were categorized as `"cold_outreach"`, `"marketing"`, `"out_of_office"`, `"irrelevant_other"`, **or any test, placeholder, or nonsense content**, then a follow-up on that thread should **not** be marked as `"organizational"`.
+            - If the previous thread or earlier messages were categorized as `"cold_outreach"`, `"marketing"`, `"auto_reply"`, `"irrelevant_other"`, **or any test, placeholder, or nonsense content**, then a follow-up on that thread should **not** be marked as `"organizational"`.
             - In such cases, classify based on the *current message’s actual content or purpose* (e.g., `"irrelevant_other"` if still meaningless).
             - A message like “Just following up on my last email” **only counts as organizational** if the last email was legitimate and relevant to MLFA’s work.
 
@@ -836,7 +836,12 @@ def classify_email(subject, body):
     - **Media inquiries** → If the sender is a **reporter or journalist asking for comments, interviews, or statements**, categorize as `"media"`. Forward to:
     mediarequests@mlfa.org
 
-    - **Out-of-office / automatic replies** → If the email indicates the sender is away or unavailable — including automatic replies like "Automatic reply:", "Out of Office", "Auto-Reply", "OOO", "Away from office" or manual notes like "I'm out of the office until …", "I will have limited access …" — categorize as `"out_of_office"`. Do not forward. These should be moved to Trash.
+   - **Automatic replies (including out-of-office)** → Categorize as "auto_reply" if the email is an automatically generated response triggered by our outbound message. This includes:
+    1)Traditional out-of-office notices (e.g., "I am out of the office until...", "I will return on...", "I have limited access to email...")
+    2) Emails explicitly labeled "Automatic reply", "Out of Office", "Auto-Reply", "OOO", "Away from office"
+    3) Institutional auto-acknowledgments (e.g., "Your message has been received", "Someone will get back to you as soon as possible", "Thank you for contacting us")
+    These should NOT be forwarded and should be moved to Trash.
+
 
     - **Microsoft Teams forwarded messages (delete)** → Categorize as `"delete_internal"` if the email is a forwarded or auto-generated message originating from Microsoft Teams.
     These emails are internal notification artifacts and provide no standalone communication value. They should be classified as `"delete_internal"` and deleted. They should not be forwarded, replied to, or categorized under any other label.
@@ -899,14 +904,14 @@ def classify_email(subject, body):
     5. If someone is **offering legal services**, classify as `"organizational"` only if relevant and serious (not promotional).
     6. Emails can and should have **multiple categories** when appropriate (e.g., a donor asking to volunteer → `"donor"` and `"volunteer"`).
     7. Use `all_recipients` only for forwarded categories: `"donor"`, `"fellowship"`, `"volunteer"`, `"job_application"`, `"internship"`, `"media"`, `"statements"`.
-    8. For `"legal"`, `"marketing"`, `"violation_notice"`,`"out_of_office"`, `"delete_internal"`, `"general_communication"`, `"jail_mail"`, `"organizational"` and all `"irrelevant"` types, leave `all_recipients` empty.
+    8. For `"legal"`, `"marketing"`, `"violation_notice"`,`"auto_reply"`, `"delete_internal"`, `"general_communication"`, `"jail_mail"`, `"organizational"` and all `"irrelevant"` types, leave `all_recipients` empty.
 
     PRIORITY & TIES:
     - If `"legal"` applies, **still include all other relevant categories** — `"legal"` is additive, never exclusive.
     - `"marketing"` vs `"cold_outreach"`: choose only one based on tailoring (see rules above).
 
     Return a JSON object with:
-    - `categories`: array from ["legal","violation_notice","donor","sponsorship","fellowship","organizational","volunteer","job_application","internship","media","marketing","out_of_office","cold_outreach","irrelevant_other", “statements”, “general_communication”, "delete_internal", "jail_mail", "financial_aid"]
+    - `categories`: array from ["legal","violation_notice","donor","sponsorship","fellowship","organizational","volunteer","job_application","internship","media","marketing","auto_reply","cold_outreach","irrelevant_other", “statements”, “general_communication”, "delete_internal", "jail_mail", "financial_aid"]
     - `all_recipients`: list of MLFA email addresses (may be empty)
     - `needs_personal_reply`: boolean per the Escalation section
     - `reason`: dictionary mapping each category to a brief justification
@@ -1854,7 +1859,7 @@ def handle_emails(categories, result, recipients_set, msg, name_sender):
         elif category == "media":
             recipients_set.update([f"{EMAILS_TO_FORWARD[7]}"])
 
-        elif category == "out_of_office":
+        elif category == "auto_reply":
             try:
                 deleted = mailbox.deleted_folder()
                 msg.move(deleted)
