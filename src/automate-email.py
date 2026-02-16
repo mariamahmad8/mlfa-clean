@@ -867,7 +867,7 @@ def classify_email(subject, body):
     - Staples receipts. Anything from staples but be put in this category
     - SBA statements or SBA-related documentation
     Forward all `"statements"` emails to:
-    Syeda.sadiqa@mlfa.org, Mujahid.rasul@mlfa.org
+    Syeda.sadiqa@mlfa.org
 
     - **General communications** → Categorize as `"general_communication"` for legitimate, non-spam email threads or replies that do not fit any other defined category but are still relevant and meaningful to MLFA. This category exists to ensure valid conversations are not misclassified as `"irrelevant_other"`. Use `"general_communication"` when the email:
     -If it contains attachments or the words "please let me know if you receive this" that is likely a reply to an ongoing/existing conversation, even if it is sent independently and not as part of a thread. 
@@ -1879,7 +1879,7 @@ def handle_emails(categories, result, recipients_set, msg, name_sender):
 
         elif category == "statements":
             # Forward statements to Syeda and Mujahid, then file
-            recipients_set.update([f"{EMAILS_TO_FORWARD[0]}", f"{EMAILS_TO_FORWARD[1]}"])
+            recipients_set.update([f"{EMAILS_TO_FORWARD[1]}"])
         
 
         elif category == "general_communication":
