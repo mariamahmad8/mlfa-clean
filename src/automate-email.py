@@ -834,7 +834,9 @@ def classify_email(subject, body):
         - If the sender explicitly states they are a current law student (e.g., law school, JD, 1L/2L/3L, LLM), categorize as `"internship_law_student"`.
         - If the sender explicitly states they are an undergraduate, high school student, pre-law student, community college student, or any non-law student, categorize as `"internship_undergraduate"`.
         - If the sender does NOT specify whether they are a law student, default to `"internship_undergraduate"`.
-    Forward all internship-related emails to: aisha.ukiu@mlfa.org
+    ONLY "internship_law_student" will be forwarded to : aisha.ukiu@mlfa.org
+    -"internship_undergraduate" emails will NOT be forwarded to anyone. 
+
 
 
     - **Media inquiries** → If the sender is a **reporter or journalist asking for comments, interviews, or statements**, categorize as `"media"`. Forward to:
@@ -907,7 +909,7 @@ def classify_email(subject, body):
     4. Never mark cold outreach or mass sales emails as `"marketing"`, even if they reference MLFA’s field.
     5. If someone is **offering legal services**, classify as `"organizational"` only if relevant and serious (not promotional).
     6. Emails can and should have **multiple categories** when appropriate (e.g., a donor asking to volunteer → `"donor"` and `"volunteer"`).
-    7. Use `all_recipients` only for forwarded categories: `"donor"`, `"fellowship"`, `"volunteer"`, `"job_application"`, `"internship_law_student"`,`"internship_undergraduate"`,`"media"`, `"statements"`.
+    7. Use `all_recipients` only for forwarded categories: `"donor"`, `"fellowship"`, `"volunteer"`, `"job_application"`, `"internship_law_student"`,`"media"`, `"statements"`.
     8. For `"legal"`, `"marketing"`, `"violation_notice"`,`"auto_reply"`, `"delete_internal"`, `"general_communication"`, `"jail_mail"`, `"organizational"` and all `"irrelevant"` types, leave `all_recipients` empty.
 
     PRIORITY & TIES:
@@ -1873,6 +1875,8 @@ def handle_emails(categories, result, recipients_set, msg, name_sender):
                 <p>Warm regards,<br>
                 The Muslim Legal Fund of America.</p>
                 """
+                
+                recipients_set.update([f"{EMAILS_TO_FORWARD[5]}"])
 
             else:
                 reply_message.body = f"""
@@ -1893,7 +1897,7 @@ def handle_emails(categories, result, recipients_set, msg, name_sender):
                 The Muslim Legal Fund of America</p>
                 """
             reply_message.send()
-            recipients_set.update([f"{EMAILS_TO_FORWARD[5]}"])
+            
 
         elif category == "job_application":
             recipients_set.update([f"{EMAILS_TO_FORWARD[6]}"])
