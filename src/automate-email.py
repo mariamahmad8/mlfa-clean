@@ -830,8 +830,12 @@ def classify_email(subject, body):
     - **Job applications** → If someone is **applying for a paid job**, sending a resume, or asking about open employment positions, categorize as `"job_application"`. Forward to:
     shawn@strategichradvisory.com
 
-    - **Internship applications** → If someone is **applying for an internship** (paid or unpaid), sending a resume for an internship program, or inquiring about internship opportunities, categorize as `"internship"`. Forward to:
-    aisha.ukiu@mlfa.org
+    - **Internship applications** → If someone is applying for an internship (paid or unpaid), sending a resume for an internship program, or inquiring about internship opportunities, categorize based on the sender’s status:
+        - If the sender explicitly states they are a current law student (e.g., law school, JD, 1L/2L/3L, LLM), categorize as `"internship_law_student"`.
+        - If the sender explicitly states they are an undergraduate, high school student, pre-law student, community college student, or any non-law student, categorize as `"internship_undergraduate"`.
+        - If the sender does NOT specify whether they are a law student, default to `"internship_undergraduate"`.
+    Forward all internship-related emails to: aisha.ukiu@mlfa.org
+
 
     - **Media inquiries** → If the sender is a **reporter or journalist asking for comments, interviews, or statements**, categorize as `"media"`. Forward to:
     mediarequests@mlfa.org
@@ -903,7 +907,7 @@ def classify_email(subject, body):
     4. Never mark cold outreach or mass sales emails as `"marketing"`, even if they reference MLFA’s field.
     5. If someone is **offering legal services**, classify as `"organizational"` only if relevant and serious (not promotional).
     6. Emails can and should have **multiple categories** when appropriate (e.g., a donor asking to volunteer → `"donor"` and `"volunteer"`).
-    7. Use `all_recipients` only for forwarded categories: `"donor"`, `"fellowship"`, `"volunteer"`, `"job_application"`, `"internship"`, `"media"`, `"statements"`.
+    7. Use `all_recipients` only for forwarded categories: `"donor"`, `"fellowship"`, `"volunteer"`, `"job_application"`, `"internship_law_student"`,`"internship_undergraduate"`,`"media"`, `"statements"`.
     8. For `"legal"`, `"marketing"`, `"violation_notice"`,`"auto_reply"`, `"delete_internal"`, `"general_communication"`, `"jail_mail"`, `"organizational"` and all `"irrelevant"` types, leave `all_recipients` empty.
 
     PRIORITY & TIES:
@@ -911,7 +915,7 @@ def classify_email(subject, body):
     - `"marketing"` vs `"cold_outreach"`: choose only one based on tailoring (see rules above).
 
     Return a JSON object with:
-    - `categories`: array from ["legal","violation_notice","donor","sponsorship","fellowship","organizational","volunteer","job_application","internship","media","marketing","auto_reply","cold_outreach","irrelevant_other", “statements”, “general_communication”, "delete_internal", "jail_mail", "financial_aid"]
+    - `categories`: array from ["legal","violation_notice","donor","sponsorship","fellowship","organizational","volunteer","job_application","internship_law_student", "internship_undergraduate","media","marketing","auto_reply","cold_outreach","irrelevant_other", “statements”, “general_communication”, "delete_internal", "jail_mail", "financial_aid"]
     - `all_recipients`: list of MLFA email addresses (may be empty)
     - `needs_personal_reply`: boolean per the Escalation section
     - `reason`: dictionary mapping each category to a brief justification
@@ -1820,8 +1824,8 @@ def handle_emails(categories, result, recipients_set, msg, name_sender):
                     <p>Thank you for reaching out to the Muslim Legal Fund of America (MLFA).</p>
                     <p>We would like to clarify that our organization does not provide direct personal financial assistance. Rather, MLFA supports and funds legal representation in select cases that impact the civil liberties and constitutional rights of Muslims in America. For this reason, we are not able to offer the type of financial assistance you are requesting.
                     </p>
-                    <p>If you have a legal matter that you would like us to consider, you may complete an official inquiry for our attorneys to review:<br>
-                    <a href=\"https://mlfa.org/application-for-legal-assistance/\">https://mlfa.org/application-for-legal-assistance/</a></p>
+                    <p>If you have a legal matter that you would like us to consider, you may complete an official inquiry for our attorneys to review:
+                    <a href=\"https://mlfa.org/application-for-legal-assistance/\">Application for Legal Assistance - MLFA</a></p>
 
                     <p>We sincerely hope that you are able to find the resources and support you need, and we pray for ease and better days ahead.</p>
 
@@ -1847,7 +1851,48 @@ def handle_emails(categories, result, recipients_set, msg, name_sender):
         elif category == "volunteer":
             recipients_set.update([f"{EMAILS_TO_FORWARD[8]}"])
 
-        elif category == "internship":
+        elif category.startswith("internship_"):
+            reply_message = msg.reply(to_all=False)
+            reply_message.body_type = "HTML"
+            has_real_name = bool(name_sender and name_sender.strip() and name_sender.strip().lower() != 'sender')
+            greeting_html = (
+                f"<p>Dear {name_sender},</p>" if has_real_name else f"<p>Good {_tod_greeting()},</p>"
+            )
+            if category == "internship_law_student":
+                reply_message.body = f"""
+                {greeting_html}
+                <p>Thank you for reaching out and for your interest in interning with the Muslim Legal Fund of America (MLFA).</p>
+
+                <p>Our internship program is open to current law students, and we welcome applications from those who are passionate about constitutional rights and public interest advocacy.</p>
+
+                <p>To be considered, please complete our internship application form via our website:
+                <a href="https://mlfa.org/join-our-team/">Join our team - MLFA</a>.</p>
+
+                <p>Once we receive your submission, a member of our team will review your application and follow up regarding next steps.</p>
+
+                <p>Warm regards,<br>
+                The Muslim Legal Fund of America.</p>
+                """
+
+            else:
+                reply_message.body = f"""
+                {greeting_html}
+
+                <p>Thank you for your interest in the Muslim Legal Fund of America (MLFA). We appreciate your enthusiasm and desire to support our work.</p>
+
+                <p>At this time, MLFA’s internship program is open exclusively to current law students. We are unable to offer internship placements to undergraduate students.</p>
+
+                <p>That said, we welcome undergraduate students to get involved through our volunteer program. If you are interested in supporting our mission through volunteer efforts, please complete our volunteer form here:
+                <a href="https://forms.office.com/Pages/ResponsePage.aspx?id=oiB_iSDzkUu20kpWPbd_DnxSOj2KmWxOomg5Rm0KtBNUMElYQkdOQUU2WUxLTlNHMkY4S0tFOU1XViQlQCN0PWcu">MLFA Volunteer Form</a></p>
+
+                <p>Our team will review your submission and follow up as appropriate.</p>
+
+                <p>We’re grateful for your interest in MLFA and encourage you to stay connected as you continue your academic and professional journey.</p>
+
+                <p>Sincerely,<br>
+                The Muslim Legal Fund of America</p>
+                """
+            reply_message.send()
             recipients_set.update([f"{EMAILS_TO_FORWARD[5]}"])
 
         elif category == "job_application":
@@ -1906,7 +1951,8 @@ def handle_emails(categories, result, recipients_set, msg, name_sender):
             "sponsorship",
             "organizational",
             "volunteer",
-            "internship",
+            "internship_law_student",
+            "internship_undergraduate",
             "job_application",
             "fellowship",
             "media",
@@ -1923,7 +1969,8 @@ def handle_emails(categories, result, recipients_set, msg, name_sender):
             "sponsorship": ["Sponsorship"],
             "organizational": ["Organizational_Inquiries"],
             "volunteer": ["Volunteer"],
-            "internship": ["Internship"],
+            "internship_law_student": ["Internship"],
+            "internship_undergraduate": ["Internship"],
             "job_application": ["Job_Application"],
             "fellowship": ["Fellowship"],
             "media": ["Media"],
