@@ -76,17 +76,18 @@ REVIEW_NOTIFY_EMAIL = os.getenv("REVIEW_NOTIFY_EMAIL", "mariam.ahmad@pairsys.ai"
 
 
 EMAILS_TO_FORWARD = [
-    'Mujahid.rasul@mlfa.org',
-    'Syeda.sadiqa@mlfa.org',
-    'Arshia.ali.khan@mlfa.org',
-    'Maria.laura@mlfa.org',
-    'info@mlfa.org',
-    'aisha.ukiu@mlfa.org',
-    'shawn@strategichradvisory.com',
-    'mediarequests@mlfa.org',
-    'maryam.libdi@mlfa.org'
+    'Mujahid.rasul@mlfa.org', #0
+    'Syeda.sadiqa@mlfa.org', #1
+    'Arshia.ali.khan@mlfa.org', #2
+    'Maria.laura@mlfa.org', #3
+    'info@mlfa.org', #4
+    'aisha.ukiu@mlfa.org', #5
+    'shawn@strategichradvisory.com', #6
+    'mediarequests@mlfa.org', #7
+    'maryam.libdi@mlfa.org',  #8
+    'give@mlfa.org' #9
 ]
-NONREAD_CATEGORIES = {"marketing"}  # Keep these unread
+NONREAD_CATEGORIES = {""}  # Keep these unread
 SKIP_CATEGORIES = {'cold_outreach', 'irrelevant_other'}
 
 # Exact email addresses to silently skip processing (lowercase)
@@ -721,7 +722,7 @@ def classify_email(subject, body):
     When prior messages or quoted threads are included, the model must carefully review them to determine the relationship and relevance of the latest email. The classification should always be based on the most recent sender’s intent, but informed by the context of the earlier conversation (e.g., to distinguish between legitimate follow-ups vs. new cold outreach or thank-you closings).
    
     IMPORTANT TAGGING CONSTRAINT:
-    ⚠️ **"jail_mail" is a SPECIALIZED SUBSET of legal-related communication, but it is a DISTINCT AND EXCLUSIVE ROUTING CATEGORY.**
+     **"jail_mail" is a SPECIALIZED SUBSET of legal-related communication, but it is a DISTINCT AND EXCLUSIVE ROUTING CATEGORY.**
     - While jail mail may involve legal issues, incarceration, or court matters, it must be routed separately.
     - An email **CANNOT** be tagged as both `"legal"` and `"jail_mail"`.
     - If an email meets **any** criteria for `"jail_mail"`, it **MUST be classified ONLY as `"jail_mail"` and NOT as `"legal"`**.
@@ -756,7 +757,7 @@ def classify_email(subject, body):
     - explicitly asks MLFA for help, legal assistance, representation, or intervention
     OR is a system-generated inmate/jail communication.
     If the current message does NOT meet the above conditions, it must NOT be classified as "jail_mail", even if earlier emails in the thread were jail_mail.
-    Closing messages, thank-yous, acknowledgments, or availability statements in a jail-related thread should be in the general_communication.
+    Closing messages, thank-yous, acknowledgments, or availability statements in a jail-related thread should be in the active_communication.
 
     -**Legal inquiries** → If someone is explicitly **ASKING for legal help, representation, or legal assistance**, categorize as `"legal". Mentioning the word legal does not equate to asking for legal help.`.
     These include emails where the sender is SEEKING support with a case, asking for a lawyer, describing a legal issue they need help with, or inquiring about eligibility for MLFA assistance.
@@ -770,7 +771,7 @@ def classify_email(subject, body):
 
     --- ADDITIONAL CLARIFICATIONS ---
 
-    ⚠️ DO NOT classify as "legal" if the email is a **legal notice**, **copyright or DMCA complaint**, **policy violation alert**, or **cease and desist letter** directed *at* MLFA.
+     DO NOT classify as "legal" if the email is a **legal notice**, **copyright or DMCA complaint**, **policy violation alert**, or **cease and desist letter** directed *at* MLFA.
     These messages are fundamentally different from help requests — they are **enforcement or warning communications**, not assistance-seeking emails.
 
     Common examples that should NOT be tagged as "legal":
@@ -794,30 +795,27 @@ def classify_email(subject, body):
         Arshia.ali.khan@mlfa.org, Maria.laura@mlfa.org
 
 
-
     Remember:
     - “Legal” = someone asking MLFA for help. 
-    - “Violation notice” = someone warning MLFA about a potential violation.
+    - “Violation notice” = someone legitimate warning MLFA about a potential violation.
 
     - **Donor-related inquiries** → Categorize as `"donor"` only if the **sender is a donor** or is asking about a **specific donation**, such as issues with payment, receipts, or donation follow-ups. Forward to:
     Mujahid.rasul@mlfa.org, Syeda.sadiqa@mlfa.org
     IMPORTANT DISTINCTION:
     If the sender is asking MLFA FOR money, funding, sponsorship, the email must be categorized as `"sponsorship"`, NOT `"donor"`, regardless of donor-related keywords used.
     If an email could otherwise appear donor-related but the intent is requesting financial support from MLFA, override `"donor"` and classify as `"financial_aid"`.
+    ADDITIONAL URGENCY FLAG for Donor:
+    If the email references a pending grant, matching gift program, corporate grant disbursement, PayPal Giving Fund, or employer match, it must remain categorized as `"donor"` AND include an additional tag `"grant"` because these require time-sensitive processing. For an email to have the `"grant"` tag it must also be tagged as `"donor"`. 
 
     - **Sponsorship requests** → If someone is **requesting sponsorship, fundraiser, from MLFA**, categorize as `"sponsorship"`. 
 
     - **Financial_Aid** -> if someone is requesting ANY sort of financial support, it is NOT sponsorship, rather it is categorized as `"financial_aid"`.
 
-
-    - **Fellowship inquiries** → If someone is **applying for, asking about, or offering a fellowship** (legal, advocacy, or nonprofit-focused), categorize as `"fellowship"`. Forward to:
-    aisha.ukiu@mlfa.org
-
     - **Organizational questions** → If the sender is asking about **MLFA's internal operations**, such as leadership, partnerships, collaboration, or continuing an ongoing, **legitimate and relevant exchange** with MLFA, categorize as `"organizational"`.
         This includes **genuine follow-up emails** that relate to a prior valid conversation with MLFA (e.g., “Following up on my partnership proposal,” or “Checking in about our meeting last week”).=
         The model must use the **context provided** — including quoted or prior messages — to assess whether the follow-up continues a **legitimate and relevant** thread. This means that if prior emails are available (as part of the thread context), they must be analyzed to decide if the new message is a meaningful continuation or just noise.
         **Not all follow-ups qualify:**
-            - If the previous thread or earlier messages were categorized as `"cold_outreach"`, `"marketing"`, `"auto_reply"`, `"irrelevant_other"`, **or any test, placeholder, or nonsense content**, then a follow-up on that thread should **not** be marked as `"organizational"`.
+            - If the previous thread or earlier messages were categorized as `"cold_outreach"`, `"auto_reply"`, `"irrelevant_other"`, **or any test, placeholder, or nonsense content**, then a follow-up on that thread should **not** be marked as `"organizational"`.
             - In such cases, classify based on the *current message’s actual content or purpose* (e.g., `"irrelevant_other"` if still meaningless).
             - A message like “Just following up on my last email” **only counts as organizational** if the last email was legitimate and relevant to MLFA’s work.
 
@@ -852,37 +850,18 @@ def classify_email(subject, body):
     - **Microsoft Teams forwarded messages (delete)** → Categorize as `"delete_internal"` if the email is a forwarded or auto-generated message originating from Microsoft Teams.
     These emails are internal notification artifacts and provide no standalone communication value. They should be classified as `"delete_internal"` and deleted. They should not be forwarded, replied to, or categorized under any other label.
 
-    - **Email marketing/sales** → If the sender is **offering a product, service, or software**, categorize as `"marketing"` only if:
-    1) The offering is **relevant to MLFA’s nonprofit or legal work**, **and**
-    2) The sender shows **clear contextual awareness** (e.g., refers to MLFA’s legal mission, Muslim families, or nonprofit context), **and**
-    3) The product is **niche-specific**, such as legal case management, zakat compliance tools, intake systems for nonprofits, or Islamic legal software.
-    Move to the "Sales emails" folder.
-    **Do not treat generic, untargeted, or mass-promotional emails as marketing.**
-
-    TRUSTED PARTNER RULE (EXPLICIT)
-
-    The following organization is a TRUSTED MLFA PARTNER:
-    - Pure Hands (also written as "PureHands", "Pure Hands, Inc.", or emails from domains including purehands.org or purehands.ccsend.com)
-
-    For emails from this trusted partner:
-    - The categories "cold_outreach" and "irrelevant_other" are NOT permitted.
-    - Mass-email indicators (e.g., Constant Contact formatting, mailing lists, or the presence of "unsubscribe") must be ignored.
-
-    Trusted partner status applies ONLY to the explicitly listed organization above.
-
-
-    - **Statements / receipts / statements** → Categorize as `"statements"` if the email contains receipts, billing statements, proofs of purchase, or expense documentation.
+    - **Statements / receipts / statements** → Categorize as `"invoice"` if the email contains receipts, billing statements, proofs of purchase, or expense documentation.
     This explicitly includes:
     -Staples receipts or invoices that include: A dollar amount, Payment confirmation, Invoice total, Tax breakdown, Billing summary, PDF receipt attachment
     Do NOT categorize as "statements" if the email is: A shipping notification, An order confirmation without pricing, A tracking update, A promotional email, SBA statements or SBA-related documentation
-    Forward all `"statements"` emails to:
+    Forward all `"invoice"` emails to:
     Syeda.sadiqa@mlfa.org
 
-    - **General communications** → Categorize as `"general_communication"` for legitimate, non-spam email threads or replies that do not fit any other defined category but are still relevant and meaningful to MLFA. This category exists to ensure valid conversations are not misclassified as `"irrelevant_other"`. Use `"general_communication"` when the email:
+    - **Active communications** → Categorize as `"active_communication"` for legitimate, non-spam email threads or replies that do not fit any other defined category but are still relevant and meaningful to MLFA. This category exists to ensure valid conversations are not misclassified as `"irrelevant_other"`. Use `"active_communication"` when the email:
     -If it contains attachments or the words "please let me know if you receive this" that is likely a reply to an ongoing/existing conversation, even if it is sent independently and not as part of a thread. 
     - Does not meet the criteria for any other category, AND
-    -It is a message to "Rachel" or "Rachel Smith" "Ms. Smith" (some form of that), or it says some form of "hi" but with a SPECIFIC NAME after it (just because it has an extra name though doesn't mean its automatically general communications). 
-    - Is coherent, doesn't seem like cold outreach, but seems to be apart of some conversation, or serves a legitimate conversational or administrative purpose (e.g., clarifications, acknowledgments, coordination, brief responses, logistics). Do NOT use `"general_communication"` for marketing, cold outreach, automated messages, test emails, or content with no meaningful purpose. If none of the above apply, classify as `"irrelevant_other"`.
+    -It is a message to "Rachel" or "Rachel Smith" "Ms. Smith" (some form of that), or it says some form of "hi" but with a SPECIFIC NAME after it (just because it has an extra name though doesn't mean its automatically active communications). 
+    - Is coherent, doesn't seem like cold outreach, but seems to be apart of some conversation, or serves a legitimate conversational or administrative purpose (e.g., clarifications, acknowledgments, coordination, brief responses, logistics). Do NOT use `"active_communication"` for cold outreach, automated messages, test emails, or content with no meaningful purpose. If none of the above apply, classify as `"irrelevant_other"`.
        
     - **Cold outreach** → Any **unsolicited sales email** that lacks clear tailoring to MLFA's work. Categorize as `"cold_outreach"` if:
         - The sender shows **no meaningful awareness** of MLFA's mission
@@ -890,7 +869,7 @@ def classify_email(subject, body):
         - The email uses commercial hooks like "Act now," "800% increase," "Only $99/month," or "Click here"
         Even if the topic sounds legal or nonprofit-adjacent, if it **feels generic**, classify it as cold outreach.
         **IMPORTANT: Do NOT classify follow-up emails as cold outreach** - if someone is following up on previous correspondence with MLFA (even if brief), classify as `"organizational"` instead.
-        Mark as read; **do not** treat as marketing.
+        Mark as read; 
         Bulk content like PR updates, blog digests, or mass announcements not addressed to MLFA directly. Place in 
         If the email contains the word “UNSUBSCRIBE” anywhere in the body, it MUST be categorized as `"cold_outreach"` regardless of other content.There can be a few exceptions to that rule for example it might be from an organization that is asking for a donation/fundraising which would then be sponsorship. 
         EXCLUSIVITY RULE:
@@ -904,20 +883,18 @@ def classify_email(subject, body):
 
     IMPORTANT GUIDELINES:
     1. Focus on **relevance and specificity**, not just keywords. The more the sender understands MLFA, the more likely it is to be legitimate.
-    2. If an email is a **niche legal tech offer clearly crafted for MLFA or Muslim nonprofits**, treat it as `"marketing"` — even if unsolicited.
     3. If the offer is **generic or clearly sent in bulk**, it’s `"cold_outreach"` — even if it references legal themes or Muslim communities.
-    4. Never mark cold outreach or mass sales emails as `"marketing"`, even if they reference MLFA’s field.
     5. If someone is **offering legal services**, classify as `"organizational"` only if relevant and serious (not promotional).
     6. Emails can and should have **multiple categories** when appropriate (e.g., a donor asking to volunteer → `"donor"` and `"volunteer"`).
-    7. Use `all_recipients` only for forwarded categories: `"donor"`, `"fellowship"`, `"volunteer"`, `"job_application"`, `"internship_law_student"`,`"media"`, `"statements"`.
-    8. For `"legal"`, `"marketing"`, `"violation_notice"`,`"auto_reply"`, `"delete_internal"`, `"general_communication"`, `"jail_mail"`, `"organizational"` and all `"irrelevant"` types, leave `all_recipients` empty.
+    7. Use `all_recipients` only for forwarded categories: `"donor"`, `"volunteer"`, `"job_application"`, `"internship_law_student"`,`"media"`, `"invoice"`. `"grant"`.
+    8. For `"legal"`, `"violation_notice"`,`"auto_reply"`, `"delete_internal"`, `"active_communication"`, `"jail_mail"`, `"organizational"` and all `"irrelevant"` types, leave `all_recipients` empty.
 
     PRIORITY & TIES:
     - If `"legal"` applies, **still include all other relevant categories** — `"legal"` is additive, never exclusive.
-    - `"marketing"` vs `"cold_outreach"`: choose only one based on tailoring (see rules above).
+  
 
     Return a JSON object with:
-    - `categories`: array from ["legal","violation_notice","donor","sponsorship","fellowship","organizational","volunteer","job_application","internship_law_student", "internship_undergraduate","media","marketing","auto_reply","cold_outreach","irrelevant_other", “statements”, “general_communication”, "delete_internal", "jail_mail", "financial_aid"]
+    - `categories`: array from ["legal","violation_notice","donor","sponsorship","organizational","volunteer","job_application","internship_law_student", "internship_undergraduate","media","auto_reply","cold_outreach","irrelevant_other", “invoice”, "active_communication", "delete_internal", "jail_mail", "financial_aid", "grant"]
     - `all_recipients`: list of MLFA email addresses (may be empty)
     - `needs_personal_reply`: boolean per the Escalation section
     - `reason`: dictionary mapping each category to a brief justification
@@ -1842,7 +1819,10 @@ def handle_emails(categories, result, recipients_set, msg, name_sender):
             recipients_set.update([f"{EMAILS_TO_FORWARD[2]}", f"{EMAILS_TO_FORWARD[3]}"])
 
         elif category == "donor":
-            recipients_set.update([f"{EMAILS_TO_FORWARD[0]}", f"{EMAILS_TO_FORWARD[1]}"]) 
+            recipients_set.update([f"{EMAILS_TO_FORWARD[0]}", f"{EMAILS_TO_FORWARD[1]}", f"{EMAILS_TO_FORWARD[9]}"])
+
+        elif category == "grant":
+            recipients_set.update([f"{EMAILS_TO_FORWARD[0]}", f"{EMAILS_TO_FORWARD[1]}", f"{EMAILS_TO_FORWARD[9]}"])
 
         elif category == "sponsorship":
             recipients_set.update([f"{EMAILS_TO_FORWARD[2]}", f"{EMAILS_TO_FORWARD[3]}"])
@@ -1902,9 +1882,6 @@ def handle_emails(categories, result, recipients_set, msg, name_sender):
         elif category == "job_application":
             recipients_set.update([f"{EMAILS_TO_FORWARD[6]}"])
 
-        elif category == "fellowship":
-            recipients_set.update([f"{EMAILS_TO_FORWARD[5]}"])
-
         elif category == "media":
             recipients_set.update([f"{EMAILS_TO_FORWARD[7]}"])
 
@@ -1917,27 +1894,27 @@ def handle_emails(categories, result, recipients_set, msg, name_sender):
             except Exception as e:
                 print(f"⚠️ Could not move to Deleted Items (Trash): {e}")
 
-        elif category == "marketing":
-            try:
-                inbox = mailbox.inbox_folder()
-                sales_folder = inbox.get_folder(folder_name="Sales emails")
-                print("Moving to sales emails folder.")
-                msg.move(sales_folder)
-                special_moved = True
-            except Exception as e:
-                print(f"⚠️ Could not move to 'Sales emails' folder: {e}")
+        #elif category == "marketing":
+         #    try:
+         #       inbox = mailbox.inbox_folder()
+         #       sales_folder = inbox.get_folder(folder_name="Sales emails")
+         #       print("Moving to sales emails folder.")
+         #       msg.move(sales_folder)
+         #       special_moved = True
+         #   except Exception as e:
+         #      print(f"⚠️ Could not move to 'Sales emails' folder: {e}")
 
         #elif category == "newsletter":
         #    if move_target_path is None:
         #        move_target_path = ["Newsletters"]
 
-        elif category == "statements":
+        elif category == "invoice":
             # Forward statements to Syeda and Mujahid, then file
             recipients_set.update([f"{EMAILS_TO_FORWARD[1]}"])
         
 
-        elif category == "general_communication":
-            # Route general communications to the General Communication folder
+        elif category == "active_communication":
+            # Route active communications to the Active Communication folder
             pass
 
         elif category == "cold_outreach":
@@ -1951,6 +1928,7 @@ def handle_emails(categories, result, recipients_set, msg, name_sender):
             "jail_mail",
             "legal",
             "violation_notice",
+            "grant",
             "donor",
             "sponsorship",
             "organizational",
@@ -1958,17 +1936,19 @@ def handle_emails(categories, result, recipients_set, msg, name_sender):
             "internship_law_student",
             "internship_undergraduate",
             "job_application",
-            "fellowship",
             "media",
-            "statements",
-            "general_communication",
+            "invoice",
+            "financial_aid",
+            "active_communication",
             "cold_outreach",
             "irrelevant_other",
+            
         ]
         category_to_folder = {
-            "jail_mail": ["Jail_Mail"],
+            "jail_mail": ["Apply for help", "Jail_Mail"],
             "legal": ["Apply for help"],
             "violation_notice": ["Violation_Notices"],
+            "grant": ["Donor_Related", "Grant"],
             "donor": ["Donor_Related"],
             "sponsorship": ["Sponsorship"],
             "organizational": ["Organizational_Inquiries"],
@@ -1976,12 +1956,13 @@ def handle_emails(categories, result, recipients_set, msg, name_sender):
             "internship_law_student": ["Internship"],
             "internship_undergraduate": ["Internship"],
             "job_application": ["Job_Application"],
-            "fellowship": ["Fellowship"],
             "media": ["Media"],
-            "statements": ["Statements"],
-            "general_communication": ["General Communication"],
+            "invoice": ["Invoices/Receipts"],
+            "financial_aid": ["Financial_Assistance"],
+            "active_communication": ["Active_Communication"],
             "cold_outreach": ["Irrelevant", "Cold_Outreach"],
             "irrelevant_other": ["Irrelevant", "Other"],
+            
         }
         for cat in priority:
             if cat in category_set:
