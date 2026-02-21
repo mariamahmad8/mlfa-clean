@@ -179,10 +179,16 @@
             padding-bottom: 32px;
             border: 1px solid #2a2a2a;
             height: 100%;
-            overflow-y: auto;
+            overflow: hidden;
             display: flex;
             flex-direction: column;
             scroll-padding-bottom: 32px;
+        }
+
+        .email-scroll {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 4px;
         }
 
         .email-original {
@@ -348,13 +354,10 @@
             display: flex;
             gap: 10px;
             justify-content: flex-end;
-            margin-top: auto;
-            padding: 16px 0 0 0;
+            margin-top: 16px;
+            padding: 12px 0 0 0;
             border-top: 1px solid #2a2a2a;
-            position: sticky;
-            bottom: 0;
             background: #1a1a1a;
-            padding-top: 12px;
         }
 
         .btn {
@@ -781,40 +784,42 @@
 
         <div class="email-preview">
             <h3>AI Analysis</h3>
-            <div class="email-header">
-                <div class="email-meta" id="emailMeta"></div>
-            </div>
-            
-            <div class="email-content" id="emailContent">
-                <div class="email-details-table">
-                    <div class="insight-row">
-                        <div class="label">Sender Name</div>
-                        <div class="value" id="senderName"></div>
-                    </div>
-                    <div class="insight-row">
-                        <div class="label">Category</div>
-                        <div class="value" id="category"></div>
-                    </div>
-                    <div class="insight-row">
-                        <div class="label">Recipients</div>
-                        <div class="value" id="recipients"></div>
-                    </div>
-                    <div class="insight-row">
-                        <div class="label">Needs Personal Reply</div>
-                        <div class="value" id="needsReply"></div>
-                    </div>
-                    <div class="insight-row">
-                        <div class="label">Reason</div>
-                        <div class="value" id="reason"></div>
-                    </div>
-                    <div class="insight-row">
-                        <div class="label">Escalation Required</div>
-                        <div class="value" id="escalation"></div>
-                    </div>
+            <div class="email-scroll">
+                <div class="email-header">
+                    <div class="email-meta" id="emailMeta"></div>
                 </div>
+                
+                <div class="email-content" id="emailContent">
+                    <div class="email-details-table">
+                        <div class="insight-row">
+                            <div class="label">Sender Name</div>
+                            <div class="value" id="senderName"></div>
+                        </div>
+                        <div class="insight-row">
+                            <div class="label">Category</div>
+                            <div class="value" id="category"></div>
+                        </div>
+                        <div class="insight-row">
+                            <div class="label">Recipients</div>
+                            <div class="value" id="recipients"></div>
+                        </div>
+                        <div class="insight-row">
+                            <div class="label">Needs Personal Reply</div>
+                            <div class="value" id="needsReply"></div>
+                        </div>
+                        <div class="insight-row">
+                            <div class="label">Reason</div>
+                            <div class="value" id="reason"></div>
+                        </div>
+                        <div class="insight-row">
+                            <div class="label">Escalation Required</div>
+                            <div class="value" id="escalation"></div>
+                        </div>
+                    </div>
 
-                <div class="status-info" style="display: none;">
-                    <p><strong>Status:</strong> Email has been processed and marked as read</p>
+                    <div class="status-info" style="display: none;">
+                        <p><strong>Status:</strong> Email has been processed and marked as read</p>
+                    </div>
                 </div>
             </div>
 
