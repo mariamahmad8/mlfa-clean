@@ -89,6 +89,7 @@ EMAILS_TO_FORWARD = [
 ]
 NONREAD_CATEGORIES = {""}  # Keep these unread
 SKIP_CATEGORIES = {'cold_outreach', 'irrelevant_other'}
+AUTO_REPLY_SAFEGUARD_CATEGORIES = {"legal", "jail_mail", "financial_aid", "volunteer", "internship_law_student", "internship_undergraduate"}
 
 # Exact email addresses to silently skip processing (lowercase)
 BLOCKED_SENDERS = [
@@ -364,14 +365,8 @@ def backfill_unread_since(folder_obj, folder_name: str, since_dt: datetime, max_
                         + f"Latest message body:\n{body_to_analyze}"
                     )
 
-                    preexisting_legal = _has_preexisting_legal_tag(msg)
-                    preexisting_jail_mail = _has_preexisting_jail_mail_tag(msg)
                     result = classify_email(msg.subject, composite_body)
-                    try:
-                        result["is_legal_preexisting"] = preexisting_legal
-                        result["is_jail_mail_preexisting"] = preexisting_jail_mail
-                    except Exception:
-                        pass
+                    _attach_preexisting_flags(result, msg)
 
                     if HUMAN_CHECK:
                         print(json.dumps(result, indent=2))
@@ -460,14 +455,8 @@ def backfill_unread_since(folder_obj, folder_name: str, since_dt: datetime, max_
                         + f"Latest message body:\n{body_to_analyze}"
                     )
 
-                    preexisting_legal = _has_preexisting_legal_tag(msg)
-                    preexisting_jail_mail = _has_preexisting_jail_mail_tag(msg)
                     result = classify_email(msg.subject, composite_body)
-                    try:
-                        result["is_legal_preexisting"] = preexisting_legal
-                        result["is_jail_mail_preexisting"] = preexisting_jail_mail
-                    except Exception:
-                        pass
+                    _attach_preexisting_flags(result, msg)
 
                     if HUMAN_CHECK:
                         print(json.dumps(result, indent=2))
@@ -613,14 +602,8 @@ def backfill_mailbox_since(since_dt: datetime, max_pages: int = 12) -> int:
                         + f"Latest message body:\n{body_to_analyze}"
                     )
 
-                    preexisting_legal = _has_preexisting_legal_tag(msg)
-                    preexisting_jail_mail = _has_preexisting_jail_mail_tag(msg)
                     result = classify_email(msg.subject, composite_body)
-                    try:
-                        result["is_legal_preexisting"] = preexisting_legal
-                        result["is_jail_mail_preexisting"] = preexisting_jail_mail
-                    except Exception:
-                        pass
+                    _attach_preexisting_flags(result, msg)
 
                     if HUMAN_CHECK:
                         print(json.dumps(result, indent=2))
@@ -800,7 +783,8 @@ def classify_email(subject, body):
     - “Violation notice” = someone legitimate warning MLFA about a potential violation.
 
     - **Donor-related inquiries** → Categorize as `"donor"` only if the **sender is a donor** or is asking about a **specific donation**, such as issues with payment, receipts, or donation follow-ups. Forward to:
-    Mujahid.rasul@mlfa.org, Syeda.sadiqa@mlfa.org
+    give@mlfa.org
+    
     IMPORTANT DISTINCTION:
     If the sender is asking MLFA FOR money, funding, sponsorship, the email must be categorized as `"sponsorship"`, NOT `"donor"`, regardless of donor-related keywords used.
     If an email could otherwise appear donor-related but the intent is requesting financial support from MLFA, override `"donor"` and classify as `"financial_aid"`.
@@ -808,6 +792,7 @@ def classify_email(subject, body):
     If the email references a pending grant, matching gift program, corporate grant disbursement, PayPal Giving Fund, or employer match, it must remain categorized as `"donor"` AND include an additional tag `"grant"` because these require time-sensitive processing. For an email to have the `"grant"` tag it must also be tagged as `"donor"`. 
 
     - **Sponsorship requests** → If someone is **requesting sponsorship, fundraiser, from MLFA**, categorize as `"sponsorship"`. 
+    Leave recipients as blank. 
 
     - **Financial_Aid** -> if someone is requesting ANY sort of financial support, it is NOT sponsorship, rather it is categorized as `"financial_aid"`.
 
@@ -910,7 +895,7 @@ def classify_email(subject, body):
     try:
         # Use the 1.x client API
         response = openai_client.chat.completions.create(
-            model="gpt-5.2",
+            model="gpt-5.4",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.2,
         )
@@ -1249,16 +1234,8 @@ def process_folder(folder, name, delta_token):
                             print("===== GPT CLASSIFY CONTEXT END =====\n")
                         except Exception:
                             pass
-                    # Check preexisting legal/jail mail tags before classification
-                    preexisting_legal = _has_preexisting_legal_tag(msg)
-                    preexisting_jail_mail = _has_preexisting_jail_mail_tag(msg)
                     result = classify_email(msg.subject, body_to_analyze)
-                    # Attach the preexisting flags to the result for downstream handling
-                    try:
-                        result["is_legal_preexisting"] = preexisting_legal
-                        result["is_jail_mail_preexisting"] = preexisting_jail_mail
-                    except Exception:
-                        pass
+                    _attach_preexisting_flags(result, msg)
                     if HUMAN_CHECK: 
                         print(json.dumps(result, indent=2))
                         # Skip if this email is already in pending queue (prevent duplicates)
@@ -1375,16 +1352,8 @@ def process_folder(folder, name, delta_token):
                         print("===== GPT CLASSIFY CONTEXT END =====\n")
                     except Exception:
                         pass
-                # Check preexisting legal/jail mail tags before classification
-                preexisting_legal = _has_preexisting_legal_tag(child)
-                preexisting_jail_mail = _has_preexisting_jail_mail_tag(child)
                 result = classify_email(child.subject, composite_body)
-                # Attach the preexisting flags to the result for downstream handling
-                try:
-                    result["is_legal_preexisting"] = preexisting_legal
-                    result["is_jail_mail_preexisting"] = preexisting_jail_mail
-                except Exception:
-                    pass
+                _attach_preexisting_flags(result, child)
                 print(json.dumps(result, indent=2))
                 
                 if HUMAN_CHECK:
@@ -1611,16 +1580,8 @@ def process_folder_via_delta(folder_obj, folder_name: str, delta_url: str | None
                     print("===== GPT CLASSIFY CONTEXT END =====\n")
                 except Exception:
                     pass
-            # Check preexisting legal/jail mail tags before classification
-            preexisting_legal = _has_preexisting_legal_tag(msg)
-            preexisting_jail_mail = _has_preexisting_jail_mail_tag(msg)
             result = classify_email(msg.subject, composite_body)
-            # Attach the preexisting flags to the result for downstream handling
-            try:
-                result["is_legal_preexisting"] = preexisting_legal
-                result["is_jail_mail_preexisting"] = preexisting_jail_mail
-            except Exception:
-                pass
+            _attach_preexisting_flags(result, msg)
             if HUMAN_CHECK:
                 print(json.dumps(result, indent=2))
                 email_id = msg.object_id
@@ -1654,8 +1615,10 @@ def handle_new_email(msg, result):
     categories = result.get("categories", [])
     recipients_set = set(result.get("all_recipients", []))
     name_sender = result.get("name_sender")
-    preexisting_legal = bool(result.get("is_legal_preexisting"))
-    preexisting_jail_mail = bool(result.get("is_jail_mail_preexisting"))
+    preexisting_flags = {
+        category: bool(result.get(f"is_{category}_preexisting"))
+        for category in AUTO_REPLY_SAFEGUARD_CATEGORIES
+    }
 
     # Hard stop: internal deletes take precedence over all actions
     if 'delete_internal' in set(categories or []):
@@ -1666,21 +1629,15 @@ def handle_new_email(msg, result):
             print(f"⚠️ Could not delete email (delete_internal): {e}")
         return
 
-    # If this email already had a legal or jail mail tag before analysis and
-    # the classifier also marked it the same way, do not auto-reply or modify it.
-    # Leave the message exactly as-is and move on.
-    if preexisting_legal and ("legal" in categories):
-        try:
-            print("⏭️  Skipping auto-reply: preexisting legal tag detected and classified as legal.")
-        except Exception:
-            pass
-        return
-    if preexisting_jail_mail and ("jail_mail" in categories):
-        try:
-            print("⏭️  Skipping auto-reply: preexisting jail_mail tag detected and classified as jail_mail.")
-        except Exception:
-            pass
-        return
+    # Generic auto-reply safeguard: if any safeguarded category already exists on
+    # this message/thread and the classifier chose it again, skip duplicate actions.
+    for category in AUTO_REPLY_SAFEGUARD_CATEGORIES:
+        if preexisting_flags.get(category) and (category in categories):
+            try:
+                print(f"⏭️  Skipping auto-reply: preexisting {category} tag detected and classified as {category}.")
+            except Exception:
+                pass
+            return
     
     # We pass the message and its categories to be tagged
     tag_email(msg, categories, replyTag=False)
@@ -1819,18 +1776,41 @@ def handle_emails(categories, result, recipients_set, msg, name_sender):
             recipients_set.update([f"{EMAILS_TO_FORWARD[2]}", f"{EMAILS_TO_FORWARD[3]}"])
 
         elif category == "donor":
-            recipients_set.update([f"{EMAILS_TO_FORWARD[0]}", f"{EMAILS_TO_FORWARD[1]}", f"{EMAILS_TO_FORWARD[9]}"])
+            recipients_set.update([f"{EMAILS_TO_FORWARD[9]}"])
 
         elif category == "grant":
-            recipients_set.update([f"{EMAILS_TO_FORWARD[0]}", f"{EMAILS_TO_FORWARD[1]}", f"{EMAILS_TO_FORWARD[9]}"])
+            recipients_set.update([f"{EMAILS_TO_FORWARD[9]}"])
 
         elif category == "sponsorship":
-            recipients_set.update([f"{EMAILS_TO_FORWARD[2]}", f"{EMAILS_TO_FORWARD[3]}"])
+            pass; 
 
         elif category == "organizational":
             recipients_set.update([f"{EMAILS_TO_FORWARD[2]}", f"{EMAILS_TO_FORWARD[3]}"])
 
         elif category == "volunteer":
+            reply_message = msg.reply(to_all=False)
+            reply_message.body_type = "HTML"
+            has_real_name = bool(name_sender and name_sender.strip() and name_sender.strip().lower() != 'sender')
+            greeting_html = (
+                f"<p>Dear {name_sender},</p>" if has_real_name else f"<p>Good {_tod_greeting()},</p>"
+            )
+            reply_message.body = f"""
+                {greeting_html}
+
+                <p>Thank you for your interest in volunteering with the Muslim Legal Fund of America (MLFA). 
+                We sincerely appreciate your willingness to support our mission.</p>
+
+                <p>If you would like to get involved, please complete our Volunteer Interest Form here:<br>
+                <a href="https://mlfa.org/join-our-team/">MLFA Volunteer Form</a></p>
+
+                <p>Our Community Engagement team will review your submission and follow up as appropriate.</p>
+
+                <p>We look forward to connecting with you.</p>
+
+                <p>Sincerely,<br>
+                The Muslim Legal Fund of America</p>
+                """
+            reply_message.send()
             recipients_set.update([f"{EMAILS_TO_FORWARD[8]}"])
 
         elif category.startswith("internship_"):
@@ -1844,13 +1824,16 @@ def handle_emails(categories, result, recipients_set, msg, name_sender):
                 reply_message.body = f"""
                 {greeting_html}
                 <p>Thank you for reaching out and for your interest in interning with the Muslim Legal Fund of America (MLFA).</p>
-
                 <p>Our internship program is open to current law students, and we welcome applications from those who are passionate about constitutional rights and public interest advocacy.</p>
 
-                <p>To be considered, please complete our internship application form via our website:
-                <a href="https://mlfa.org/join-our-team/">Join our team - MLFA</a>.</p>
+                <p>To be considered, please submit your cover letter, résumé, and writing sample directly to our Training and Development Manager at 
+                <a href="mailto:aisha.ukiu@mlfa.org">aisha.ukiu@mlfa.org</a> 
+                and copy 
+                <a href="mailto:maryam.libdi@mlfa.org">maryam.libdi@mlfa.org</a> 
+                on your email.</p>
 
                 <p>Once we receive your submission, a member of our team will review your application and follow up regarding next steps.</p>
+                <p>We are grateful for your interest in MLFA and look forward to connecting.</p>
 
                 <p>Warm regards,<br>
                 The Muslim Legal Fund of America.</p>
@@ -2078,25 +2061,98 @@ def handle_internal_reply(msg):
 
 
 def _has_preexisting_legal_tag(msg) -> bool:
-    """Return True if the message already carries a 'legal' tag/category.
-    Detects plain 'legal' or any category ending with '/legal' (e.g. 'PAIRActioned/legal').
-    """
-    try:
-        cats = [c.lower() for c in (msg.categories or [])]
-        return any(c == 'legal' or c.endswith('/legal') for c in cats)
-    except Exception:
-        return False
+    """Return True if message/thread already carries a legal tag."""
+    return _has_preexisting_category_tag(msg, "legal")
 
 
 def _has_preexisting_jail_mail_tag(msg) -> bool:
-    """Return True if the message already carries a 'jail_mail' tag/category.
-    Detects plain 'jail_mail' or any category ending with '/jail_mail' (e.g. 'PAIRActioned/jail_mail').
-    """
+    """Return True if message/thread already carries a jail_mail tag."""
+    return _has_preexisting_category_tag(msg, "jail_mail")
+
+
+def _has_preexisting_financial_aid_tag(msg) -> bool:
+    """Return True if message/thread already carries a financial_aid tag."""
+    return _has_preexisting_category_tag(msg, "financial_aid")
+
+
+def _category_present_in_tags(categories, target: str) -> bool:
     try:
-        cats = [c.lower() for c in (msg.categories or [])]
-        return any(c == 'jail_mail' or c.endswith('/jail_mail') for c in cats)
+        t = (target or "").strip().lower()
+        if not t:
+            return False
+        cats = [str(c).strip().lower() for c in (categories or []) if c]
+        return any(c == t or c.endswith(f"/{t}") for c in cats)
     except Exception:
         return False
+
+
+def _thread_has_preexisting_category_tag(msg, target: str) -> bool:
+    """Return True if any OTHER message in the same conversation already has target tag."""
+    try:
+        conv_id = getattr(msg, 'conversation_id', None)
+        if not conv_id:
+            return False
+        current_id = getattr(msg, 'object_id', None)
+        con = account.con
+        base = f"https://graph.microsoft.com/v1.0/users/{EMAIL_TO_WATCH}/messages"
+        select = (
+            "$select=id,conversationId,categories,parentFolderId&"
+            f"$filter=conversationId eq '{conv_id}'&$top=50"
+        )
+        url = f"{base}?{select}"
+        safety = 0
+        while url and safety < 100:
+            safety += 1
+            resp = con.get(url)
+            if not resp or resp.status_code // 100 != 2:
+                return False
+            data = resp.json() or {}
+            if not isinstance(data, dict):
+                try:
+                    data = json.loads(data) if isinstance(data, str) else {}
+                except Exception:
+                    data = {}
+            vals = data.get('value', []) if isinstance(data, dict) else []
+            if isinstance(vals, dict):
+                vals = [vals]
+            if isinstance(vals, str):
+                try:
+                    parsed_vals = json.loads(vals)
+                    vals = parsed_vals if isinstance(parsed_vals, list) else []
+                except Exception:
+                    vals = []
+            for it in vals:
+                if not isinstance(it, dict):
+                    continue
+                if current_id and it.get('id') == current_id:
+                    continue
+                if _category_present_in_tags(it.get('categories') or [], target):
+                    return True
+            url = data.get('@odata.nextLink') if isinstance(data, dict) else None
+        return False
+    except Exception:
+        return False
+
+
+def _has_preexisting_category_tag(msg, target: str) -> bool:
+    """Return True if current message OR thread already carries target tag."""
+    try:
+        if _category_present_in_tags(getattr(msg, 'categories', None) or [], target):
+            return True
+    except Exception:
+        pass
+    return _thread_has_preexisting_category_tag(msg, target)
+
+
+def _attach_preexisting_flags(result, msg):
+    """Attach preexisting safeguards for all auto-reply categories to result."""
+    try:
+        if not isinstance(result, dict):
+            return
+        for category in AUTO_REPLY_SAFEGUARD_CATEGORIES:
+            result[f"is_{category}_preexisting"] = _has_preexisting_category_tag(msg, category)
+    except Exception:
+        pass
 
 
 def _is_blocked_sender(addr: str | None) -> bool:
