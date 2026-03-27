@@ -784,6 +784,13 @@ def classify_email(subject, body):
 
     - **Donor-related inquiries** → Categorize as `"donor"` only if the **sender is a donor** or is asking about a **specific donation**, such as issues with payment, receipts, or donation follow-ups. Forward to:
     give@mlfa.org
+
+    DONOR AMOUNT RULE:
+    - If donation amount ≥ $1,000 → forward to: give@mlfa.org
+    - If donation amount < $1,000 → do NOT forward
+    - If amount unclear → do NOT forward
+    - Use the final donation/payment amount, not pledge language or unrelated totals
+    - Also return `amount_detected`: number or null
     
     IMPORTANT DISTINCTION:
     If the sender is asking MLFA FOR money, funding, sponsorship, the email must be categorized as `"sponsorship"`, NOT `"donor"`, regardless of donor-related keywords used.
@@ -839,8 +846,16 @@ def classify_email(subject, body):
     This explicitly includes:
     -Staples receipts or invoices that include: A dollar amount, Payment confirmation, Invoice total, Tax breakdown, Billing summary, PDF receipt attachment
     Do NOT categorize as "statements" if the email is: A shipping notification, An order confirmation without pricing, A tracking update, A promotional email, SBA statements or SBA-related documentation
-    Forward all `"invoice"` emails to:
-    Syeda.sadiqa@mlfa.org
+
+    AMOUNT RULE:
+    - If total ≥ $1,000 → forward to: Syeda.sadiqa@mlfa.org
+    - If total < $1,000 → do NOT forward (leave `all_recipients` empty)
+    - Use the final total (not subtotal/tax)
+    - If amount unclear → do NOT forward
+
+    Also return:
+    - `amount_detected`: number or null
+
 
     - **Active communications** → Categorize as `"active_communication"` for legitimate, non-spam email threads or replies that do not fit any other defined category but are still relevant and meaningful to MLFA. This category exists to ensure valid conversations are not misclassified as `"irrelevant_other"`. Use `"active_communication"` when the email:
     -If it contains attachments or the words "please let me know if you receive this" that is likely a reply to an ongoing/existing conversation, even if it is sent independently and not as part of a thread. 
@@ -871,8 +886,9 @@ def classify_email(subject, body):
     3. If the offer is **generic or clearly sent in bulk**, it’s `"cold_outreach"` — even if it references legal themes or Muslim communities.
     5. If someone is **offering legal services**, classify as `"organizational"` only if relevant and serious (not promotional).
     6. Emails can and should have **multiple categories** when appropriate (e.g., a donor asking to volunteer → `"donor"` and `"volunteer"`).
-    7. Use `all_recipients` only for forwarded categories: `"donor"`, `"volunteer"`, `"job_application"`, `"internship_law_student"`,`"media"`, `"invoice"`. `"grant"`.
-    8. For `"legal"`, `"violation_notice"`,`"auto_reply"`, `"delete_internal"`, `"active_communication"`, `"jail_mail"`, `"organizational"` and all `"irrelevant"` types, leave `all_recipients` empty.
+    7. Use `all_recipients` only for forwarded categories: `"donor"`, `"volunteer"`, `"job_application"`, `"internship_law_student"`,`"media"`,  `"grant"`.
+    8. "invoice" and "donor" use `all_recipients` ONLY if amount ≥ $1,000
+    9. For `"legal"`, `"violation_notice"`,`"auto_reply"`, `"delete_internal"`, `"active_communication"`, `"jail_mail"`, `"organizational"` and all `"irrelevant"` types, leave `all_recipients` empty.
 
     PRIORITY & TIES:
     - If `"legal"` applies, **still include all other relevant categories** — `"legal"` is additive, never exclusive.
@@ -884,6 +900,7 @@ def classify_email(subject, body):
     - `needs_personal_reply`: boolean per the Escalation section
     - `reason`: dictionary mapping each category to a brief justification
     - `escalation_reason`: brief string explaining why `needs_personal_reply` is true (empty string if false)
+    - `amount_detected`: number or null
     - `name_sender`: the sender’s name if confidently identified; otherwise null
 
     Subject: {subject}
@@ -923,15 +940,35 @@ def classify_email(subject, body):
 
         # Ensure we always return a dict so downstream .get() calls are safe
         if isinstance(parsed, dict):
-            return parsed
+            return _apply_amount_based_recipient_filters(parsed)
         # If model returned a list with a single dict, accept it
         if isinstance(parsed, list) and parsed and isinstance(parsed[0], dict):
-            return parsed[0]
+            return _apply_amount_based_recipient_filters(parsed[0])
         # Fallback: wrap raw content so routes don't break
         return {"raw": raw}
     except Exception as e:
         print(f"Classification error: {e}")
         return {}
+
+
+def _apply_amount_based_recipient_filters(result: dict) -> dict:
+    categories = result.get("categories", []) or []
+    recipients = list(result.get("all_recipients", []) or [])
+    amount = result.get("amount_detected")
+
+    try:
+        amount_value = float(amount) if amount is not None else None
+    except (TypeError, ValueError):
+        amount_value = None
+
+    if "invoice" in categories and (amount_value is None or amount_value < 1000):
+        recipients = [r for r in recipients if r != "Syeda.sadiqa@mlfa.org"]
+
+    if "donor" in categories and (amount_value is None or amount_value < 1000):
+        recipients = [r for r in recipients if r != "give@mlfa.org"]
+
+    result["all_recipients"] = recipients
+    return result
 
 
 def build_thread_context(folder_obj, current_msg) -> str:
