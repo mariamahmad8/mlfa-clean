@@ -2490,11 +2490,18 @@ def get_emails():
         if not sender_name or (isinstance(sender_name, str) and not sender_name.strip()):
             sender_name = 'Unknown'
 
+        amount_detected = classification.get('amount_detected')
+        if amount_detected is None or amount_detected == '':
+            amount_display = 'None'
+        else:
+            amount_display = str(amount_detected)
+
         email = {
             "id": email_id,
             "meta": f"FROM: [INBOX] {email_data['received']} | {email_data['sender']} | {email_data['subject']}",
             "senderName": sender_name,
             "category": category_display,
+            "amountDetected": amount_display,
             "recipients": recipients_display,
             "needsReply": "Yes" if classification.get('needs_personal_reply', False) else "No",
             "reason": reason_display,

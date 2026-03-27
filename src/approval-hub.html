@@ -800,6 +800,10 @@
                             <div class="value" id="category"></div>
                         </div>
                         <div class="insight-row">
+                            <div class="label">Amount Detected</div>
+                            <div class="value" id="amountDetected"></div>
+                        </div>
+                        <div class="insight-row">
                             <div class="label">Recipients</div>
                             <div class="value" id="recipients"></div>
                         </div>
@@ -880,6 +884,7 @@
                 document.querySelector('.email-meta').textContent = data.meta;
                 document.getElementById('senderName').textContent = data.senderName;
                 document.getElementById('category').textContent = data.category;
+                document.getElementById('amountDetected').textContent = data.amountDetected || 'None';
                 document.getElementById('recipients').textContent = data.recipients;
                 document.getElementById('needsReply').textContent = data.needsReply;
                 document.getElementById('reason').textContent = data.reason;
