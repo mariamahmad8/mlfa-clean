@@ -87,7 +87,12 @@ EMAILS_TO_FORWARD = [
     'maryam.libdi@mlfa.org',  #8
     'give@mlfa.org' #9
 ]
-NONREAD_CATEGORIES = {""}  # Keep these unread
+NONREAD_CATEGORIES = {
+    "active_communication",
+    "donor",
+    "internship_law_student",
+    "internship_undergraduate",
+}  # Keep these unread
 SKIP_CATEGORIES = {'cold_outreach', 'irrelevant_other'}
 AUTO_REPLY_SAFEGUARD_CATEGORIES = {"legal", "jail_mail", "financial_aid", "volunteer", "internship_law_student", "internship_undergraduate"}
 
@@ -800,7 +805,6 @@ def classify_email(subject, body):
     DONOR AMOUNT RULE:
     - If donation amount ≥ $1,000 → forward to: give@mlfa.org
     - If donation amount < $1,000 → do NOT forward
-    - If amount unclear → do NOT forward
     - Use the final donation/payment amount, not pledge language or unrelated totals
     - Also return `amount_detected`: number or null
 
