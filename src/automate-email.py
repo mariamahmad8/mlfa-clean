@@ -848,9 +848,16 @@ def classify_email(subject, body):
     ONLY "internship_law_student" will be forwarded to : aisha.ukiu@mlfa.org
     -"internship_undergraduate" emails will NOT be forwarded to anyone. 
 
+    Media inquiries → classify as `"media"` ONLY if the sender explicitly requests an interview, statement, comment, or coverage involving MLFA.
 
+    Do NOT classify as "media" if:
+    - the sender is only sharing content or links
+    - the message is not tailored to MLFA
+    - there is no request directed at MLFA
 
-    - **Media inquiries** → If the sender is a **reporter or journalist asking for comments, interviews, or statements**, categorize as `"media"`. Forward to:
+    → classify as "cold_outreach" or "irrelevant_other"
+
+    Forward all "media" emails to:
     mediarequests@mlfa.org
 
    - **Automatic replies (including out-of-office)** → Categorize as "auto_reply" if the email is an automatically generated response triggered by our outbound message. This includes:
