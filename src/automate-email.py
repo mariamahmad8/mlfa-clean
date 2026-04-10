@@ -37,10 +37,39 @@ PROCESS_SINCE = (datetime.now(CENTRAL_TZ)
 PROCESS_SINCE = PROCESS_SINCE.astimezone(timezone.utc)
 # Persist tokens next to this script to avoid CWD confusion
 TOKEN_DIR = os.path.dirname(os.path.abspath(__file__))
+SETTINGS_PATH = os.path.join(TOKEN_DIR, "hub_settings.json")
 # Re-auth interval (minutes) to proactively refresh tokens
 AUTH_REFRESH_MIN = int(os.getenv('AUTH_REFRESH_MIN', '50'))
 last_auth_time = datetime.now(timezone.utc)
 processed_messages = set()
+
+
+def load_hub_settings():
+    """Load persisted hub settings from disk."""
+    default_settings = {"automation_enabled": False}
+    try:
+        with open(SETTINGS_PATH, 'r') as f:
+            loaded = json.load(f)
+        if isinstance(loaded, dict):
+            default_settings.update(loaded)
+    except FileNotFoundError:
+        pass
+    except Exception as e:
+        print(f"⚠️ Could not load hub settings: {e}")
+    default_settings["automation_enabled"] = bool(default_settings.get("automation_enabled", False))
+    return default_settings
+
+
+def save_hub_settings():
+    """Persist hub settings to disk."""
+    try:
+        with open(SETTINGS_PATH, 'w') as f:
+            json.dump(hub_settings, f)
+    except Exception as e:
+        print(f"⚠️ Could not save hub settings: {e}")
+
+
+hub_settings = load_hub_settings()
 
 def load_processed_messages():
     """Load processed messages from file to prevent reprocessing on restart"""
@@ -83,7 +112,7 @@ EMAILS_TO_FORWARD = [
     'info@mlfa.org', #4
     'aisha.ukiu@mlfa.org', #5
     'shawn@strategichradvisory.com', #6
-    'mediarequests@mlfa.org', #7
+    'media@mlfa.org', #7
     'maryam.libdi@mlfa.org',  #8
     'give@mlfa.org' #9
 ]
@@ -92,6 +121,7 @@ NONREAD_CATEGORIES = {
     "donor",
     "internship_law_student",
     "internship_undergraduate",
+    "organizational"
 }  # Keep these unread
 SKIP_CATEGORIES = {'cold_outreach', 'irrelevant_other'}
 AUTO_REPLY_SAFEGUARD_CATEGORIES = {"legal", "jail_mail", "financial_aid", "volunteer", "internship_law_student", "internship_undergraduate"}
@@ -105,13 +135,23 @@ SKIP_SENDER_RECIPIENT_PAIRS = [
     ("info@mlfa.org", "mariam.ahmad@pairsys.ai"),
 ]
 
-HUMAN_CHECK = True  # Enable human check for approval hub
+HUMAN_CHECK = True  # Legacy default; runtime behavior uses hub_settings["automation_enabled"]
 USE_THREAD_CONTEXT = os.getenv('USE_THREAD_CONTEXT', 'true').strip().lower() == 'true'  # Include thread context in GPT
 DEBUG_CLASSIFY_PROMPT = os.getenv('DEBUG_CLASSIFY_PROMPT', 'false').strip().lower() == 'true'
 
 # Storage for multiple pending emails
 pending_emails = {}  # Dictionary to store multiple emails by ID
 current_email_id = None  # Track which email is currently being shown
+
+
+def requires_human_check() -> bool:
+    return not bool(hub_settings.get("automation_enabled", False))
+
+
+def set_automation_enabled(enabled: bool) -> bool:
+    hub_settings["automation_enabled"] = bool(enabled)
+    save_hub_settings()
+    return hub_settings["automation_enabled"]
 
 # Flask app for approval hub
 app = Flask(__name__, static_folder='.', template_folder='templates')
@@ -373,7 +413,7 @@ def backfill_unread_since(folder_obj, folder_name: str, since_dt: datetime, max_
                     result = classify_email(msg.subject, composite_body)
                     _attach_preexisting_flags(result, msg)
 
-                    if HUMAN_CHECK:
+                    if requires_human_check():
                         print(json.dumps(result, indent=2))
                         email_id = msg.object_id
                         if email_id not in pending_emails:
@@ -463,7 +503,7 @@ def backfill_unread_since(folder_obj, folder_name: str, since_dt: datetime, max_
                     result = classify_email(msg.subject, composite_body)
                     _attach_preexisting_flags(result, msg)
 
-                    if HUMAN_CHECK:
+                    if requires_human_check():
                         print(json.dumps(result, indent=2))
                         email_id = msg.object_id
                         if email_id not in pending_emails:
@@ -610,7 +650,7 @@ def backfill_mailbox_since(since_dt: datetime, max_pages: int = 12) -> int:
                     result = classify_email(msg.subject, composite_body)
                     _attach_preexisting_flags(result, msg)
 
-                    if HUMAN_CHECK:
+                    if requires_human_check():
                         print(json.dumps(result, indent=2))
                         email_id = msg.object_id
                         if email_id not in pending_emails:
@@ -799,23 +839,35 @@ def classify_email(subject, body):
     - “Legal” = someone asking MLFA for help. 
     - “Violation notice” = someone legitimate warning MLFA about a potential violation.
 
-    - **Donor-related inquiries** → Categorize as `"donor"` only if the **sender is a donor** or is asking about a **specific donation**, such as issues with payment, receipts, or donation follow-ups. Forward to:
-    give@mlfa.org
+    DONOR CLASSIFICATION + FORWARDING RULES
 
-    DONOR AMOUNT RULE:
-    - If donation amount ≥ $1,000 → forward to: give@mlfa.org
-    - If donation amount < $1,000 → do NOT forward
-    - Use the final donation/payment amount, not pledge language or unrelated totals
-    - Also return `amount_detected`: number or null
+    Categorize as "donor" if:
+    - Sender is an individual donor, OR
+    - Email is about a specific donation (payment issue, receipt, tax receipt, confirmation we received it, follow-up)
 
-    GRANT OVERRIDE (CRITICAL)
+    Exclude:
+    - Automated notifications (PayPal, Bloomerang, etc.) unless a human is asking for help
 
-    If an email is tagged as "grant":
-    - It MUST also be tagged as "donor"
+    FORWARDING:
+
+    1. Donation SUPPORT / RECEIPT / CONFIRMATION (CRITICAL)
     - ALWAYS forward to: give@mlfa.org
-    - IGNORE the $1,000 donor threshold
+    - Applies regardless of amount
+    - Includes: tax receipts, missing receipts, payment issues, "did you receive my donation?"
 
-    This rule overrides all donor amount rules.
+    2. NEW DONATION MESSAGES:
+    - If amount ≥ $1,000 → forward to: give@mlfa.org
+    - If amount < $1,000 → do NOT forward
+
+    AMOUNT RULE:
+    - Extract final donation/payment amount → amount_detected (number or null)
+    - Ignore pledges, goals, or unrelated numbers
+
+    GRANT OVERRIDE:
+    - If tagged "grant":
+    - ALSO tag as "donor"
+    - ALWAYS forward to: give@mlfa.org
+    - IGNORE $1,000 threshold
     
     IMPORTANT DISTINCTION:
     If the sender is asking MLFA FOR money, funding, sponsorship, the email must be categorized as `"sponsorship"`, NOT `"donor"`, regardless of donor-related keywords used.
@@ -862,7 +914,7 @@ def classify_email(subject, body):
     → classify as "cold_outreach" or "irrelevant_other"
 
     Forward all "media" emails to:
-    mediarequests@mlfa.org
+    media@mlfa.org
 
    - **Automatic replies (including out-of-office)** → Categorize as "auto_reply" if the email is an automatically generated response triggered by our outbound message. This includes:
     1)Traditional out-of-office notices (e.g., "I am out of the office until...", "I will return on...", "I have limited access to email...")
@@ -1364,7 +1416,7 @@ def process_folder(folder, name, delta_token):
                             pass
                     result = classify_email(msg.subject, body_to_analyze)
                     _attach_preexisting_flags(result, msg)
-                    if HUMAN_CHECK: 
+                    if requires_human_check(): 
                         print(json.dumps(result, indent=2))
                         # Skip if this email is already in pending queue (prevent duplicates)
                         email_id = msg.object_id
@@ -1484,7 +1536,7 @@ def process_folder(folder, name, delta_token):
                 _attach_preexisting_flags(result, child)
                 print(json.dumps(result, indent=2))
                 
-                if HUMAN_CHECK:
+                if requires_human_check():
                     # Skip if this email is already in pending queue (prevent duplicates)
                     email_id = child.object_id
                     if email_id not in pending_emails:
@@ -1710,7 +1762,7 @@ def process_folder_via_delta(folder_obj, folder_name: str, delta_url: str | None
                     pass
             result = classify_email(msg.subject, composite_body)
             _attach_preexisting_flags(result, msg)
-            if HUMAN_CHECK:
+            if requires_human_check():
                 print(json.dumps(result, indent=2))
                 email_id = msg.object_id
                 if email_id not in pending_emails:
@@ -2607,6 +2659,34 @@ def get_emails():
         }
         emails.append(email)
     return jsonify(emails)
+
+
+@app.route('/api/settings/automation', methods=['GET'])
+@login_required
+def get_automation_setting():
+    return jsonify({
+        "status": "success",
+        "automationEnabled": bool(hub_settings.get("automation_enabled", False))
+    })
+
+
+@app.route('/api/settings/automation', methods=['POST'])
+@login_required
+def update_automation_setting():
+    try:
+        data = request.get_json(silent=True) or {}
+        enabled = bool(data.get('automationEnabled', False))
+        set_automation_enabled(enabled)
+        mode = "full automation" if enabled else "manual review"
+        print(f"⚙️ Automation mode updated: {mode}")
+        return jsonify({
+            "status": "success",
+            "automationEnabled": bool(hub_settings.get("automation_enabled", False)),
+            "message": f"Automation mode set to {mode}"
+        })
+    except Exception as e:
+        print(f"❌ Error updating automation setting: {e}")
+        return jsonify({"status": "error", "message": f"Server error while updating automation: {e}"}), 500
 
 @app.route('/api/emails/<email_id>/approve', methods=['POST'])
 @login_required

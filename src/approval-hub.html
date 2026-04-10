@@ -1060,6 +1060,67 @@
         // API Configuration
         // For static hosting, set window.APP_CONFIG = { apiBase: "https://<backend>.up.railway.app/api" }
         const API_BASE = (window.APP_CONFIG && window.APP_CONFIG.apiBase) || '/api';
+
+        async function loadAutomationSetting() {
+            try {
+                const response = await fetch(`${API_BASE}/settings/automation`, {
+                    headers: { 'Accept': 'application/json' },
+                    credentials: 'include'
+                });
+                if (response.status === 401) {
+                    window.location.href = '/login';
+                    return;
+                }
+                const result = await response.json();
+                if (response.ok && result.status === 'success') {
+                    document.getElementById('automationToggle').checked = !!result.automationEnabled;
+                } else {
+                    throw new Error(result.message || 'Failed to load automation setting');
+                }
+            } catch (error) {
+                console.error('Error loading automation setting:', error);
+                showNotification('Failed to load automation setting', 'error');
+            }
+        }
+
+        async function updateAutomationSetting(enabled) {
+            const toggle = document.getElementById('automationToggle');
+            toggle.disabled = true;
+            try {
+                const response = await fetch(`${API_BASE}/settings/automation`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ automationEnabled: enabled }),
+                    credentials: 'include'
+                });
+                if (response.status === 401) {
+                    window.location.href = '/login';
+                    return;
+                }
+                const result = await response.json();
+                if (response.ok && result.status === 'success') {
+                    toggle.checked = !!result.automationEnabled;
+                    showNotification(
+                        result.automationEnabled
+                            ? 'Full automation enabled. New emails will bypass the hub.'
+                            : 'Manual review enabled. New emails will go to the hub.',
+                        'success'
+                    );
+                    loadEmails();
+                } else {
+                    throw new Error(result.message || 'Failed to update automation setting');
+                }
+            } catch (error) {
+                console.error('Error updating automation setting:', error);
+                toggle.checked = !enabled;
+                showNotification(`Failed to update automation setting: ${error.message}`, 'error');
+            } finally {
+                toggle.disabled = false;
+            }
+        }
         
         // Load emails from backend
         async function loadEmails() {
@@ -1176,6 +1237,11 @@
         // Initialize application
         document.addEventListener('DOMContentLoaded', function() {
             console.log('Initializing MLFA Approval Hub...');
+            const automationToggle = document.getElementById('automationToggle');
+            automationToggle.addEventListener('change', function(event) {
+                updateAutomationSetting(event.target.checked);
+            });
+            loadAutomationSetting();
             loadEmails();
             
             // Auto-refresh disabled to preserve selection and avoid jumping
