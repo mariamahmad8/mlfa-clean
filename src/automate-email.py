@@ -2679,10 +2679,18 @@ def update_automation_setting():
         set_automation_enabled(enabled)
         mode = "full automation" if enabled else "manual review"
         print(f"⚙️ Automation mode updated: {mode}")
+        processed_now = 0
+        errors = []
+        if enabled:
+            outcome = process_pending_queue()
+            processed_now = outcome.get("processed", 0)
+            errors = outcome.get("errors", [])
         return jsonify({
             "status": "success",
             "automationEnabled": bool(hub_settings.get("automation_enabled", False)),
-            "message": f"Automation mode set to {mode}"
+            "message": f"Automation mode set to {mode}",
+            "processedNow": processed_now,
+            "errors": errors,
         })
     except Exception as e:
         print(f"❌ Error updating automation setting: {e}")
@@ -2820,44 +2828,12 @@ def approve_email(email_id):
 @login_required
 def approve_all_emails():
     try:
-        ids = list(pending_emails.keys())
-        approved = 0
-        errors = []
-        for email_id in ids:
-            try:
-                email_data = pending_emails.get(email_id)
-                if not email_data:
-                    continue
-                # Resolve message safely per item
-                msg = _fetch_message_safely(email_id, email_data.get("message_obj"))
-                if msg is None:
-                    _remove_from_pending(email_id)
-                    processed_messages.add(email_id)
-                    approved += 1
-                    continue
-                classification = email_data["classification"]
-                if not isinstance(classification, dict):
-                    classification = {}
-                try:
-                    handle_new_email(msg, classification)
-                    dedup_key = getattr(msg, 'internet_message_id', None) or msg.object_id
-                    processed_messages.add(dedup_key)
-                    processed_messages.add(email_id)
-                    _remove_from_pending(email_id)
-                    approved += 1
-                except Exception as ex:
-                    # best-effort cleanup on failure and keep queue moving
-                    try:
-                        mark_as_read(msg)
-                    except Exception:
-                        pass
-                    _remove_from_pending(email_id)
-                    processed_messages.add(getattr(msg, 'internet_message_id', None) or getattr(msg, 'object_id', email_id))
-                    processed_messages.add(email_id)
-                    approved += 1
-            except Exception as inner_e:
-                errors.append({"id": email_id, "error": str(inner_e)})
-        return jsonify({"status": "success", "approved": approved, "errors": errors})
+        outcome = process_pending_queue()
+        return jsonify({
+            "status": "success",
+            "approved": outcome.get("processed", 0),
+            "errors": outcome.get("errors", []),
+        })
     except Exception as e:
         print(f"❌ Error approving all emails: {e}")
         return jsonify({"status": "error", "message": f"Server error while approving all: {e}"}), 500
@@ -3094,6 +3070,52 @@ def _remove_from_pending(email_id: str):
         return False
     except Exception:
         return False
+
+
+def process_pending_queue() -> dict:
+    """Best-effort processing of all pending emails currently in the hub."""
+    ids = list(pending_emails.keys())
+    processed = 0
+    errors = []
+
+    for email_id in ids:
+        try:
+            email_data = pending_emails.get(email_id)
+            if not email_data:
+                continue
+
+            msg = _fetch_message_safely(email_id, email_data.get("message_obj"))
+            if msg is None:
+                _remove_from_pending(email_id)
+                processed_messages.add(email_id)
+                processed += 1
+                continue
+
+            classification = email_data.get("classification")
+            if not isinstance(classification, dict):
+                classification = {}
+
+            try:
+                handle_new_email(msg, classification)
+                dedup_key = getattr(msg, 'internet_message_id', None) or msg.object_id
+                processed_messages.add(dedup_key)
+                processed_messages.add(email_id)
+                _remove_from_pending(email_id)
+                processed += 1
+            except Exception as ex:
+                try:
+                    mark_as_read(msg)
+                except Exception:
+                    pass
+                _remove_from_pending(email_id)
+                processed_messages.add(getattr(msg, 'internet_message_id', None) or getattr(msg, 'object_id', email_id))
+                processed_messages.add(email_id)
+                processed += 1
+                errors.append({"id": email_id, "error": str(ex)})
+        except Exception as inner_e:
+            errors.append({"id": email_id, "error": str(inner_e)})
+
+    return {"processed": processed, "errors": errors}
 
 # One-time backfill to catch older-but-unread messages since PROCESS_SINCE
 _did_backfill = False

@@ -455,6 +455,9 @@
             transform: translateX(400px);
             transition: transform 0.3s ease;
             z-index: 1000;
+            max-width: min(420px, calc(100vw - 40px));
+            word-break: break-word;
+            box-sizing: border-box;
         }
 
         .notification.show {
@@ -1103,9 +1106,10 @@
                 const result = await response.json();
                 if (response.ok && result.status === 'success') {
                     toggle.checked = !!result.automationEnabled;
+                    const processedNow = result.processedNow || 0;
                     showNotification(
                         result.automationEnabled
-                            ? 'Full automation enabled. New emails will bypass the hub.'
+                            ? `Full automation enabled. Processed ${processedNow} pending email(s); new emails will bypass the hub.`
                             : 'Manual review enabled. New emails will go to the hub.',
                         'success'
                     );
