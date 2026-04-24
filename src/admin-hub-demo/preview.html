@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Hub Demo - Test Rules</title>
+    <style>
+        :root {
+            --bg: #F7F9FC;
+            --panel: #FFFFFF;
+            --panel-2: #F0F4F8;
+            --muted: #6B7280;
+            --muted-2: #9CA3AF;
+            --text: #1F2937;
+            --line: #E5EAF0;
+            --accent: #4F6BED;
+            --accent-soft: rgba(79,107,237,0.08);
+        }
+        * { box-sizing: border-box; }
+        body { margin:0; font-family:"Inter","Segoe UI",sans-serif; background:var(--bg); color:var(--text); }
+        a { color:inherit; text-decoration:none; }
+        .layout { display:grid; grid-template-columns:236px 1fr; min-height:100vh; }
+        .sidebar { padding:24px 16px; border-right:1px solid var(--line); background:#FFFFFF; }
+        .brand { color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.16em; font-weight:600; margin:4px 10px 20px; }
+        .nav-group { margin-bottom:22px; }
+        .nav-label { color:var(--muted-2); font-size:11px; font-weight:600; letter-spacing:.14em; margin:0 10px 8px; text-transform:uppercase; }
+        .nav-link { display:block; padding:10px 12px; border-radius:10px; margin-bottom:4px; color:var(--muted); border:1px solid transparent; font-size:14px; transition:all 0.15s ease; }
+        .nav-link.active, .nav-link:hover { background:var(--accent-soft); color:var(--accent); border-color:rgba(79,107,237,0.12); font-weight:600; }
+        .inbox-switcher { margin:0 6px 24px; padding:12px 14px; border:1px solid var(--line); border-radius:12px; background:var(--panel-2); }
+        .inbox-switcher-label { color:var(--muted-2); font-size:11px; font-weight:600; letter-spacing:.12em; margin-bottom:8px; text-transform:uppercase; }
+        .inbox-switcher-select { width:100%; appearance:none; background:#FFFFFF; border:1px solid var(--line); border-radius:8px; color:var(--text); font:inherit; font-size:13px; font-weight:600; padding:9px 12px; outline:none; }
+        .inbox-switcher-select:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(79,107,237,0.1); }
+        .inbox-switcher-note { color:var(--muted); font-size:12px; line-height:1.5; margin-top:8px; }
+        .main { padding:32px; }
+        .header h1 { margin:0; font-size:28px; letter-spacing:-0.02em; font-weight:700; }
+        .header p { margin:10px 0 24px; color:var(--muted); max-width:900px; line-height:1.7; font-size:15px; }
+        .grid { display:grid; grid-template-columns:0.9fr 1.1fr; gap:18px; }
+        .stack { display:grid; gap:14px; }
+        .card { background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:24px; box-shadow:0 1px 3px rgba(0,0,0,0.04); }
+        .label { color:var(--muted-2); font-size:11px; text-transform:uppercase; letter-spacing:.14em; font-weight:600; margin-bottom:12px; }
+        .field { display:grid; gap:6px; margin-bottom:12px; }
+        .field label { color:var(--muted); font-size:13px; font-weight:600; }
+        .input, .textarea {
+            width:100%;
+            padding:10px 12px;
+            border-radius:10px;
+            border:1px solid var(--line);
+            background:#FFFFFF;
+            color:var(--text);
+            font-family:inherit;
+            font-size:14px;
+            transition:border-color 0.15s ease;
+        }
+        .input:focus, .textarea:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(79,107,237,0.1); }
+        .textarea { min-height:170px; line-height:1.6; }
+        .button {
+            border:1px solid transparent;
+            background:var(--accent);
+            color:#FFFFFF;
+            padding:10px 16px;
+            border-radius:10px;
+            display:inline-block;
+            font-weight:600;
+            font-size:14px;
+            cursor:pointer;
+            transition:all 0.15s ease;
+        }
+        .button:hover { filter:brightness(0.95); }
+        .result-box {
+            padding:14px;
+            border-radius:12px;
+            border:1px solid var(--line);
+            background:var(--panel-2);
+            margin-bottom:12px;
+        }
+        .result-box strong { display:block; margin-bottom:6px; font-size:14px; color:var(--text); }
+        .scenario-row {
+            display:flex;
+            gap:8px;
+            flex-wrap:wrap;
+            margin-bottom:14px;
+        }
+        .scenario-pill {
+            padding:7px 12px;
+            border-radius:999px;
+            border:1px solid var(--line);
+            background:#FFFFFF;
+            font-size:13px;
+            cursor:pointer;
+            transition:all 0.15s ease;
+        }
+        .scenario-pill.active,
+        .scenario-pill:hover {
+            background:var(--accent-soft);
+            border-color:rgba(79,107,237,0.2);
+            color:var(--accent);
+            font-weight:600;
+        }
+        .pill-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+        .pill { padding:5px 10px; border-radius:999px; border:1px solid var(--line); font-size:12px; background:#FFFFFF; color:var(--muted); }
+        .code {
+            background:#FFFFFF;
+            border:1px solid var(--line);
+            border-radius:12px;
+            padding:16px;
+            color:var(--muted);
+            font-family:"JetBrains Mono","SFMono-Regular",monospace;
+            font-size:13px;
+            line-height:1.7;
+            white-space:pre-wrap;
+        }
+        .toast {
+            position:fixed; right:20px; top:20px;
+            background:#1F2937; color:#FFFFFF;
+            padding:12px 16px; border-radius:10px;
+            opacity:0; transform:translateY(-8px);
+            transition:all 0.2s ease;
+            box-shadow:0 4px 16px rgba(0,0,0,0.15);
+            font-size:14px; z-index:30;
+        }
+        .toast.show { opacity:1; transform:translateY(0); }
+        @media (max-width:1100px) {
+            .layout { grid-template-columns:1fr; }
+            .grid { grid-template-columns:1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="layout">
+        <aside class="sidebar">
+            <div class="brand">MLFA Admin Hub Demo</div>
+
+            <div class="inbox-switcher">
+                <div class="inbox-switcher-label">Working Inbox</div>
+                <select class="inbox-switcher-select" data-inbox-switcher>
+                    <option value="info@mlfa.org">MLFA Main · info@mlfa.org</option>
+                    <option value="legal@mlfa.org">Legal · legal@mlfa.org</option>
+                    <option value="give@mlfa.org">Donor Ops · give@mlfa.org</option>
+                </select>
+                <div class="inbox-switcher-note">These settings pages apply to the inbox selected here.</div>
+            </div>
+
+            <div class="nav-group">
+                <div class="nav-label">Overview</div>
+                <a class="nav-link" href="index.html">Dashboard</a>
+                <a class="nav-link" href="hub.html">Review Hub</a>
+            </div>
+
+            <div class="nav-group">
+                <div class="nav-label">Settings</div>
+                <a class="nav-link" href="inboxes.html">Inboxes</a>
+                <a class="nav-link" href="categories.html">Categories</a>
+                <a class="nav-link" href="recipients.html">Recipients</a>
+                <a class="nav-link" href="templates.html">Reply Templates</a>
+                <a class="nav-link" href="audit.html">Users & Audit</a>
+                <a class="nav-link active" href="preview.html">Test Rules</a>
+            </div>
+        </aside>
+
+        <main class="main">
+            <div class="header">
+                <h1>Prompt Preview & Test Rules</h1>
+                <p>This page is the trust layer. Admins paste a subject and body, then see the generated prompt preview, the AI classification facts, and the final deterministic action plan before saving any rule changes.</p>
+            </div>
+
+            <section class="grid">
+                <div class="card">
+                <div class="label">Test input</div>
+                    <div class="scenario-row" id="scenarioRow">
+                        <div class="scenario-pill active" data-scenario="grant">Grant</div>
+                        <div class="scenario-pill" data-scenario="volunteer">Volunteer</div>
+                        <div class="scenario-pill" data-scenario="media">Media</div>
+                    </div>
+                    <div class="field">
+                        <label>Subject</label>
+                        <input class="input" id="subjectInput" value="Employer match confirmation">
+                    </div>
+                    <div class="field">
+                        <label>Email body</label>
+                        <textarea class="textarea" id="bodyInput">Please confirm the matching gift request for donor Arefin Ahmed. Matching Program: 1:1 U.S. Matching Gifts. Donation Amount: $300.00.</textarea>
+                    </div>
+                    <div class="button" id="runTest">Run Test</div>
+                </div>
+
+                <div class="stack">
+                    <div class="card">
+                        <div class="label">AI classification preview</div>
+                        <div class="result-box">
+                            <strong>Categories</strong>
+                            <div class="pill-row" id="categoryPills">
+                                <span class="pill">grant</span>
+                                <span class="pill">donor</span>
+                            </div>
+                        </div>
+                        <div class="result-box">
+                            <strong>Reason</strong>
+                            <div style="color:var(--muted); margin-top:8px; font-size:14px; line-height:1.6;" id="reasonText">Email references an employer match / matching gift workflow and includes a donor confirmation amount.</div>
+                        </div>
+                        <div class="result-box">
+                            <strong>Action plan preview</strong>
+                            <div class="pill-row" id="actionPills">
+                                <span class="pill">Folder: Inbox / Donor_Related / Grant</span>
+                                <span class="pill">Recipients: Give Inbox</span>
+                                <span class="pill">Forwarding: Yes</span>
+                                <span class="pill">Auto-reply: No</span>
+                                <span class="pill">Queue: Manual Review</span>
+                                <span class="pill">Tags: PAIRActioned/grant + donor</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="label">Generated prompt preview</div>
+                        <div class="code" id="promptPreview">SYSTEM PREAMBLE
+- Classify the email into one or more configured categories.
+- Return categories, reason, sender name, amount, and personal reply need only.
+
+INBOX: info@mlfa.org
+
+CATEGORY: grant
+- Rule: Use when the email references matching gifts, corporate grants, or employer match workflows.
+- Implies: donor
+- Higher priority than donor
+
+CATEGORY: donor
+- Rule: Use when a donor references a specific donation, receipt, gift, or donation follow-up.
+
+OUTPUT
+- categories
+- reason
+- amount_detected
+- name_sender
+- needs_personal_reply</div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+    <div class="toast" id="toast"></div>
+    <script>
+        const scenarioData = {
+            grant: {
+                subject: "Employer match confirmation",
+                body: "Please confirm the matching gift request for donor Arefin Ahmed. Matching Program: 1:1 U.S. Matching Gifts. Donation Amount: $300.00.",
+                categories: ["grant", "donor"],
+                reason: "Email references an employer match / matching gift workflow and includes a donor confirmation amount.",
+                actionPlan: [
+                    "Folder: Inbox / Donor_Related / Grant",
+                    "Recipients: Give Inbox",
+                    "Forwarding: Yes",
+                    "Auto-reply: No",
+                    "Queue: Manual Review",
+                    "Tags: PAIRActioned/grant + donor"
+                ],
+                prompt: `SYSTEM PREAMBLE
+- Classify the email into one or more configured categories.
+- Return categories, reason, sender name, amount, and personal reply need only.
+
+INBOX: info@mlfa.org
+
+CATEGORY: grant
+- Rule: Use when the email references matching gifts, corporate grants, or employer match workflows.
+- Implies: donor
+- Higher priority than donor
+
+CATEGORY: donor
+- Rule: Use when a donor references a specific donation, receipt, gift, or donation follow-up.
+
+OUTPUT
+- categories
+- reason
+- amount_detected
+- name_sender
+- needs_personal_reply`
+            },
+            volunteer: {
+                subject: "Interested in volunteering",
+                body: "Assalamu alaikum, I would love to volunteer with MLFA and support community outreach. Please let me know how to apply.",
+                categories: ["volunteer"],
+                reason: "The sender explicitly asks how to volunteer with MLFA.",
+                actionPlan: [
+                    "Folder: Inbox / Volunteer",
+                    "Recipients: None",
+                    "Forwarding: No",
+                    "Auto-reply: Volunteer Interest",
+                    "Queue: Manual Review",
+                    "Tags: PAIRActioned/volunteer"
+                ],
+                prompt: `SYSTEM PREAMBLE
+- Classify the email into one or more configured categories.
+- Return categories, reason, sender name, amount, and personal reply need only.
+
+INBOX: info@mlfa.org
+
+CATEGORY: volunteer
+- Rule: Use when the sender asks how to volunteer, support events, or contribute time to MLFA.
+
+OUTPUT
+- categories
+- reason
+- amount_detected
+- name_sender
+- needs_personal_reply`
+            },
+            media: {
+                subject: "Request for comment",
+                body: "Hello, we are reporting on a developing civil liberties story and would like a statement from MLFA by noon today.",
+                categories: ["media"],
+                reason: "The sender is a reporter asking for comment on a public story.",
+                actionPlan: [
+                    "Folder: Inbox / Media",
+                    "Recipients: media@mlfa.org",
+                    "Forwarding: Yes",
+                    "Auto-reply: No",
+                    "Queue: Manual Review",
+                    "Tags: PAIRActioned/media"
+                ],
+                prompt: `SYSTEM PREAMBLE
+- Classify the email into one or more configured categories.
+- Return categories, reason, sender name, amount, and personal reply need only.
+
+INBOX: info@mlfa.org
+
+CATEGORY: media
+- Rule: Use when a journalist, newsroom, or media desk requests a statement, interview, or comment.
+
+OUTPUT
+- categories
+- reason
+- amount_detected
+- name_sender
+- needs_personal_reply`
+            }
+        };
+
+        function showToast(message) {
+            const toast = document.getElementById("toast");
+            toast.textContent = message;
+            toast.classList.add("show");
+            clearTimeout(window.__previewToastTimer);
+            window.__previewToastTimer = setTimeout(() => toast.classList.remove("show"), 1600);
+        }
+
+        function renderPills(targetId, values) {
+            const root = document.getElementById(targetId);
+            root.innerHTML = "";
+            values.forEach((value) => {
+                const pill = document.createElement("span");
+                pill.className = "pill";
+                pill.textContent = value;
+                root.appendChild(pill);
+            });
+        }
+
+        function loadScenario(name) {
+            const scenario = scenarioData[name];
+            document.getElementById("subjectInput").value = scenario.subject;
+            document.getElementById("bodyInput").value = scenario.body;
+            renderPills("categoryPills", scenario.categories);
+            renderPills("actionPills", scenario.actionPlan);
+            document.getElementById("reasonText").textContent = scenario.reason;
+            document.getElementById("promptPreview").textContent = scenario.prompt;
+        }
+
+        document.querySelectorAll(".scenario-pill").forEach((pill) => {
+            pill.addEventListener("click", () => {
+                document.querySelectorAll(".scenario-pill").forEach((item) => item.classList.remove("active"));
+                pill.classList.add("active");
+                loadScenario(pill.dataset.scenario);
+                showToast(`Loaded ${pill.textContent} scenario`);
+            });
+        });
+
+        document.getElementById("runTest").addEventListener("click", () => {
+            const active = document.querySelector(".scenario-pill.active");
+            const scenarioKey = active ? active.dataset.scenario : "grant";
+            loadScenario(scenarioKey);
+            showToast("Rendered AI preview and action plan");
+        });
+    </script>
+
+<script>
+(function () {
+    const storageKey = 'adminHubSelectedInbox';
+    const selects = document.querySelectorAll('[data-inbox-switcher]');
+    if (!selects.length) return;
+
+    const saved = localStorage.getItem(storageKey) || 'info@mlfa.org';
+    selects.forEach((select) => {
+        select.value = saved;
+        select.addEventListener('change', () => {
+            localStorage.setItem(storageKey, select.value);
+            selects.forEach((other) => {
+                if (other !== select) other.value = select.value;
+            });
+        });
+    });
+})();
+</script>
+
+</body>
+</html>

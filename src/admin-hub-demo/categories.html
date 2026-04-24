@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Hub Demo - Categories</title>
+    <style>
+        :root {
+            --bg: #F7F9FC;
+            --panel: #FFFFFF;
+            --panel-2: #F0F4F8;
+            --muted: #6B7280;
+            --muted-2: #9CA3AF;
+            --text: #1F2937;
+            --line: #E5EAF0;
+            --accent: #4F6BED;
+            --accent-soft: rgba(79,107,237,0.08);
+            --success: #3BA776;
+            --amber: #D9A441;
+        }
+        * { box-sizing: border-box; }
+        body { margin:0; font-family:"Inter","Segoe UI",sans-serif; background:var(--bg); color:var(--text); }
+        a { color:inherit; text-decoration:none; }
+        .layout { display:grid; grid-template-columns:236px 1fr; min-height:100vh; }
+        .sidebar { padding:24px 16px; border-right:1px solid var(--line); background:#FFFFFF; }
+        .brand { color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.16em; font-weight:600; margin:4px 10px 20px; }
+        .nav-group { margin-bottom:22px; }
+        .nav-label { color:var(--muted-2); font-size:11px; font-weight:600; letter-spacing:.14em; margin:0 10px 8px; text-transform:uppercase; }
+        .nav-link { display:block; padding:10px 12px; border-radius:10px; margin-bottom:4px; color:var(--muted); border:1px solid transparent; font-size:14px; transition:all 0.15s ease; }
+        .nav-link.active, .nav-link:hover { background:var(--accent-soft); color:var(--accent); border-color:rgba(79,107,237,0.12); font-weight:600; }
+        .inbox-switcher { margin:0 6px 24px; padding:12px 14px; border:1px solid var(--line); border-radius:12px; background:var(--panel-2); }
+        .inbox-switcher-label { color:var(--muted-2); font-size:11px; font-weight:600; letter-spacing:.12em; margin-bottom:8px; text-transform:uppercase; }
+        .inbox-switcher-select { width:100%; appearance:none; background:#FFFFFF; border:1px solid var(--line); border-radius:8px; color:var(--text); font:inherit; font-size:13px; font-weight:600; padding:9px 12px; outline:none; }
+        .inbox-switcher-select:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(79,107,237,0.1); }
+        .inbox-switcher-note { color:var(--muted); font-size:12px; line-height:1.5; margin-top:8px; }
+        .main { padding:32px; }
+        .header { display:flex; justify-content:space-between; gap:24px; align-items:flex-start; margin-bottom:24px; }
+        .header h1 { margin:0; font-size:28px; letter-spacing:-0.02em; font-weight:700; }
+        .header p { margin:10px 0 0; color:var(--muted); max-width:900px; line-height:1.7; font-size:15px; }
+        .button { border:1px solid transparent; background:var(--accent); color:#FFFFFF; padding:10px 16px; border-radius:10px; cursor:pointer; font-weight:600; font-size:14px; white-space:nowrap; transition:all 0.15s ease; }
+        .button:hover { filter:brightness(0.95); }
+        .button.secondary { background:#FFFFFF; color:var(--text); border-color:var(--line); }
+        .button.secondary:hover { filter:none; background:var(--panel-2); }
+        .builder { display:grid; grid-template-columns:300px 1fr; gap:18px; }
+        .card { background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:24px; box-shadow:0 1px 3px rgba(0,0,0,0.04); }
+        .label { color:var(--muted-2); font-size:11px; text-transform:uppercase; letter-spacing:.14em; font-weight:600; margin-bottom:12px; }
+        .category-pill {
+            padding:12px 14px;
+            border-radius:12px;
+            border:1px solid var(--line);
+            background:var(--panel-2);
+            margin-bottom:8px;
+            cursor:pointer;
+            transition:all 0.15s ease;
+        }
+        .category-pill.active {
+            border-left:3px solid var(--accent);
+            border-color:rgba(79,107,237,0.25);
+            background:rgba(79,107,237,0.03);
+            box-shadow:0 2px 8px rgba(0,0,0,0.06);
+        }
+        .category-pill:hover { background:var(--panel-2); box-shadow:0 2px 8px rgba(0,0,0,0.06); }
+        .category-pill strong { display:block; margin-bottom:3px; font-size:14px; }
+        .field { display:grid; gap:6px; margin-bottom:12px; }
+        .field label { color:var(--muted); font-size:13px; font-weight:600; }
+        .input, .textarea, .select {
+            width:100%;
+            background:#FFFFFF;
+            border:1px solid var(--line);
+            color:var(--text);
+            border-radius:10px;
+            padding:10px 12px;
+            font-family:inherit;
+            font-size:14px;
+            transition:border-color 0.15s ease;
+        }
+        .input:focus, .textarea:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(79,107,237,0.1); }
+        .textarea { min-height:120px; line-height:1.6; }
+        .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+        .rule-box {
+            padding:14px;
+            border-radius:12px;
+            border:1px solid var(--line);
+            background:var(--panel-2);
+            margin-bottom:12px;
+        }
+        .rule-box strong { display:block; margin-bottom:8px; font-size:14px; color:var(--text); }
+        .chip-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+        .chip { padding:5px 10px; border-radius:999px; border:1px solid var(--line); font-size:12px; background:#FFFFFF; color:var(--muted); }
+        .path { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+        .segment { background:#FFFFFF; border:1px solid var(--line); padding:6px 10px; border-radius:8px; font-size:13px; color:var(--text); }
+        .footer-actions { display:flex; gap:10px; margin-top:18px; padding-top:18px; border-top:1px solid var(--line); }
+        .toast {
+            position:fixed; right:20px; top:20px;
+            background:#1F2937; color:#FFFFFF;
+            padding:12px 16px; border-radius:10px;
+            opacity:0; transform:translateY(-8px);
+            transition:all 0.2s ease;
+            box-shadow:0 4px 16px rgba(0,0,0,0.15);
+            font-size:14px;
+        }
+        .toast.show { opacity:1; transform:translateY(0); }
+        @media (max-width:1100px) {
+            .layout { grid-template-columns:1fr; }
+            .builder { grid-template-columns:1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="layout">
+        <aside class="sidebar">
+            <div class="brand">MLFA Admin Hub Demo</div>
+
+            <div class="inbox-switcher">
+                <div class="inbox-switcher-label">Working Inbox</div>
+                <select class="inbox-switcher-select" data-inbox-switcher>
+                    <option value="info@mlfa.org">MLFA Main · info@mlfa.org</option>
+                    <option value="legal@mlfa.org">Legal · legal@mlfa.org</option>
+                    <option value="give@mlfa.org">Donor Ops · give@mlfa.org</option>
+                </select>
+                <div class="inbox-switcher-note">These settings pages apply to the inbox selected here.</div>
+            </div>
+
+            <div class="nav-group">
+                <div class="nav-label">Overview</div>
+                <a class="nav-link" href="index.html">Dashboard</a>
+                <a class="nav-link" href="hub.html">Review Hub</a>
+            </div>
+
+            <div class="nav-group">
+                <div class="nav-label">Settings</div>
+                <a class="nav-link" href="inboxes.html">Inboxes</a>
+                <a class="nav-link active" href="categories.html">Categories</a>
+                <a class="nav-link" href="recipients.html">Recipients</a>
+                <a class="nav-link" href="templates.html">Reply Templates</a>
+                <a class="nav-link" href="audit.html">Users & Audit</a>
+                <a class="nav-link" href="preview.html">Test Rules</a>
+            </div>
+        </aside>
+
+        <main class="main">
+            <div class="header">
+                <div>
+                    <h1>Category Builder</h1>
+                    <p>This mockup shows how an admin can add categories, set plain-English rules, define folder paths, forwarding, tags, auto-replies, parent categories, and implied categories without touching code.</p>
+                </div>
+                <div class="button" id="addCategoryButton">+ Add Category</div>
+            </div>
+
+            <section class="builder">
+                <div class="card">
+                    <div class="label">Priority order</div>
+
+                    <div class="category-pill active" data-name="Grant" data-key="grant" data-parent="Donor" data-rule="Use this category when an email references matching gifts, employer match, corporate grant disbursement, or a time-sensitive grant confirmation. This category should also imply donor." data-folder="Inbox / Donor_Related / Grant" data-forwarding="Enabled · Recipients: Give Inbox · Condition: Always" data-autoreply="Disabled · Duplicate safeguard: Off" data-tags="Generated tag: PAIRActioned/grant · Implied category: donor · Priority slot: 4">
+                        <strong>Grant</strong>
+                        <div style="color:var(--muted); font-size:13px;">key: grant · parent: donor</div>
+                    </div>
+                    <div class="category-pill" data-name="Donor" data-key="donor" data-parent="None" data-rule="Use this category when a donor asks about a specific gift, receipt, donation issue, or follow-up." data-folder="Inbox / Donor_Related" data-forwarding="Enabled · Recipients: Give Inbox · Condition: Only if amount ≥ 1000" data-autoreply="Disabled · Duplicate safeguard: Off" data-tags="Generated tag: PAIRActioned/donor · Priority slot: 5">
+                        <strong>Donor</strong>
+                        <div style="color:var(--muted); font-size:13px;">key: donor</div>
+                    </div>
+                    <div class="category-pill" data-name="Violation Notice" data-key="violation_notice" data-parent="None" data-rule="Use this category for policy notices, DMCA, legal warnings, or cease and desist emails sent to MLFA." data-folder="Inbox / Irrelevant / Violation_Notices" data-forwarding="Enabled · Recipients: Maria Laura · Condition: Always" data-autoreply="Disabled · Duplicate safeguard: Off" data-tags="Generated tag: PAIRActioned/violation_notice · Priority slot: 3">
+                        <strong>Violation Notice</strong>
+                        <div style="color:var(--muted); font-size:13px;">key: violation_notice</div>
+                    </div>
+                    <div class="category-pill" data-name="Statements / Receipts" data-key="statements_receipts" data-parent="None" data-rule="Use for receipts, billing summaries, and account statements that are not invoices." data-folder="Inbox / Statements" data-forwarding="Disabled" data-autoreply="Disabled" data-tags="Generated tag: PAIRActioned/statements_receipts · Priority slot: 13">
+                        <strong>Statements / Receipts</strong>
+                        <div style="color:var(--muted); font-size:13px;">key: statements_receipts</div>
+                    </div>
+                    <div class="category-pill" data-name="Active Communication" data-key="active_communication" data-parent="None" data-rule="Use for legitimate thread continuations that do not belong to another specific category." data-folder="Inbox / Active_Communication" data-forwarding="Disabled" data-autoreply="Disabled" data-tags="Generated tag: PAIRActioned/active_communication · Priority slot: 15">
+                        <strong>Active Communication</strong>
+                        <div style="color:var(--muted); font-size:13px;">key: active_communication</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="label" id="selectedCategoryLabel">Selected category: Grant</div>
+
+                    <div class="grid-2">
+                        <div class="field">
+                            <label>Display name</label>
+                            <input class="input" id="displayName" value="Grant">
+                        </div>
+                        <div class="field">
+                            <label>Category key</label>
+                            <input class="input" id="categoryKey" value="grant">
+                        </div>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="field">
+                            <label>Parent category</label>
+                            <div class="select" id="parentCategory" style="display:flex;align-items:center;min-height:42px;">Donor</div>
+                        </div>
+                        <div class="field">
+                            <label>Status</label>
+                            <div class="select" style="display:flex;align-items:center;min-height:42px;">Active</div>
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label>Rule text</label>
+                        <div class="textarea" id="ruleText">Use this category when an email references matching gifts, employer match, corporate grant disbursement, or a time-sensitive grant confirmation. This category should also imply donor.</div>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="rule-box">
+                            <strong>Positive examples</strong>
+                            <div class="chip-row">
+                                <span class="chip">"Please confirm matching gift"</span>
+                                <span class="chip">"Employer match request"</span>
+                            </div>
+                        </div>
+                        <div class="rule-box">
+                            <strong>Negative examples</strong>
+                            <div class="chip-row">
+                                <span class="chip">"Monthly donor receipt"</span>
+                                <span class="chip">"General sponsorship request"</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="rule-box">
+                        <strong>Folder behavior</strong>
+                        <div class="path" id="folderPath">
+                            <span class="segment">Inbox</span>
+                            <span class="segment">Donor_Related</span>
+                            <span class="segment">Grant</span>
+                        </div>
+                    </div>
+
+                    <div class="rule-box">
+                        <strong>Forwarding</strong>
+                        <div class="chip-row" id="forwardingChips">
+                            <span class="chip">Enabled</span>
+                            <span class="chip">Recipients: Give Inbox</span>
+                            <span class="chip">Condition: Always</span>
+                        </div>
+                    </div>
+
+                    <div class="rule-box">
+                        <strong>Auto-reply</strong>
+                        <div class="chip-row" id="autoreplyChips">
+                            <span class="chip">Disabled</span>
+                            <span class="chip">Duplicate safeguard: Off</span>
+                        </div>
+                    </div>
+
+                    <div class="rule-box">
+                        <strong>Tags & hierarchy</strong>
+                        <div class="chip-row" id="tagChips">
+                            <span class="chip">Generated tag: PAIRActioned/grant</span>
+                            <span class="chip">Implied category: donor</span>
+                            <span class="chip">Priority slot: 4</span>
+                        </div>
+                    </div>
+
+                    <div class="footer-actions">
+                        <div class="button secondary" id="discardCategory">Discard Changes</div>
+                        <div class="button" id="saveCategory">Save Category</div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+    <div class="toast" id="toast"></div>
+    <script>
+        function showToast(message) {
+            const toast = document.getElementById("toast");
+            toast.textContent = message;
+            toast.classList.add("show");
+            clearTimeout(window.__categoryToastTimer);
+            window.__categoryToastTimer = setTimeout(() => toast.classList.remove("show"), 1600);
+        }
+
+        function setChips(targetId, value) {
+            const root = document.getElementById(targetId);
+            root.innerHTML = "";
+            value.split("·").forEach((part) => {
+                const chip = document.createElement("span");
+                chip.className = "chip";
+                chip.textContent = part.trim();
+                root.appendChild(chip);
+            });
+        }
+
+        document.querySelectorAll(".category-pill").forEach((pill) => {
+            pill.addEventListener("click", () => {
+                document.querySelectorAll(".category-pill").forEach((item) => item.classList.remove("active"));
+                pill.classList.add("active");
+                document.getElementById("selectedCategoryLabel").textContent = `Selected category: ${pill.dataset.name}`;
+                document.getElementById("displayName").value = pill.dataset.name;
+                document.getElementById("categoryKey").value = pill.dataset.key;
+                document.getElementById("parentCategory").textContent = pill.dataset.parent;
+                document.getElementById("ruleText").textContent = pill.dataset.rule;
+
+                const folderPath = document.getElementById("folderPath");
+                folderPath.innerHTML = "";
+                pill.dataset.folder.split("/").forEach((segment) => {
+                    const node = document.createElement("span");
+                    node.className = "segment";
+                    node.textContent = segment.trim();
+                    folderPath.appendChild(node);
+                });
+
+                setChips("forwardingChips", pill.dataset.forwarding);
+                setChips("autoreplyChips", pill.dataset.autoreply);
+                setChips("tagChips", pill.dataset.tags);
+                showToast(`Loaded ${pill.dataset.name}`);
+            });
+        });
+
+        document.getElementById("saveCategory").addEventListener("click", () => showToast("Category saved in demo"));
+        document.getElementById("discardCategory").addEventListener("click", () => showToast("Changes discarded"));
+        document.getElementById("addCategoryButton").addEventListener("click", () => {
+            document.querySelectorAll(".category-pill").forEach((item) => item.classList.remove("active"));
+            document.getElementById("selectedCategoryLabel").textContent = "Selected category: New Category";
+            document.getElementById("displayName").value = "New Category";
+            document.getElementById("categoryKey").value = "new_category";
+            document.getElementById("parentCategory").textContent = "None";
+            document.getElementById("ruleText").textContent = "Describe the new category in plain English so the prompt renderer can include it.";
+            document.getElementById("folderPath").innerHTML = '<span class="segment">Inbox</span><span class="segment">New_Folder</span>';
+            setChips("forwardingChips", "Disabled");
+            setChips("autoreplyChips", "Disabled");
+            setChips("tagChips", "Generated tag: PAIRActioned/new_category · Priority slot: pending");
+            showToast("Started a new category draft");
+        });
+    </script>
+
+<script>
+(function () {
+    const storageKey = 'adminHubSelectedInbox';
+    const selects = document.querySelectorAll('[data-inbox-switcher]');
+    if (!selects.length) return;
+
+    const saved = localStorage.getItem(storageKey) || 'info@mlfa.org';
+    selects.forEach((select) => {
+        select.value = saved;
+        select.addEventListener('change', () => {
+            localStorage.setItem(storageKey, select.value);
+            selects.forEach((other) => {
+                if (other !== select) other.value = select.value;
+            });
+        });
+    });
+})();
+</script>
+
+</body>
+</html>

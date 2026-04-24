@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Hub Demo - Inboxes</title>
+    <style>
+        :root {
+            --bg: #F7F9FC;
+            --surface: #FFFFFF;
+            --surface-soft: #F0F4F8;
+            --line: #E5EAF0;
+            --text: #1F2937;
+            --muted: #6B7280;
+            --muted-2: #9CA3AF;
+            --accent: #4F6BED;
+            --accent-soft: rgba(79,107,237,0.08);
+            --success: #3BA776;
+            --success-soft: rgba(59,167,118,0.1);
+            --warning: #D9A441;
+            --warning-soft: rgba(217,164,65,0.12);
+            --neutral-pill: rgba(156,163,175,0.12);
+            --shadow: 0 1px 3px rgba(0,0,0,0.05);
+            --shadow-hover: 0 4px 14px rgba(0,0,0,0.08);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: "Inter", "Segoe UI", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        a { color: inherit; text-decoration: none; }
+
+        .layout {
+            min-height: 100vh;
+            display: grid;
+            grid-template-columns: 236px 1fr;
+        }
+
+        .sidebar {
+            background: #FFFFFF;
+            border-right: 1px solid var(--line);
+            padding: 24px 16px;
+        }
+
+        .brand {
+            color: var(--muted);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.16em;
+            font-weight: 600;
+            margin: 4px 10px 20px;
+        }
+
+        .nav-group { margin-bottom: 22px; }
+
+        .nav-label {
+            color: var(--muted-2);
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.14em;
+            margin: 0 10px 8px;
+            text-transform: uppercase;
+        }
+
+        .nav-link {
+            display: block;
+            padding: 10px 12px;
+            border-radius: 10px;
+            margin-bottom: 4px;
+            color: var(--muted);
+            border: 1px solid transparent;
+            font-size: 14px;
+            transition: all 0.15s ease;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            background: var(--accent-soft);
+            color: var(--accent);
+            border-color: rgba(79,107,237,0.12);
+            font-weight: 600;
+        }
+
+        .inbox-switcher {
+            margin: 0 6px 24px;
+            padding: 12px 14px;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: var(--surface-soft);
+        }
+
+        .inbox-switcher-label {
+            color: var(--muted-2);
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.12em;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .inbox-switcher-select {
+            width: 100%;
+            appearance: none;
+            background: #FFFFFF;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            color: var(--text);
+            font: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 9px 12px;
+            outline: none;
+        }
+
+        .inbox-switcher-select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(79,107,237,0.1);
+        }
+
+        .inbox-switcher-note {
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.5;
+            margin-top: 8px;
+        }
+
+        .main { padding: 32px; }
+
+        .page-shell {
+            max-width: 1380px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 24px;
+            margin-bottom: 28px;
+        }
+
+        .title-block h1 {
+            margin: 0;
+            font-size: 28px;
+            line-height: 1.1;
+            letter-spacing: -0.02em;
+            font-weight: 700;
+        }
+
+        .title-block p {
+            margin: 10px 0 0;
+            color: var(--muted);
+            font-size: 15px;
+            line-height: 1.7;
+            max-width: 780px;
+        }
+
+        .button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border-radius: 10px;
+            border: 1px solid transparent;
+            background: var(--accent);
+            color: #FFFFFF;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+
+        .button:hover { filter: brightness(0.95); }
+
+        .button.secondary {
+            background: var(--surface);
+            color: var(--text);
+            border-color: var(--line);
+        }
+
+        .button.secondary:hover {
+            filter: none;
+            background: var(--surface-soft);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1.15fr 0.85fr;
+            gap: 20px;
+            align-items: start;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: var(--shadow);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 16px;
+            margin-bottom: 18px;
+        }
+
+        .label {
+            color: var(--muted-2);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+            margin: 0;
+        }
+
+        .section-copy {
+            margin: 5px 0 0;
+            color: var(--muted);
+            line-height: 1.6;
+            font-size: 14px;
+        }
+
+        .list { display: grid; gap: 10px; }
+
+        .inbox-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 18px;
+            align-items: center;
+            padding: 16px 18px;
+            border-radius: 12px;
+            border: 1px solid var(--line);
+            background: var(--surface);
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .inbox-row:hover {
+            box-shadow: var(--shadow-hover);
+            border-color: rgba(79,107,237,0.2);
+        }
+
+        .inbox-row.active {
+            border-left: 3px solid var(--accent);
+            border-color: rgba(79,107,237,0.25);
+            background: rgba(79,107,237,0.02);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .inbox-main { min-width: 0; }
+
+        .inbox-row h3 {
+            margin: 0 0 4px;
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+        }
+
+        .inbox-row p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .row-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .status {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 5px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .status.manual {
+            background: var(--warning-soft);
+            color: #A0711A;
+        }
+
+        .status.auto {
+            background: rgba(79,107,237,0.1);
+            color: var(--accent);
+        }
+
+        .status.active {
+            background: var(--success-soft);
+            color: #2A7F58;
+        }
+
+        .status.draft {
+            background: var(--neutral-pill);
+            color: var(--muted);
+        }
+
+        .mini {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 5px 10px;
+            border-radius: 8px;
+            border: 1px solid var(--line);
+            background: var(--surface);
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .stack { display: grid; gap: 0; }
+
+        .form-section {
+            padding: 18px 0;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .form-section:last-of-type {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .form-section-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--muted-2);
+            margin-bottom: 14px;
+        }
+
+        .field {
+            display: grid;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+
+        .field:last-child { margin-bottom: 0; }
+
+        .field label {
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .input,
+        .select {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid var(--line);
+            background: var(--surface);
+            color: var(--text);
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.15s ease;
+        }
+
+        .input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(79,107,237,0.1);
+        }
+
+        .select {
+            display: flex;
+            align-items: center;
+            min-height: 42px;
+        }
+
+        .inline {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .info-block {
+            padding: 14px;
+            border-radius: 12px;
+            border: 1px solid var(--line);
+            background: var(--surface-soft);
+            margin-bottom: 10px;
+        }
+
+        .info-block:last-of-type { margin-bottom: 0; }
+
+        .info-block strong {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+            color: var(--text);
+        }
+
+        .info-block p {
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.6;
+            font-size: 13px;
+        }
+
+        .footer-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 18px;
+            padding-top: 18px;
+            border-top: 1px solid var(--line);
+        }
+
+        .toast {
+            position: fixed;
+            right: 20px;
+            top: 20px;
+            background: #1F2937;
+            color: #FFFFFF;
+            padding: 12px 16px;
+            border-radius: 10px;
+            opacity: 0;
+            transform: translateY(-8px);
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+            font-size: 14px;
+        }
+
+        .toast.show { opacity: 1; transform: translateY(0); }
+
+        @media (max-width: 1180px) {
+            .layout { grid-template-columns: 1fr; }
+            .sidebar { border-right: none; border-bottom: 1px solid var(--line); }
+            .grid { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 720px) {
+            .main { padding: 20px; }
+            .header { flex-direction: column; align-items: stretch; }
+            .inline { grid-template-columns: 1fr; }
+            .inbox-row { grid-template-columns: 1fr; }
+            .row-actions { justify-content: flex-start; }
+        }
+    </style>
+</head>
+<body>
+    <div class="layout">
+        <aside class="sidebar">
+            <div class="brand">MLFA Admin Hub Demo</div>
+
+            <div class="inbox-switcher">
+                <div class="inbox-switcher-label">Working Inbox</div>
+                <select class="inbox-switcher-select" data-inbox-switcher>
+                    <option value="info@mlfa.org">MLFA Main · info@mlfa.org</option>
+                    <option value="legal@mlfa.org">Legal · legal@mlfa.org</option>
+                    <option value="give@mlfa.org">Donor Ops · give@mlfa.org</option>
+                </select>
+                <div class="inbox-switcher-note">These settings pages apply to the inbox selected here.</div>
+            </div>
+
+            <div class="nav-group">
+                <div class="nav-label">Overview</div>
+                <a class="nav-link" href="index.html">Dashboard</a>
+                <a class="nav-link" href="hub.html">Review Hub</a>
+            </div>
+
+            <div class="nav-group">
+                <div class="nav-label">Settings</div>
+                <a class="nav-link active" href="inboxes.html">Inboxes</a>
+                <a class="nav-link" href="categories.html">Categories</a>
+                <a class="nav-link" href="recipients.html">Recipients</a>
+                <a class="nav-link" href="templates.html">Reply Templates</a>
+                <a class="nav-link" href="audit.html">Users & Audit</a>
+                <a class="nav-link" href="preview.html">Test Rules</a>
+            </div>
+        </aside>
+
+        <main class="main">
+            <div class="page-shell">
+                <div class="header">
+                    <div class="title-block">
+                        <h1>Inboxes</h1>
+                        <p>Admins add inboxes here, choose whether the inbox is live, and decide whether it starts in manual review or full automation. This page also shows the clone-existing-inbox flow.</p>
+                    </div>
+                    <div class="button" id="addInboxButton">+ Add Inbox</div>
+                </div>
+
+                <section class="grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <div>
+                                <div class="label">Existing inboxes</div>
+                                <h2 class="section-title">Live and draft inboxes</h2>
+                                <p class="section-copy">Click any inbox to load its setup into the editor on the right.</p>
+                            </div>
+                        </div>
+
+                        <div class="list">
+                            <div class="inbox-row active" data-inbox="MLFA Main" data-email="info@mlfa.org" data-key="info_mlfa_org" data-mode="Manual Review" data-status="Active">
+                                <div class="inbox-main">
+                                    <h3>MLFA Main</h3>
+                                    <p>info@mlfa.org · key: <strong>info_mlfa_org</strong></p>
+                                </div>
+                                <div class="row-actions">
+                                    <span class="status manual">Manual Review</span>
+                                    <span class="status active">Active</span>
+                                    <span class="mini">Edit</span>
+                                </div>
+                            </div>
+
+                            <div class="inbox-row" data-inbox="MLFA Legal" data-email="legal@mlfa.org" data-key="legal_mlfa_org" data-mode="Full Automation" data-status="Active">
+                                <div class="inbox-main">
+                                    <h3>MLFA Legal</h3>
+                                    <p>legal@mlfa.org · key: <strong>legal_mlfa_org</strong></p>
+                                </div>
+                                <div class="row-actions">
+                                    <span class="status auto">Full Automation</span>
+                                    <span class="status active">Active</span>
+                                    <span class="mini">Edit</span>
+                                </div>
+                            </div>
+
+                            <div class="inbox-row" data-inbox="Donor Ops" data-email="give@mlfa.org" data-key="give_mlfa_org" data-mode="Manual Review" data-status="Draft / Inactive">
+                                <div class="inbox-main">
+                                    <h3>Donor Ops</h3>
+                                    <p>give@mlfa.org · key: <strong>give_mlfa_org</strong></p>
+                                </div>
+                                <div class="row-actions">
+                                    <span class="status manual">Manual Review</span>
+                                    <span class="status draft">Draft</span>
+                                    <span class="mini">Edit</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <div>
+                                <div class="label">New inbox setup</div>
+                                <h2 class="section-title">Create or update an inbox</h2>
+                                <p class="section-copy">Use this setup panel to define the inbox, set its mode, and decide how it should go live.</p>
+                            </div>
+                        </div>
+
+                        <div class="stack">
+                            <div class="form-section">
+                                <div class="form-section-title">Inbox Basics</div>
+                                <div class="field">
+                                    <label>Display name</label>
+                                    <input class="input" id="displayName" value="Donor Operations">
+                                </div>
+                                <div class="field">
+                                    <label>Mailbox address / resource</label>
+                                    <input class="input" id="mailboxAddress" value="give@mlfa.org">
+                                </div>
+                                <div class="field">
+                                    <label>Inbox key</label>
+                                    <input class="input" id="inboxKey" value="give_mlfa_org">
+                                </div>
+                            </div>
+
+                            <div class="form-section">
+                                <div class="form-section-title">Behavior</div>
+                                <div class="inline">
+                                    <div class="field">
+                                        <label>Automation mode</label>
+                                        <div class="select" id="automationMode">Manual Review</div>
+                                    </div>
+                                    <div class="field">
+                                        <label>Status</label>
+                                        <div class="select" id="statusValue">Draft / Inactive</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-section">
+                                <div class="form-section-title">Advanced</div>
+                                <div class="info-block">
+                                    <strong>Clone an existing inbox</strong>
+                                    <p>Pull in categories, folder paths, recipients, templates, and priority order from MLFA Main as a starting point.</p>
+                                </div>
+                                <div class="info-block">
+                                    <strong>Safe publish flow</strong>
+                                    <p>New inboxes stay inactive until the admin reviews categories and clicks Publish.</p>
+                                </div>
+                            </div>
+
+                            <div class="footer-actions">
+                                <div class="button secondary" id="cancelInbox">Cancel</div>
+                                <div class="button" id="createInbox">Create Inbox</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        function showToast(message) {
+            const toast = document.getElementById("toast");
+            toast.textContent = message;
+            toast.classList.add("show");
+            clearTimeout(window.__inboxToastTimer);
+            window.__inboxToastTimer = setTimeout(() => toast.classList.remove("show"), 1600);
+        }
+
+        document.querySelectorAll(".inbox-row").forEach((row) => {
+            row.addEventListener("click", () => {
+                document.querySelectorAll(".inbox-row").forEach((item) => item.classList.remove("active"));
+                row.classList.add("active");
+                document.getElementById("displayName").value = row.dataset.inbox;
+                document.getElementById("mailboxAddress").value = row.dataset.email;
+                document.getElementById("inboxKey").value = row.dataset.key;
+                document.getElementById("automationMode").textContent = row.dataset.mode;
+                document.getElementById("statusValue").textContent = row.dataset.status;
+                showToast(`Loaded ${row.dataset.inbox}`);
+            });
+        });
+
+        document.getElementById("createInbox").addEventListener("click", () => showToast("Inbox saved in demo"));
+        document.getElementById("cancelInbox").addEventListener("click", () => showToast("Changes discarded"));
+        document.getElementById("addInboxButton").addEventListener("click", () => {
+            document.getElementById("displayName").value = "New Inbox";
+            document.getElementById("mailboxAddress").value = "new-inbox@mlfa.org";
+            document.getElementById("inboxKey").value = "new_inbox_mlfa_org";
+            document.getElementById("automationMode").textContent = "Manual Review";
+            document.getElementById("statusValue").textContent = "Draft / Inactive";
+            document.querySelectorAll(".inbox-row").forEach((item) => item.classList.remove("active"));
+            showToast("Opened new inbox draft");
+        });
+    </script>
+
+<script>
+(function () {
+    const storageKey = 'adminHubSelectedInbox';
+    const selects = document.querySelectorAll('[data-inbox-switcher]');
+    if (!selects.length) return;
+
+    const saved = localStorage.getItem(storageKey) || 'info@mlfa.org';
+    selects.forEach((select) => {
+        select.value = saved;
+        select.addEventListener('change', () => {
+            localStorage.setItem(storageKey, select.value);
+            selects.forEach((other) => {
+                if (other !== select) other.value = select.value;
+            });
+        });
+    });
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Hub Demo - Review Hub</title>
+    <style>
+        :root {
+            --bg: #F7F9FC;
+            --panel: #FFFFFF;
+            --panel-2: #F0F4F8;
+            --line: #E5EAF0;
+            --text: #1F2937;
+            --muted: #6B7280;
+            --soft: #6B7280;
+            --success: #3BA776;
+            --danger: #E5534B;
+            --accent: #4F6BED;
+            --accent-soft: rgba(79,107,237,0.08);
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: "Inter", "Segoe UI", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        a { color: inherit; text-decoration: none; }
+
+        .header {
+            padding: 0 24px;
+            background: #FFFFFF;
+            border-bottom: 1px solid var(--line);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            height: 56px;
+        }
+
+        .inbox-selector {
+            display: flex;
+            gap: 0;
+            flex-wrap: wrap;
+        }
+
+        .inbox-btn {
+            padding: 0 14px;
+            height: 56px;
+            background: transparent;
+            color: var(--muted);
+            border: none;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            font-family: inherit;
+            transition: all 0.15s ease;
+        }
+
+        .inbox-btn:hover,
+        .inbox-btn.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+            font-weight: 600;
+        }
+
+        .header-center {
+            color: var(--muted);
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.1em;
+            font-weight: 600;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .manage-tabs {
+            padding: 10px 24px 11px;
+            background: #FFFFFF;
+            border-bottom: 1px solid var(--line);
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+
+        .manage-tab {
+            padding: 7px 12px;
+            border: 1px solid transparent;
+            border-radius: 8px;
+            background: transparent;
+            color: var(--muted);
+            font-size: 13px;
+            font-family: inherit;
+            transition: all 0.15s ease;
+            cursor: pointer;
+        }
+
+        .manage-tab:hover,
+        .manage-tab.active {
+            background: var(--accent-soft);
+            color: var(--accent);
+            border-color: rgba(79,107,237,0.12);
+            font-weight: 600;
+        }
+
+        .toggle-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .toggle {
+            width: 40px;
+            height: 22px;
+            border-radius: 999px;
+            background: var(--line);
+            border: none;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .toggle::before {
+            content: "";
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #FFFFFF;
+            left: 3px;
+            top: 3px;
+            transition: transform 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+
+        .toggle.active { background: var(--success); }
+        .toggle.active::before { transform: translateX(18px); }
+
+        .btn {
+            padding: 8px 14px;
+            background: #FFFFFF;
+            color: var(--muted);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            font-family: inherit;
+            transition: all 0.15s ease;
+        }
+
+        .btn:hover,
+        .btn.active {
+            background: var(--panel-2);
+            color: var(--text);
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            border-color: transparent;
+            color: #FFFFFF;
+            font-weight: 600;
+        }
+
+        .btn-primary:hover {
+            filter: brightness(0.95);
+            background: var(--accent);
+            color: #FFFFFF;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 300px 1fr 340px;
+            gap: 16px;
+            padding: 16px 20px 20px;
+            min-height: calc(100vh - 100px);
+        }
+
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 16px;
+            min-height: 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+
+        .panel h2 {
+            margin: 0 0 14px;
+            font-size: 11px;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            font-weight: 600;
+        }
+
+        .queue-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .queue-item {
+            padding: 12px 14px;
+            border-radius: 10px;
+            background: var(--panel-2);
+            border: 1px solid var(--line);
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .queue-item.active,
+        .queue-item:hover {
+            border-color: rgba(79,107,237,0.25);
+            background: rgba(79,107,237,0.04);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        .queue-item.active {
+            border-left: 3px solid var(--accent);
+        }
+
+        .queue-item .subject {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: var(--text);
+        }
+
+        .queue-item .meta {
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .details-table {
+            display: grid;
+            gap: 0;
+            border-top: 1px solid var(--line);
+            margin-top: 12px;
+        }
+
+        .row {
+            padding: 13px 0;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .row .label {
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.09em;
+            font-size: 11px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .row .value {
+            font-size: 14px;
+            line-height: 1.65;
+            color: var(--text);
+        }
+
+        .action-buttons {
+            margin-top: 14px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .action-buttons .btn {
+            flex: 1;
+            padding: 11px 14px;
+            font-size: 14px;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .action-buttons .reject {
+            background: rgba(229,83,75,0.06);
+            border-color: rgba(229,83,75,0.2);
+            color: var(--danger);
+        }
+
+        .action-buttons .accept {
+            background: rgba(59,167,118,0.08);
+            border-color: rgba(59,167,118,0.2);
+            color: var(--success);
+        }
+
+        .composer {
+            margin-top: 18px;
+            display: grid;
+            gap: 12px;
+        }
+
+        .composer textarea {
+            width: 100%;
+            min-height: 145px;
+            resize: vertical;
+            border-radius: 10px;
+            border: 1px solid var(--line);
+            background: #FFFFFF;
+            color: var(--text);
+            padding: 12px 14px;
+            line-height: 1.7;
+            font-family: "Inter", "Segoe UI", sans-serif;
+            font-size: 14px;
+            transition: border-color 0.15s ease;
+        }
+
+        .composer textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(79,107,237,0.1);
+        }
+
+        .composer-preview {
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: #FAFBFD;
+            padding: 14px;
+            line-height: 1.7;
+            color: var(--text);
+            font-size: 14px;
+        }
+
+        .composer-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .original {
+            white-space: pre-wrap;
+            font-family: "Roboto Mono", monospace;
+            line-height: 1.7;
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        .toast {
+            position: fixed;
+            right: 20px;
+            top: 20px;
+            background: #1F2937;
+            color: #FFFFFF;
+            padding: 12px 16px;
+            border-radius: 10px;
+            opacity: 0;
+            transform: translateY(-8px);
+            transition: all 0.2s ease;
+            max-width: min(420px, calc(100vw - 40px));
+            z-index: 50;
+            font-size: 14px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        }
+
+        .toast.show { opacity: 1; transform: translateY(0); }
+
+        @media (max-width: 1200px) {
+            .layout { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="inbox-selector">
+            <button class="inbox-btn active">info@mlfa.org</button>
+            <button class="inbox-btn">legal@mlfa.org</button>
+            <button class="inbox-btn">give@mlfa.org</button>
+            <button class="inbox-btn">+ Add Inbox</button>
+        </div>
+        <div class="header-center">Approval Hub Demo</div>
+        <div class="header-right">
+            <div class="toggle-wrap">
+                <span>Full Automation</span>
+                <div class="toggle" id="automationToggle"></div>
+            </div>
+            <button class="btn">Approve All</button>
+            <a class="btn btn-primary" href="index.html">Settings</a>
+            <button class="btn">Logout</button>
+        </div>
+    </div>
+
+    <div class="manage-tabs">
+        <a class="manage-tab active" href="hub.html">Review Queue</a>
+        <a class="manage-tab" href="inboxes.html">Inboxes</a>
+        <a class="manage-tab" href="categories.html">Categories</a>
+        <a class="manage-tab" href="recipients.html">Recipients</a>
+        <a class="manage-tab" href="templates.html">Reply Templates</a>
+        <a class="manage-tab" href="preview.html">Test Rules</a>
+    </div>
+
+    <div class="layout">
+        <section class="panel">
+            <h2>Inbox Queue</h2>
+            <div class="queue-list" id="queueList">
+                <div class="queue-item active" data-index="0">
+                    <div class="subject">Employer match confirmation</div>
+                    <div class="meta">Arefin Ahmed · donor, grant · 2026-04-10 09:15</div>
+                </div>
+                <div class="queue-item" data-index="1">
+                    <div class="subject">Volunteer interest form</div>
+                    <div class="meta">Mariam K. · volunteer · 2026-04-10 09:06</div>
+                </div>
+                <div class="queue-item" data-index="2">
+                    <div class="subject">Potential media inquiry</div>
+                    <div class="meta">Reporter Desk · media · 2026-04-10 08:52</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel">
+            <h2>AI Analysis</h2>
+            <div class="row">
+                <div class="label">From</div>
+                <div class="value" id="emailMeta">[INBOX] 2026-04-10 09:15 | Arefin Ahmed | Employer match confirmation</div>
+            </div>
+            <div class="details-table">
+                <div class="row"><div class="label">Sender Name</div><div class="value" id="senderName">Arefin Ahmed</div></div>
+                <div class="row"><div class="label">Category</div><div class="value" id="category">Grant, Donor</div></div>
+                <div class="row"><div class="label">Amount Detected</div><div class="value" id="amountDetected">$300.00</div></div>
+                <div class="row"><div class="label">Recipients</div><div class="value" id="recipients">Give Inbox</div></div>
+                <div class="row"><div class="label">Action Plan</div><div class="value" id="actionPlan">Move to Inbox / Donor_Related / Grant · Forward · Leave unread</div></div>
+                <div class="row"><div class="label">Reason</div><div class="value" id="reason">Matching gift request with donor amount and employer match language.</div></div>
+            </div>
+            <div class="action-buttons">
+                <button class="btn reject" data-demo="Rejected for review">Reject</button>
+                <button class="btn accept" data-demo="Accepted and processed">Accept</button>
+            </div>
+
+            <div class="composer">
+                <div class="row" style="padding-bottom: 0;">
+                    <div class="label">Response Draft</div>
+                    <div class="value" style="font-family: inherit; color: var(--muted);">
+                        Type a normal response here. The demo converts it into HTML preview like the admin template builder.
+                    </div>
+                </div>
+                <textarea id="replyDraft">Dear Arefin,
+
+Thank you for sending this over. We confirmed the employer match request and the Give team will take it from here.
+
+Sincerely,
+The Muslim Legal Fund of America</textarea>
+                <div class="composer-preview" id="replyHtmlPreview"></div>
+                <div class="composer-actions">
+                    <button class="btn" id="resetDraft">Reset Draft</button>
+                    <button class="btn btn-primary" id="saveDraft">Save Draft</button>
+                </div>
+            </div>
+        </section>
+
+        <aside class="panel">
+            <h2>Original Email</h2>
+            <div class="original" id="originalContent">Please confirm the matching gift request for donor Arefin Ahmed.
+
+Matching Program: 1:1 U.S. Matching Gifts
+Donation Amount (USD): $300.00
+Gift ID: 335475109</div>
+        </aside>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const queueData = [
+            {
+                meta: "[INBOX] 2026-04-10 09:15 | Arefin Ahmed | Employer match confirmation",
+                senderName: "Arefin Ahmed",
+                category: "Grant, Donor",
+                amountDetected: "$300.00",
+                recipients: "Give Inbox",
+                actionPlan: "Move to Inbox / Donor_Related / Grant · Forward · Leave unread",
+                reason: "Matching gift request with donor amount and employer match language.",
+                originalContent: "Please confirm the matching gift request for donor Arefin Ahmed.\n\nMatching Program: 1:1 U.S. Matching Gifts\nDonation Amount (USD): $300.00\nGift ID: 335475109"
+            },
+            {
+                meta: "[INBOX] 2026-04-10 09:06 | Mariam K. | Volunteer interest form",
+                senderName: "Mariam K.",
+                category: "Volunteer",
+                amountDetected: "None",
+                recipients: "maryam.libdi@mlfa.org",
+                actionPlan: "Move to Inbox / Volunteer · Send volunteer template · Leave unread",
+                reason: "The sender explicitly asked how to volunteer with MLFA.",
+                originalContent: "Assalamu alaikum,\n\nI would love to support MLFA as a volunteer. Please let me know the next step."
+            },
+            {
+                meta: "[INBOX] 2026-04-10 08:52 | Reporter Desk | Potential media inquiry",
+                senderName: "Unknown",
+                category: "Media",
+                amountDetected: "None",
+                recipients: "media@mlfa.org",
+                actionPlan: "Move to Inbox / Media · Forward · Queue for review",
+                reason: "The sender is requesting comment on a public story.",
+                originalContent: "Hello,\n\nWe are reporting on civil liberties litigation and would like a statement from MLFA by noon."
+            }
+        ];
+
+        function showToast(message) {
+            const toast = document.getElementById("toast");
+            toast.textContent = message;
+            toast.classList.add("show");
+            clearTimeout(window.__demoToastTimer);
+            window.__demoToastTimer = setTimeout(() => toast.classList.remove("show"), 1800);
+        }
+
+        function escapeHtml(text) {
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;");
+        }
+
+        function renderReplyHtml() {
+            const raw = document.getElementById("replyDraft").value.trim();
+            const paragraphs = raw.split(/\n\s*\n/).filter(Boolean);
+            const html = paragraphs.map((paragraph) => `<p>${escapeHtml(paragraph).replace(/\n/g, "<br>")}</p>`).join("");
+            document.getElementById("replyHtmlPreview").innerHTML = html || "<p><em>No response drafted yet.</em></p>";
+        }
+
+        function renderQueueItem(index) {
+            const data = queueData[index];
+            document.getElementById("emailMeta").textContent = data.meta;
+            document.getElementById("senderName").textContent = data.senderName;
+            document.getElementById("category").textContent = data.category;
+            document.getElementById("amountDetected").textContent = data.amountDetected;
+            document.getElementById("recipients").textContent = data.recipients;
+            document.getElementById("actionPlan").textContent = data.actionPlan;
+            document.getElementById("reason").textContent = data.reason;
+            document.getElementById("originalContent").textContent = data.originalContent;
+
+            document.querySelectorAll(".queue-item").forEach((item, itemIndex) => {
+                item.classList.toggle("active", itemIndex === index);
+            });
+        }
+
+        document.querySelectorAll(".queue-item").forEach((item) => {
+            item.addEventListener("click", () => renderQueueItem(Number(item.dataset.index)));
+        });
+
+        document.querySelectorAll(".inbox-btn").forEach((button) => {
+            button.addEventListener("click", () => {
+                document.querySelectorAll(".inbox-btn").forEach((b) => b.classList.remove("active"));
+                button.classList.add("active");
+                showToast(`Switched to ${button.textContent}`);
+            });
+        });
+
+        document.getElementById("automationToggle").addEventListener("click", (event) => {
+            event.currentTarget.classList.toggle("active");
+            showToast(event.currentTarget.classList.contains("active")
+                ? "Full automation demo enabled"
+                : "Manual review demo enabled");
+        });
+
+        document.querySelectorAll("[data-demo]").forEach((button) => {
+            button.addEventListener("click", () => showToast(button.dataset.demo));
+        });
+
+        document.getElementById("replyDraft").addEventListener("input", renderReplyHtml);
+        document.getElementById("resetDraft").addEventListener("click", () => {
+            const currentSubject = document.querySelector(".queue-item.active .subject").textContent;
+            const sample = currentSubject === "Volunteer interest form"
+                ? "Dear Mariam,\n\nThank you for your interest in supporting MLFA. Please complete our volunteer form and our team will follow up.\n\nSincerely,\nThe Muslim Legal Fund of America"
+                : currentSubject === "Potential media inquiry"
+                    ? "Hello,\n\nThank you for reaching out. We received your request and our team will review whether a response is appropriate.\n\nSincerely,\nThe Muslim Legal Fund of America"
+                    : "Dear Arefin,\n\nThank you for sending this over. We confirmed the employer match request and the Give team will take it from here.\n\nSincerely,\nThe Muslim Legal Fund of America";
+            document.getElementById("replyDraft").value = sample;
+            renderReplyHtml();
+            showToast("Draft reset to sample response");
+        });
+        document.getElementById("saveDraft").addEventListener("click", () => showToast("Draft saved in demo"));
+
+        renderReplyHtml();
+    </script>
+</body>
+</html>
