@@ -138,6 +138,8 @@ SKIP_SENDER_RECIPIENT_PAIRS = [
 HUMAN_CHECK = True  # Legacy default; runtime behavior uses hub_settings["automation_enabled"]
 USE_THREAD_CONTEXT = os.getenv('USE_THREAD_CONTEXT', 'true').strip().lower() == 'true'  # Include thread context in GPT
 DEBUG_CLASSIFY_PROMPT = os.getenv('DEBUG_CLASSIFY_PROMPT', 'false').strip().lower() == 'true'
+INTERNAL_REPLY_BRIDGE_ENABLED = os.getenv('INTERNAL_REPLY_BRIDGE_ENABLED', 'true').strip().lower() == 'true'
+INTERNAL_REPLY_SEND_PREFIX = os.getenv('INTERNAL_REPLY_SEND_PREFIX', 'SEND:')
 
 # Storage for multiple pending emails
 pending_emails = {}  # Dictionary to store multiple emails by ID
@@ -356,7 +358,7 @@ def backfill_unread_since(folder_obj, folder_name: str, since_dt: datetime, max_
                     sender_addr = _extract_sender_address(msg).lower()
                     sender_is_staff = sender_addr in [e.lower() for e in EMAILS_TO_FORWARD]
                     is_automated_reply = bool(re.search(fr"{REPLY_ID_TAG}\s*([^\s<]+)", msg.body or "", flags=re.I|re.S))
-                    if sender_is_staff and is_automated_reply and not any((c or '').startswith('PAIRActioned') for c in (msg.categories or [])):
+                    if INTERNAL_REPLY_BRIDGE_ENABLED and sender_is_staff and is_automated_reply and not any((c or '').startswith('PAIRActioned') for c in (msg.categories or [])):
                         handle_internal_reply(msg)
                         processed_messages.add(dedup_key)
                         count += 1
@@ -471,7 +473,7 @@ def backfill_unread_since(folder_obj, folder_name: str, since_dt: datetime, max_
                     sender_addr = _extract_sender_address(msg).lower()
                     sender_is_staff = sender_addr in [e.lower() for e in EMAILS_TO_FORWARD]
                     is_automated_reply = bool(re.search(fr"{REPLY_ID_TAG}\s*([^\s<]+)", msg.body or "", flags=re.I|re.S))
-                    if sender_is_staff and is_automated_reply and not any((c or '').startswith('PAIRActioned') for c in (msg.categories or [])):
+                    if INTERNAL_REPLY_BRIDGE_ENABLED and sender_is_staff and is_automated_reply and not any((c or '').startswith('PAIRActioned') for c in (msg.categories or [])):
                         handle_internal_reply(msg)
                         processed_messages.add(dedup_key)
                         count += 1
@@ -620,7 +622,7 @@ def backfill_mailbox_since(since_dt: datetime, max_pages: int = 12) -> int:
                     sender_addr = _extract_sender_address(msg).lower()
                     sender_is_staff = sender_addr in [e.lower() for e in EMAILS_TO_FORWARD]
                     is_automated_reply = bool(re.search(fr"{REPLY_ID_TAG}\s*([^\s<]+)", msg.body or "", flags=re.I|re.S))
-                    if sender_is_staff and is_automated_reply and not any((c or '').startswith('PAIRActioned') for c in (msg.categories or [])):
+                    if INTERNAL_REPLY_BRIDGE_ENABLED and sender_is_staff and is_automated_reply and not any((c or '').startswith('PAIRActioned') for c in (msg.categories or [])):
                         handle_internal_reply(msg)
                         processed_messages.add(dedup_key)
                         count += 1
@@ -803,6 +805,8 @@ def classify_email(subject, body):
     - the message expresses gratitude only
     - the message mentions a legal issue but does NOT request help
 
+    If the sender references existing representation, ongoing coordination, or prior engagement with MLFA, classify as "active_communication" even if legal issues are described.
+
     → In these cases, classify as "active_communication"
 
     KEY RULE:
@@ -844,10 +848,6 @@ def classify_email(subject, body):
     Categorize as "donor" if:
     - Sender is an individual donor, OR
     - Email is about a specific donation (payment issue, receipt, tax receipt, confirmation we received it, follow-up)
-
-    Exclude:
-    - Automated notifications (PayPal, Bloomerang, etc.) unless a human is asking for help
-
     FORWARDING:
 
     1. Donation SUPPORT / RECEIPT / CONFIRMATION (CRITICAL)
@@ -926,48 +926,33 @@ def classify_email(subject, body):
     - **Microsoft Teams forwarded messages (delete)** → Categorize as `"delete_internal"` if the email is a forwarded or auto-generated message originating from Microsoft Teams.
     These emails are internal notification artifacts and provide no standalone communication value. They should be classified as `"delete_internal"` and deleted. They should not be forwarded, replied to, or categorized under any other label.
 
-    ---
+  
+    STATEMENTS / RECEIPTS:
+    Tag "statements_receipts" if it includes payment confirmation or receipt details (amount, tax, total, billing summary).
 
-    **Statements / Receipts** → Categorize as `"statements_receipts"` if the email contains:
-    - receipts
-    - proofs of purchase
-    - payment confirmations
-    - account statements summarizing activity or balances
+    Includes:
+    - Order confirmations WITH pricing
 
-    This includes:
-    - Staples receipts or similar documents with:
-    - dollar amount
-    - payment confirmation
-    - tax breakdown
-    - billing summary
-    - receipt attachments (PDF)
+    Exclude:
+    - Order confirmations WITHOUT pricing
+    - Shipping / tracking updates
+    - Promotions
+    - Automated system notifications (unless human inquiry)
 
-    Do NOT categorize as "statements_receipts" if the email is:
-    - a shipping notification
-    - an order confirmation without pricing
-    - a tracking update
-    - a promotional email
-    - SBA statements or SBA-related documentation
+    Forwarding:
+    - Do NOT forward
 
-    Do NOT forward `"statements_receipts"` emails.
+    INVOICE:
+    Tag "invoice" if payment is being requested (amount owed, due date, invoice label).
 
-    **Invoices** → Categorize as `"invoice"` if the email is a bill requesting payment for specific goods or services.
+    Forwarding:
+    - ≥ $1,000 → forward to: Syeda.sadiqa@mlfa.org
+    - < $1,000 → do NOT forward
 
-    Indicators of an invoice:
-    - payment requested or due
-    - amount owed
-    - due date
-    - “invoice” label
-    - request for remittance
-
-    AMOUNT RULE:
-    - If total ≥ $1,000 → forward to: Syeda.sadiqa@mlfa.org
-    - If total < $1,000 → do NOT forward (leave `all_recipients` empty)
-    - Use the final total (not subtotal/tax)
-    - If amount unclear → do NOT forward
-
-    Also return:
-    - `amount_detected`: number or null
+    Amount:
+    - Use final total; if unclear → do NOT forward
+        Also return:
+        - `amount_detected`: number or null
 
 
 
@@ -1363,7 +1348,7 @@ def process_folder(folder, name, delta_token):
                     sender_addr = _extract_sender_address(msg).lower()
                     sender_is_staff = sender_addr in [e.lower() for e in EMAILS_TO_FORWARD]
                     is_automated_reply = bool(re.search(fr"{REPLY_ID_TAG}\s*([^\s<]+)", msg.body or "", flags=re.I|re.S))
-                    if sender_is_staff and is_automated_reply and not any((c or '').startswith('PAIRActioned') for c in (msg.categories or [])):
+                    if INTERNAL_REPLY_BRIDGE_ENABLED and sender_is_staff and is_automated_reply and not any((c or '').startswith('PAIRActioned') for c in (msg.categories or [])):
                         handle_internal_reply(msg)
                         processed_messages.add(dedup_key)
                         continue
@@ -1481,7 +1466,7 @@ def process_folder(folder, name, delta_token):
                 sender_addr = _extract_sender_address(child).lower()
                 sender_is_staff = sender_addr in [e.lower() for e in EMAILS_TO_FORWARD]
                 is_automated_reply = bool(re.search(fr"{REPLY_ID_TAG}\s*([^\s<]+)", child.body or "", flags=re.I|re.S))
-                if sender_is_staff and is_automated_reply and not any(
+                if INTERNAL_REPLY_BRIDGE_ENABLED and sender_is_staff and is_automated_reply and not any(
                     (c or '').startswith('PAIRActioned') for c in (child.categories or [])
                 ):
                     handle_internal_reply(child)
@@ -1712,7 +1697,7 @@ def process_folder_via_delta(folder_obj, folder_name: str, delta_url: str | None
             sender_addr = _extract_sender_address(msg).lower()
             sender_is_staff = sender_addr in [e.lower() for e in EMAILS_TO_FORWARD]
             is_automated_reply = bool(re.search(fr"{REPLY_ID_TAG}\s*([^\s<]+)", msg.body or "", flags=re.I|re.S))
-            if sender_is_staff and is_automated_reply and not any((c or '').startswith('PAIRActioned') for c in (msg.categories or [])):
+            if INTERNAL_REPLY_BRIDGE_ENABLED and sender_is_staff and is_automated_reply and not any((c or '').startswith('PAIRActioned') for c in (msg.categories or [])):
                 handle_internal_reply(msg)
                 processed_messages.add(dedup_key)
                 continue
@@ -1835,8 +1820,8 @@ def handle_new_email(msg, result):
 
         # Prepend to the auto-generated forward body (HTML)
         fwd.body = (
-            "<p>Please click 'Reply All' to reply to info@mlfa.org. "
-            "Your email will automatically be sent to the correct person.</p>"
+            "<p>To send a reply back to the original sender, click 'Reply All' and start your message with "
+            "<strong>SEND:</strong>. Messages without <strong>SEND:</strong> stay internal.</p>"
             + instruction_html
         )
         fwd.body_type = 'HTML'
@@ -2209,34 +2194,60 @@ def mark_as_read(msg):
 
 def handle_internal_reply(msg): 
     print(f"\nREPLY DETECTED: From {msg.sender.address} | {msg.subject}")
-    body_parts = msg.body.split(REPLY_ID_TAG)
-    if len(body_parts) < 2:
-        print(" ERROR: Could not find the reply id, therefore, we cannot reply. ")
-        return
-
-    html_chunk = body_parts[0]
-    soup = BeautifulSoup(html_chunk, 'html.parser')
-    reply_content = str(soup)
-
-    if not reply_content: 
-        print("   WARNING: Reply appears to be empty. Not sending. ")
-        #We need to maybe re-email the person who wrote the reply to the forwarded email to try again. 
-        return
-
-    match = re.search(f"{REPLY_ID_TAG}(.+?)</", msg.body)
-    if not match: 
+    match = re.search(f"{REPLY_ID_TAG}(.+?)</", msg.body or "")
+    if not match:
         print("   ERROR: Could not find the original message ID.")
         return
     original_message_id = match.group(1).strip()
-    
+
+    clean_reply_text = (get_clean_message_text(msg) or "").strip()
+    if not clean_reply_text:
+        print("   WARNING: Reply appears to be empty. Not sending.")
+        try:
+            tag_email(msg, ['internal_note'], replyTag=False)
+        except Exception:
+            pass
+        msg.mark_as_read()
+        return
+
+    send_prefix = (INTERNAL_REPLY_SEND_PREFIX or "SEND:").strip()
+    if send_prefix and clean_reply_text[:len(send_prefix)].lower() != send_prefix.lower():
+        print("   INFO: Internal reply missing SEND: prefix; keeping internal only.")
+        try:
+            tag_email(msg, ['internal_note'], replyTag=False)
+        except Exception:
+            pass
+        msg.mark_as_read()
+        return
+
+    outbound_text = clean_reply_text[len(send_prefix):].strip() if send_prefix else clean_reply_text
+    if not outbound_text:
+        print("   WARNING: SEND: prefix found but no outbound content provided.")
+        try:
+            tag_email(msg, ['internal_note'], replyTag=False)
+        except Exception:
+            pass
+        msg.mark_as_read()
+        return
+
+    safe_reply_html = (
+        outbound_text.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace("\n", "<br>")
+    )
+
     try:
         original_msg = mailbox.get_message(original_message_id)
-        # Include all original participants on the final reply
-        final_reply = original_msg.reply(to_all=True)
-        final_reply.body = reply_content
+        final_reply = original_msg.reply(to_all=False)
+        final_reply.body = f"<div>{safe_reply_html}</div>"
         final_reply.body_type = "HTML"
         final_reply.send()
         print(f"   Sent reply to original sender: {original_msg.sender.address}")
+        try:
+            tag_email(msg, ['internal_reply_sent'], replyTag=False)
+        except Exception:
+            pass
     except Exception as e:
         print(f"   ERROR: Could not send final reply. Error: {e}")
         return
