@@ -119,9 +119,11 @@ EMAILS_TO_FORWARD = [
 NONREAD_CATEGORIES = {
     "active_communication",
     "donor",
+    "legal",
     "internship_law_student",
     "internship_undergraduate",
-    "organizational"
+    "organizational",
+    "volunteer",
 }  # Keep these unread
 SKIP_CATEGORIES = {'cold_outreach', 'irrelevant_other'}
 AUTO_REPLY_SAFEGUARD_CATEGORIES = {"legal", "jail_mail", "financial_aid", "volunteer", "internship_law_student", "internship_undergraduate"}
@@ -138,7 +140,7 @@ SKIP_SENDER_RECIPIENT_PAIRS = [
 HUMAN_CHECK = True  # Legacy default; runtime behavior uses hub_settings["automation_enabled"]
 USE_THREAD_CONTEXT = os.getenv('USE_THREAD_CONTEXT', 'true').strip().lower() == 'true'  # Include thread context in GPT
 DEBUG_CLASSIFY_PROMPT = os.getenv('DEBUG_CLASSIFY_PROMPT', 'false').strip().lower() == 'true'
-INTERNAL_REPLY_BRIDGE_ENABLED = os.getenv('INTERNAL_REPLY_BRIDGE_ENABLED', 'true').strip().lower() == 'true'
+INTERNAL_REPLY_BRIDGE_ENABLED = os.getenv('INTERNAL_REPLY_BRIDGE_ENABLED', 'false').strip().lower() == 'true'
 INTERNAL_REPLY_SEND_PREFIX = os.getenv('INTERNAL_REPLY_SEND_PREFIX', 'SEND:')
 
 # Storage for multiple pending emails
@@ -367,8 +369,7 @@ def backfill_unread_since(folder_obj, folder_name: str, since_dt: datetime, max_
                     # Skip internal MLFA senders (e.g., Sent Items picked up by mailbox-wide scan)
                     if _is_internal_sender(sender_addr):
                         try:
-                            tag_email(msg, ['internal_outgoing'], replyTag=False)
-                            mark_as_read(msg)
+                            _handle_internal_outgoing(msg)
                         except Exception:
                             pass
                         processed_messages.add(dedup_key)
@@ -378,8 +379,7 @@ def backfill_unread_since(folder_obj, folder_name: str, since_dt: datetime, max_
                     # Skip internal MLFA senders
                     if _is_internal_sender(sender_addr):
                         try:
-                            tag_email(msg, ['internal_outgoing'], replyTag=False)
-                            mark_as_read(msg)
+                            _handle_internal_outgoing(msg)
                         except Exception:
                             pass
                         processed_messages.add(dedup_key)
@@ -844,36 +844,18 @@ def classify_email(subject, body):
     - “Violation notice” = someone legitimate warning MLFA about a potential violation.
 
     DONOR CLASSIFICATION + FORWARDING RULES
+    Categorize as "donor" if the email is from an individual donor or concerns a specific donation, payment, receipt, tax receipt, confirmation, donor follow-up, payment issue, employer match, corporate giving, PayPal Giving Fund, or grant disbursement.
+    Do NOT categorize as "donor" if the sender is asking MLFA for money, funding, sponsorship, or financial support. Use "sponsorship" or "financial_aid" instead.
 
-    Categorize as "donor" if:
-    - Sender is an individual donor, OR
-    - Email is about a specific donation (payment issue, receipt, tax receipt, confirmation we received it, follow-up)
     FORWARDING:
-
-    1. Donation SUPPORT / RECEIPT / CONFIRMATION (CRITICAL)
-    - ALWAYS forward to: give@mlfa.org
-    - Applies regardless of amount
-    - Includes: tax receipts, missing receipts, payment issues, "did you receive my donation?"
-
-    2. NEW DONATION MESSAGES:
-    - If amount ≥ $1,000 → forward to: give@mlfa.org
-    - If amount < $1,000 → do NOT forward
+    - Forward active donor communications to give@mlfa.org regardless of amount, including questions, receipt requests, payment issues, follow-ups, or references to a prior donation.
+    - Do not forward passive automated donation/payment notifications under $1,000 if they merely report that someone donated or that a payment was received.
+    - Forward passive automated donation/payment notifications only if the final donation/payment amount is ≥ $1,000.
+    - Grant, employer match, corporate giving, corporate grant disbursement, and PayPal Giving Fund emails must be tagged "donor" and "grant" and always forwarded to give@mlfa.org.
 
     AMOUNT RULE:
-    - Extract final donation/payment amount → amount_detected (number or null)
-    - Ignore pledges, goals, or unrelated numbers
+    Extract only the final donation/payment amount as amount_detected. Ignore pledges, goals, years, IDs, balances, or unrelated numbers.
 
-    GRANT OVERRIDE:
-    - If tagged "grant":
-    - ALSO tag as "donor"
-    - ALWAYS forward to: give@mlfa.org
-    - IGNORE $1,000 threshold
-    
-    IMPORTANT DISTINCTION:
-    If the sender is asking MLFA FOR money, funding, sponsorship, the email must be categorized as `"sponsorship"`, NOT `"donor"`, regardless of donor-related keywords used.
-    If an email could otherwise appear donor-related but the intent is requesting financial support from MLFA, override `"donor"` and classify as `"financial_aid"`.
-    ADDITIONAL URGENCY FLAG for Donor:
-    If the email references a pending grant, matching gift program, corporate grant disbursement, PayPal Giving Fund, or employer match, it must remain categorized as `"donor"` AND include an additional tag `"grant"` because these require time-sensitive processing. For an email to have the `"grant"` tag it must also be tagged as `"donor"`. 
 
     - **Sponsorship requests** → If someone is **requesting sponsorship, fundraiser, from MLFA**, categorize as `"sponsorship"`. 
     Leave recipients as blank. 
@@ -1356,8 +1338,7 @@ def process_folder(folder, name, delta_token):
                     # Skip internal MLFA senders
                     if _is_internal_sender(sender_addr):
                         try:
-                            tag_email(msg, ['internal_outgoing'], replyTag=False)
-                            mark_as_read(msg)
+                            _handle_internal_outgoing(msg)
                         except Exception:
                             pass
                         processed_messages.add(dedup_key)
@@ -1366,8 +1347,7 @@ def process_folder(folder, name, delta_token):
                     # Skip all MLFA internal senders from approval/classification
                     if _is_internal_sender(sender_addr):
                         try:
-                            tag_email(msg, ['internal_outgoing'], replyTag=False)
-                            mark_as_read(msg)
+                            _handle_internal_outgoing(msg)
                         except Exception:
                             pass
                         processed_messages.add(dedup_key)
@@ -1476,8 +1456,7 @@ def process_folder(folder, name, delta_token):
                 # 2) Skip any internal MLFA senders (outgoing items landing in Inbox)
                 if _is_internal_sender(sender_addr):
                     try:
-                        tag_email(child, ['internal_outgoing'], replyTag=False)
-                        mark_as_read(child)
+                        _handle_internal_outgoing(child)
                     except Exception:
                         pass
                     processed_messages.add(dedup_key)
@@ -1705,8 +1684,7 @@ def process_folder_via_delta(folder_obj, folder_name: str, delta_url: str | None
             # Skip internal MLFA senders entirely
             if _is_internal_sender(sender_addr):
                 try:
-                    tag_email(msg, ['internal_outgoing'], replyTag=False)
-                    mark_as_read(msg)
+                    _handle_internal_outgoing(msg)
                 except Exception:
                     pass
                 processed_messages.add(dedup_key)
@@ -1864,6 +1842,139 @@ def ensure_folder_path(path_parts):
         return None
 
 
+ROUTING_PRIORITY = [
+    "jail_mail",
+    "legal",
+    "violation_notice",
+    "grant",
+    "donor",
+    "sponsorship",
+    "organizational",
+    "volunteer",
+    "internship_law_student",
+    "internship_undergraduate",
+    "job_application",
+    "media",
+    "invoice",
+    "statements_receipts",
+    "financial_aid",
+    "active_communication",
+    "cold_outreach",
+    "irrelevant_other",
+]
+
+CATEGORY_TO_FOLDER = {
+    "jail_mail": ["Apply for help", "Jail_Mail"],
+    "legal": ["Apply for help"],
+    "violation_notice": ["Irrelevant", "Violation_Notices"],
+    "grant": ["Donor_Related", "Grant"],
+    "donor": ["Donor_Related"],
+    "sponsorship": ["Sponsorship"],
+    "organizational": ["Organizational_Inquiries"],
+    "volunteer": ["Volunteer"],
+    "internship_law_student": ["Internship"],
+    "internship_undergraduate": ["Internship"],
+    "job_application": ["Job_Application"],
+    "media": ["Media"],
+    "invoice": ["Invoices"],
+    "statements_receipts": ["Statements"],
+    "financial_aid": ["Financial_Assistance"],
+    "active_communication": ["Active_Communication"],
+    "cold_outreach": ["Irrelevant", "Cold_Outreach"],
+    "irrelevant_other": ["Irrelevant", "Other"],
+}
+
+INTERNAL_TAG_TO_FOLDER = {
+    "internal_outgoing": ["Internal", "Outgoing"],
+    "internal_note": ["Internal", "Notes"],
+    "internal_reply_sent": ["Internal", "Replies_Sent"],
+}
+
+
+def _move_message_by_categories(msg, categories, context="message"):
+    category_set = set(categories or [])
+    move_target_path = None
+    for cat in ROUTING_PRIORITY:
+        if cat in category_set:
+            move_target_path = CATEGORY_TO_FOLDER.get(cat)
+            break
+
+    if not move_target_path:
+        return False
+
+    try:
+        print(f"📌 Routing {context}: categories={sorted(category_set)} -> {'/'.join(move_target_path)}")
+    except Exception:
+        pass
+
+    try:
+        dest = ensure_folder_path(move_target_path)
+        if dest:
+            msg.move(dest)
+            print(f"📁 Moved {context} to: {'/'.join(move_target_path)}")
+            return True
+        print(f"⚠️ No destination folder found for {context}: {'/'.join(move_target_path)}")
+    except Exception as e:
+        print(f"⚠️ Could not move {context} to {'/'.join(move_target_path)}: {e}")
+    return False
+
+
+def _move_message_by_internal_tag(msg, internal_tag, context="internal message"):
+    move_target_path = INTERNAL_TAG_TO_FOLDER.get((internal_tag or "").strip())
+    if not move_target_path:
+        return False
+
+    try:
+        print(f"📌 Routing {context}: {internal_tag} -> {'/'.join(move_target_path)}")
+    except Exception:
+        pass
+
+    try:
+        dest = ensure_folder_path(move_target_path)
+        if dest:
+            msg.move(dest)
+            print(f"📁 Moved {context} to: {'/'.join(move_target_path)}")
+            return True
+        print(f"⚠️ No destination folder found for {context}: {'/'.join(move_target_path)}")
+    except Exception as e:
+        print(f"⚠️ Could not move {context} to {'/'.join(move_target_path)}: {e}")
+    return False
+
+
+def _extract_routing_categories_from_tags(msg):
+    routing_categories = set()
+    for category in (msg.categories or []):
+        category = (category or "").strip()
+        if not category.startswith("PAIRActioned/"):
+            continue
+        suffix = category[len("PAIRActioned/"):]
+        if not suffix or suffix == "PAIRActioned":
+            continue
+        if suffix.startswith("replied/"):
+            continue
+        if suffix in {"internal_note", "internal_reply_sent", "dismissed", "internal_outgoing"}:
+            continue
+        if suffix.startswith("irrelevant/"):
+            suffix = suffix.split("/", 1)[1]
+        routing_categories.add(suffix)
+    return routing_categories
+
+
+def _handle_internal_outgoing(msg):
+    routed = _move_message_by_categories(
+        msg,
+        _extract_routing_categories_from_tags(msg),
+        context="internal outgoing",
+    )
+    if not routed:
+        _move_message_by_internal_tag(msg, "internal_outgoing", context="internal outgoing")
+    try:
+        mark_as_read(msg)
+    except Exception:
+        pass
+    return routed
+
+
 def handle_emails(categories, result, recipients_set, msg, name_sender): 
     move_target_path = None  # Decide one destination per message
     special_moved = False  # Marketing/out_of_office handled separately
@@ -1941,7 +2052,9 @@ def handle_emails(categories, result, recipients_set, msg, name_sender):
             recipients_set.update([f"{EMAILS_TO_FORWARD[3]}"])
 
         elif category == "donor":
-            recipients_set.update([f"{EMAILS_TO_FORWARD[9]}"])
+            # Donor forwarding should follow the classifier/result rules,
+            # not be re-added unconditionally at runtime.
+            pass
 
         elif category == "grant":
             recipients_set.update([f"{EMAILS_TO_FORWARD[9]}"])
@@ -2012,7 +2125,7 @@ def handle_emails(categories, result, recipients_set, msg, name_sender):
 
                 <p>Thank you for your interest in the Muslim Legal Fund of America (MLFA). We appreciate your enthusiasm and desire to support our work.</p>
 
-                <p>At this time, MLFA’s internship program is open exclusively to current law students. We are unable to offer internship placements to undergraduate students.</p>
+                <p>At this time, MLFA’s internship program is open exclusively to current law students. We are unable to offer internship placements to undergraduate and high school students.</p>
 
                 <p>That said, we welcome undergraduate students to get involved through our volunteer program. If you are interested in supporting our mission through volunteer efforts, please complete our volunteer form here:
                 <a href="https://forms.office.com/Pages/ResponsePage.aspx?id=oiB_iSDzkUu20kpWPbd_DnxSOj2KmWxOomg5Rm0KtBNUMElYQkdOQUU2WUxLTlNHMkY4S0tFOU1XViQlQCN0PWcu">MLFA Volunteer Form</a></p>
@@ -2075,51 +2188,9 @@ def handle_emails(categories, result, recipients_set, msg, name_sender):
             pass
 
     if not special_moved:
-        priority = [
-            "jail_mail",
-            "legal",
-            "violation_notice",
-            "grant",
-            "donor",
-            "sponsorship",
-            "organizational",
-            "volunteer",
-            "internship_law_student",
-            "internship_undergraduate",
-            "job_application",
-            "media",
-            "invoice",
-            "statements_receipts",
-            "financial_aid",
-            "active_communication",
-            "cold_outreach",
-            "irrelevant_other",
-            
-        ]
-        category_to_folder = {
-            "jail_mail": ["Apply for help", "Jail_Mail"],
-            "legal": ["Apply for help"],
-            "violation_notice": ["Irrelevant", "Violation_Notices"],
-            "grant": ["Donor_Related", "Grant"],
-            "donor": ["Donor_Related"],
-            "sponsorship": ["Sponsorship"],
-            "organizational": ["Organizational_Inquiries"],
-            "volunteer": ["Volunteer"],
-            "internship_law_student": ["Internship"],
-            "internship_undergraduate": ["Internship"],
-            "job_application": ["Job_Application"],
-            "media": ["Media"],
-            "invoice": ["Invoices"],
-            "statements_receipts": ["Statements"],
-            "financial_aid": ["Financial_Assistance"],
-            "active_communication": ["Active_Communication"],
-            "cold_outreach": ["Irrelevant", "Cold_Outreach"],
-            "irrelevant_other": ["Irrelevant", "Other"],
-            
-        }
-        for cat in priority:
+        for cat in ROUTING_PRIORITY:
             if cat in category_set:
-                move_target_path = category_to_folder.get(cat)
+                move_target_path = CATEGORY_TO_FOLDER.get(cat)
                 break
 
     if move_target_path:
@@ -2205,6 +2276,7 @@ def handle_internal_reply(msg):
         print("   WARNING: Reply appears to be empty. Not sending.")
         try:
             tag_email(msg, ['internal_note'], replyTag=False)
+            _move_message_by_internal_tag(msg, "internal_note", context="internal note")
         except Exception:
             pass
         msg.mark_as_read()
@@ -2215,6 +2287,7 @@ def handle_internal_reply(msg):
         print("   INFO: Internal reply missing SEND: prefix; keeping internal only.")
         try:
             tag_email(msg, ['internal_note'], replyTag=False)
+            _move_message_by_internal_tag(msg, "internal_note", context="internal note")
         except Exception:
             pass
         msg.mark_as_read()
@@ -2225,6 +2298,7 @@ def handle_internal_reply(msg):
         print("   WARNING: SEND: prefix found but no outbound content provided.")
         try:
             tag_email(msg, ['internal_note'], replyTag=False)
+            _move_message_by_internal_tag(msg, "internal_note", context="internal note")
         except Exception:
             pass
         msg.mark_as_read()
@@ -2246,6 +2320,7 @@ def handle_internal_reply(msg):
         print(f"   Sent reply to original sender: {original_msg.sender.address}")
         try:
             tag_email(msg, ['internal_reply_sent'], replyTag=False)
+            _move_message_by_internal_tag(msg, "internal_reply_sent", context="internal reply sent")
         except Exception:
             pass
     except Exception as e:
