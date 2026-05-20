@@ -140,8 +140,9 @@ SKIP_SENDER_RECIPIENT_PAIRS = [
 HUMAN_CHECK = True  # Legacy default; runtime behavior uses hub_settings["automation_enabled"]
 USE_THREAD_CONTEXT = os.getenv('USE_THREAD_CONTEXT', 'true').strip().lower() == 'true'  # Include thread context in GPT
 DEBUG_CLASSIFY_PROMPT = os.getenv('DEBUG_CLASSIFY_PROMPT', 'false').strip().lower() == 'true'
-INTERNAL_REPLY_BRIDGE_ENABLED = os.getenv('INTERNAL_REPLY_BRIDGE_ENABLED', 'false').strip().lower() == 'true'
-INTERNAL_REPLY_SEND_PREFIX = os.getenv('INTERNAL_REPLY_SEND_PREFIX', 'SEND:')
+INTERNAL_REPLY_BRIDGE_ENABLED = os.getenv('INTERNAL_REPLY_BRIDGE_ENABLED', 'true').strip().lower() == 'true'
+INTERNAL_REPLY_EXTERNAL_PREFIX = os.getenv('INTERNAL_REPLY_EXTERNAL_PREFIX', '[EXTERNAL]')
+INTERNAL_REPLY_INTERNAL_PREFIX = os.getenv('INTERNAL_REPLY_INTERNAL_PREFIX', '[INTERNAL]')
 
 # Storage for multiple pending emails
 pending_emails = {}  # Dictionary to store multiple emails by ID
@@ -358,30 +359,8 @@ def backfill_unread_since(folder_obj, folder_name: str, since_dt: datetime, max_
                         pass
                     # Internal reply detection
                     sender_addr = _extract_sender_address(msg).lower()
-                    sender_is_staff = sender_addr in [e.lower() for e in EMAILS_TO_FORWARD]
-                    is_automated_reply = bool(re.search(fr"{REPLY_ID_TAG}\s*([^\s<]+)", msg.body or "", flags=re.I|re.S))
-                    if INTERNAL_REPLY_BRIDGE_ENABLED and sender_is_staff and is_automated_reply and not any((c or '').startswith('PAIRActioned') for c in (msg.categories or [])):
+                    if _is_internal_bridge_candidate(msg, sender_addr):
                         handle_internal_reply(msg)
-                        processed_messages.add(dedup_key)
-                        count += 1
-                        continue
-
-                    # Skip internal MLFA senders (e.g., Sent Items picked up by mailbox-wide scan)
-                    if _is_internal_sender(sender_addr):
-                        try:
-                            _handle_internal_outgoing(msg)
-                        except Exception:
-                            pass
-                        processed_messages.add(dedup_key)
-                        count += 1
-                        continue
-
-                    # Skip internal MLFA senders
-                    if _is_internal_sender(sender_addr):
-                        try:
-                            _handle_internal_outgoing(msg)
-                        except Exception:
-                            pass
                         processed_messages.add(dedup_key)
                         count += 1
                         continue
@@ -1328,28 +1307,8 @@ def process_folder(folder, name, delta_token):
                 if not msg.is_read:
                     # Internal-reply detection (rare path)
                     sender_addr = _extract_sender_address(msg).lower()
-                    sender_is_staff = sender_addr in [e.lower() for e in EMAILS_TO_FORWARD]
-                    is_automated_reply = bool(re.search(fr"{REPLY_ID_TAG}\s*([^\s<]+)", msg.body or "", flags=re.I|re.S))
-                    if INTERNAL_REPLY_BRIDGE_ENABLED and sender_is_staff and is_automated_reply and not any((c or '').startswith('PAIRActioned') for c in (msg.categories or [])):
+                    if _is_internal_bridge_candidate(msg, sender_addr):
                         handle_internal_reply(msg)
-                        processed_messages.add(dedup_key)
-                        continue
-
-                    # Skip internal MLFA senders
-                    if _is_internal_sender(sender_addr):
-                        try:
-                            _handle_internal_outgoing(msg)
-                        except Exception:
-                            pass
-                        processed_messages.add(dedup_key)
-                        continue
-
-                    # Skip all MLFA internal senders from approval/classification
-                    if _is_internal_sender(sender_addr):
-                        try:
-                            _handle_internal_outgoing(msg)
-                        except Exception:
-                            pass
                         processed_messages.add(dedup_key)
                         continue
 
@@ -1444,25 +1403,12 @@ def process_folder(folder, name, delta_token):
 
                 # 1) Internal reply path (staff replies captured by your hidden REPLY_ID_TAG)
                 sender_addr = _extract_sender_address(child).lower()
-                sender_is_staff = sender_addr in [e.lower() for e in EMAILS_TO_FORWARD]
-                is_automated_reply = bool(re.search(fr"{REPLY_ID_TAG}\s*([^\s<]+)", child.body or "", flags=re.I|re.S))
-                if INTERNAL_REPLY_BRIDGE_ENABLED and sender_is_staff and is_automated_reply and not any(
-                    (c or '').startswith('PAIRActioned') for c in (child.categories or [])
-                ):
+                if _is_internal_bridge_candidate(child, sender_addr):
                     handle_internal_reply(child)
                     processed_messages.add(dedup_key)
                     continue
 
-                # 2) Skip any internal MLFA senders (outgoing items landing in Inbox)
-                if _is_internal_sender(sender_addr):
-                    try:
-                        _handle_internal_outgoing(child)
-                    except Exception:
-                        pass
-                    processed_messages.add(dedup_key)
-                    continue
-
-                # 3) Classify using reply-only text, then handle
+                # 2) Classify using reply-only text, then handle
                 body_to_analyze = get_clean_message_text(child)
                 # Silent skip for blocked senders or blocked sender/recipient pairs
                 if _should_skip_message(child):
@@ -1674,19 +1620,8 @@ def process_folder_via_delta(folder_obj, folder_name: str, delta_url: str | None
 
             # Internal reply detection
             sender_addr = _extract_sender_address(msg).lower()
-            sender_is_staff = sender_addr in [e.lower() for e in EMAILS_TO_FORWARD]
-            is_automated_reply = bool(re.search(fr"{REPLY_ID_TAG}\s*([^\s<]+)", msg.body or "", flags=re.I|re.S))
-            if INTERNAL_REPLY_BRIDGE_ENABLED and sender_is_staff and is_automated_reply and not any((c or '').startswith('PAIRActioned') for c in (msg.categories or [])):
+            if _is_internal_bridge_candidate(msg, sender_addr):
                 handle_internal_reply(msg)
-                processed_messages.add(dedup_key)
-                continue
-
-            # Skip internal MLFA senders entirely
-            if _is_internal_sender(sender_addr):
-                try:
-                    _handle_internal_outgoing(msg)
-                except Exception:
-                    pass
                 processed_messages.add(dedup_key)
                 continue
 
@@ -1758,6 +1693,7 @@ def handle_new_email(msg, result):
     categories = result.get("categories", [])
     recipients_set = set(result.get("all_recipients", []))
     name_sender = result.get("name_sender")
+    is_internal_message = _is_internal_sender(_extract_sender_address(msg))
     preexisting_flags = {
         category: bool(result.get(f"is_{category}_preexisting"))
         for category in AUTO_REPLY_SAFEGUARD_CATEGORIES
@@ -1785,9 +1721,19 @@ def handle_new_email(msg, result):
     # We pass the message and its categories to be tagged
     tag_email(msg, categories, replyTag=False)
     # We use the results to perform specific actions
-    handle_emails(categories, result, recipients_set, msg, name_sender)
+    handle_emails(
+        categories,
+        result,
+        recipients_set,
+        msg,
+        name_sender,
+        allow_outbound_actions=not is_internal_message,
+    )
 
     # No follow-up recipient merging; rely on classification and runtime participants
+
+    if is_internal_message:
+        recipients_set.clear()
 
     if recipients_set:
         fwd = msg.forward()
@@ -1798,8 +1744,10 @@ def handle_new_email(msg, result):
 
         # Prepend to the auto-generated forward body (HTML)
         fwd.body = (
-            "<p>To send a reply back to the original sender, click 'Reply All' and start your message with "
-            "<strong>SEND:</strong>. Messages without <strong>SEND:</strong> stay internal.</p>"
+            "<p><strong>Forwarding process:</strong> use <strong>Reply All</strong> in this thread.</p>"
+            "<p>Start your message with <strong>[EXTERNAL]</strong> if the reply should be sent back to the original sender through MLFA.</p>"
+            "<p>Start your message with <strong>[INTERNAL]</strong> if the reply should stay internal only.</p>"
+            "<p>Without either prefix, the message stays a normal internal email and will not be sent back to the original sender.</p>"
             + instruction_html
         )
         fwd.body_type = 'HTML'
@@ -1975,13 +1923,43 @@ def _handle_internal_outgoing(msg):
     return routed
 
 
-def handle_emails(categories, result, recipients_set, msg, name_sender): 
+def _get_internal_reply_mode(msg):
+    clean_reply_text = (get_clean_message_text(msg) or "").strip()
+    external_prefix = (INTERNAL_REPLY_EXTERNAL_PREFIX or "[EXTERNAL]").strip()
+    internal_prefix = (INTERNAL_REPLY_INTERNAL_PREFIX or "[INTERNAL]").strip()
+
+    if internal_prefix and clean_reply_text[:len(internal_prefix)].lower() == internal_prefix.lower():
+        return "internal"
+    if external_prefix and clean_reply_text[:len(external_prefix)].lower() == external_prefix.lower():
+        return "external"
+    return None
+
+
+def _is_internal_bridge_candidate(msg, sender_addr: str | None):
+    if not INTERNAL_REPLY_BRIDGE_ENABLED:
+        return False
+    try:
+        sender = (sender_addr or "").lower()
+        sender_is_staff = sender in [e.lower() for e in EMAILS_TO_FORWARD]
+        has_reply_id = bool(re.search(fr"{REPLY_ID_TAG}\s*([^\s<]+)", msg.body or "", flags=re.I | re.S))
+        if not sender_is_staff or not has_reply_id:
+            return False
+        if any((c or "").startswith("PAIRActioned") for c in (msg.categories or [])):
+            return False
+        return _get_internal_reply_mode(msg) in {"internal", "external"}
+    except Exception:
+        return False
+
+
+def handle_emails(categories, result, recipients_set, msg, name_sender, allow_outbound_actions=True): 
     move_target_path = None  # Decide one destination per message
     special_moved = False  # Marketing/out_of_office handled separately
     category_set = set(categories or [])
 
     for category in categories:
         if category in ("legal", "jail_mail"):
+            if not allow_outbound_actions:
+                continue
             reply_message = msg.reply(to_all=False)
             reply_message.body_type = "HTML"
             needs_personal = result.get("needs_personal_reply", False)
@@ -2005,6 +1983,8 @@ def handle_emails(categories, result, recipients_set, msg, name_sender):
                     <p>Once submitted, our team will carefully review your application and follow up with next steps. 
                     If you have any questions about the application process or need help completing it, please don't hesitate to reach out.</p>
 
+                    <p>If you have already submitted an application, please disregard this request; no further action is needed at this time.</p>
+
                     <p>We appreciate your patience as we work through applications, and we look forward to learning more about how we might be able to help.</p>
 
                     <p>Warm regards,<br>
@@ -2023,12 +2003,16 @@ def handle_emails(categories, result, recipients_set, msg, name_sender):
 
                     <p>This ensures our legal team has the information needed to review your case promptly.</p>
 
+                    <p>If you have already submitted an application, please disregard this request; no further action is needed at this time.</p>
+
                     <p>Sincerely,<br>
                     The MLFA Team</p>
                 """
             reply_message.send()
 
         elif category == "financial_aid":
+            if not allow_outbound_actions:
+                continue
             reply_message = msg.reply(to_all=False)
             reply_message.body_type = "HTML"
             reply_message.body = f"""
@@ -2049,7 +2033,8 @@ def handle_emails(categories, result, recipients_set, msg, name_sender):
 
         elif category == "violation_notice":
             # Forward legal/DMCA/policy violation notices to Arshia and Maria, then file
-            recipients_set.update([f"{EMAILS_TO_FORWARD[3]}"])
+            if allow_outbound_actions:
+                recipients_set.update([f"{EMAILS_TO_FORWARD[3]}"])
 
         elif category == "donor":
             # Donor forwarding should follow the classifier/result rules,
@@ -2057,15 +2042,18 @@ def handle_emails(categories, result, recipients_set, msg, name_sender):
             pass
 
         elif category == "grant":
-            recipients_set.update([f"{EMAILS_TO_FORWARD[9]}"])
+            if allow_outbound_actions:
+                recipients_set.update([f"{EMAILS_TO_FORWARD[9]}"])
 
         elif category == "sponsorship":
-            pass; 
+            pass
 
         elif category == "organizational":
-            recipients_set.update([f"{EMAILS_TO_FORWARD[2]}", f"{EMAILS_TO_FORWARD[3]}"])
+            pass
 
         elif category == "volunteer":
+            if not allow_outbound_actions:
+                continue
             reply_message = msg.reply(to_all=False)
             reply_message.body_type = "HTML"
             has_real_name = bool(name_sender and name_sender.strip() and name_sender.strip().lower() != 'sender')
@@ -2092,6 +2080,8 @@ def handle_emails(categories, result, recipients_set, msg, name_sender):
             recipients_set.update([f"{EMAILS_TO_FORWARD[8]}"])
 
         elif category.startswith("internship_"):
+            if not allow_outbound_actions:
+                continue
             reply_message = msg.reply(to_all=False)
             reply_message.body_type = "HTML"
             has_real_name = bool(name_sender and name_sender.strip() and name_sender.strip().lower() != 'sender')
@@ -2141,10 +2131,12 @@ def handle_emails(categories, result, recipients_set, msg, name_sender):
             
 
         elif category == "job_application":
-            recipients_set.update([f"{EMAILS_TO_FORWARD[6]}"])
+            if allow_outbound_actions:
+                recipients_set.update([f"{EMAILS_TO_FORWARD[6]}"])
 
         elif category == "media":
-            recipients_set.update([f"{EMAILS_TO_FORWARD[7]}"])
+            if allow_outbound_actions:
+                recipients_set.update([f"{EMAILS_TO_FORWARD[7]}"])
 
         elif category == "auto_reply":
             try:
@@ -2171,7 +2163,8 @@ def handle_emails(categories, result, recipients_set, msg, name_sender):
 
         elif category == "invoice":
             # Forward invoices to Syeda when the amount rule allows it, then file
-            recipients_set.update([f"{EMAILS_TO_FORWARD[1]}"])
+            if allow_outbound_actions:
+                recipients_set.update([f"{EMAILS_TO_FORWARD[1]}"])
 
         elif category == "statements_receipts":
             # Statements/receipts are filed only and never forwarded.
@@ -2282,9 +2275,11 @@ def handle_internal_reply(msg):
         msg.mark_as_read()
         return
 
-    send_prefix = (INTERNAL_REPLY_SEND_PREFIX or "SEND:").strip()
-    if send_prefix and clean_reply_text[:len(send_prefix)].lower() != send_prefix.lower():
-        print("   INFO: Internal reply missing SEND: prefix; keeping internal only.")
+    external_prefix = (INTERNAL_REPLY_EXTERNAL_PREFIX or "[EXTERNAL]").strip()
+    internal_prefix = (INTERNAL_REPLY_INTERNAL_PREFIX or "[INTERNAL]").strip()
+
+    if internal_prefix and clean_reply_text[:len(internal_prefix)].lower() == internal_prefix.lower():
+        print("   INFO: Internal reply marked [INTERNAL]; keeping internal only.")
         try:
             tag_email(msg, ['internal_note'], replyTag=False)
             _move_message_by_internal_tag(msg, "internal_note", context="internal note")
@@ -2293,9 +2288,19 @@ def handle_internal_reply(msg):
         msg.mark_as_read()
         return
 
-    outbound_text = clean_reply_text[len(send_prefix):].strip() if send_prefix else clean_reply_text
+    if external_prefix and clean_reply_text[:len(external_prefix)].lower() != external_prefix.lower():
+        print("   INFO: Internal reply missing [EXTERNAL]; keeping internal only.")
+        try:
+            tag_email(msg, ['internal_note'], replyTag=False)
+            _move_message_by_internal_tag(msg, "internal_note", context="internal note")
+        except Exception:
+            pass
+        msg.mark_as_read()
+        return
+
+    outbound_text = clean_reply_text[len(external_prefix):].strip() if external_prefix else clean_reply_text
     if not outbound_text:
-        print("   WARNING: SEND: prefix found but no outbound content provided.")
+        print("   WARNING: [EXTERNAL] prefix found but no outbound content provided.")
         try:
             tag_email(msg, ['internal_note'], replyTag=False)
             _move_message_by_internal_tag(msg, "internal_note", context="internal note")
