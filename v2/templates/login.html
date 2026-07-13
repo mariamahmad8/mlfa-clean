@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MLFA — Sign in</title>
+    <link rel="stylesheet" href="/static/shared.css">
+    <style>
+        body { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+        .login-card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 32px; width: 380px; box-shadow: var(--shadow); }
+        .brand-title { font-size: 20px; font-weight: 700; margin: 0 0 4px; }
+        .brand-sub { font-size: 13px; color: var(--text-muted); margin: 0 0 24px; }
+        .msg { padding: 10px 12px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 16px; }
+        .msg.error { background: rgba(168, 91, 78, 0.10); color: var(--danger); }
+        .msg.info { background: var(--accent-soft); color: var(--accent); }
+        .divider { border: none; border-top: 1px solid var(--line-soft); margin: 20px 0; }
+        details summary { font-size: 12px; color: var(--text-muted); cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <h1 class="brand-title">MLFA hub</h1>
+        <p class="brand-sub">Sign in to review and manage automated email routing.</p>
+
+        {% if error %}<div class="msg error">{{ error }}</div>{% endif %}
+        {% if info %}<div class="msg info">{{ info }}</div>{% endif %}
+
+        <form method="POST" action="/login">
+            <div class="form-group">
+                <label class="form-label">Work email</label>
+                <input class="form-input" type="email" name="email" placeholder="you@mlfa.org" autofocus required>
+            </div>
+            <button class="btn primary" type="submit" style="width: 100%;">Send me a login link</button>
+        </form>
+    </div>
+</body>
+</html>

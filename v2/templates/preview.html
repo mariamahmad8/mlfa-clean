@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MLFA — Preview & Test</title>
+    <link rel="stylesheet" href="/static/shared.css">
+    <style>
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .code-block { background: var(--panel-2); border-radius: var(--radius-sm); padding: 16px; font-family: monospace; font-size: 12px; white-space: pre-wrap; max-height: 500px; overflow-y: auto; }
+        .result-section { margin-top: 16px; }
+        .result-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+        .result-value { padding: 8px 12px; background: var(--panel-2); border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+    <header class="app-header">
+        <div class="brand">MLFA</div>
+        <div class="header-right">
+            <div class="user-chip" title="{{ current_email }}"><div class="avatar">{{ (current_email or "?")[0]|upper }}</div><div class="user-email">{{ current_email }}</div></div>
+            <a href="/settings" class="btn small">Back to settings</a>
+            <a href="/" class="btn small">Hub</a>
+        </div>
+    </header>
+
+    <div class="settings-layout">
+        {% include '_settings_nav.html' %}
+        <main class="settings-content">
+        <h1 class="page-title">Preview &amp; test</h1>
+        <p class="page-subtitle">See what the classification prompt looks like, or paste a fake email to see how it would be routed.</p>
+
+        <div class="toolbar">
+            <select class="form-select" id="inboxSelect" style="max-width: 300px;"></select>
+            <div></div>
+        </div>
+
+        <div class="two-col">
+            <div class="card">
+                <div class="card-title">Prompt preview</div>
+                <p class="card-desc">The full prompt as GPT would see it (with placeholder email).</p>
+                <button class="btn primary small" onclick="loadPrompt()" style="margin: 12px 0;">Load prompt</button>
+                <div class="code-block" id="promptBlock">Click "Load prompt" to see the assembled prompt.</div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Test classification</div>
+                <p class="card-desc">Paste a fake email and see the action plan without touching Outlook.</p>
+
+                <div class="form-group" style="margin-top: 12px;">
+                    <label class="form-label">Subject</label>
+                    <input class="form-input" id="tSubject" placeholder="Test subject">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Sender</label>
+                    <input class="form-input" id="tSender" placeholder="person@example.com">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Body</label>
+                    <textarea class="form-textarea" id="tBody" placeholder="Email content..."></textarea>
+                </div>
+                <button class="btn primary small" onclick="runTest()">Run test</button>
+
+                <div id="testResults" style="display:none;">
+                    <div class="result-section">
+                        <div class="result-label">Categories</div>
+                        <div class="result-value" id="rCategories"></div>
+                        <div class="result-label">Move to folder</div>
+                        <div class="result-value" id="rFolder"></div>
+                        <div class="result-label">Forward to</div>
+                        <div class="result-value" id="rForward"></div>
+                        <div class="result-label">Auto-reply</div>
+                        <div class="result-value" id="rReply"></div>
+                        <div class="result-label">Amount detected</div>
+                        <div class="result-value" id="rAmount"></div>
+                        <div class="result-label">Requires human review</div>
+                        <div class="result-value" id="rReview"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </main>
+    </div>
+
+    <script>
+        async function loadInboxes() {
+            const res = await fetch('/api/inboxes');
+            if (!res.ok) return;
+            const inboxes = await res.json();
+            const sel = document.getElementById('inboxSelect');
+            sel.innerHTML = inboxes.map(ib => `<option value="${ib.id}">${escapeHtml(ib.display_name)}</option>`).join('');
+        }
+
+        async function loadPrompt() {
+            const id = document.getElementById('inboxSelect').value;
+            const res = await fetch(`/api/inboxes/${id}/prompt_preview`);
+            if (!res.ok) { document.getElementById('promptBlock').textContent = 'Failed to load.'; return; }
+            const data = await res.json();
+            document.getElementById('promptBlock').textContent = data.prompt || '';
+        }
+
+        async function runTest() {
+            const id = document.getElementById('inboxSelect').value;
+            const payload = {
+                subject: document.getElementById('tSubject').value,
+                sender: document.getElementById('tSender').value,
+                body: document.getElementById('tBody').value,
+            };
+            const res = await fetch(`/api/inboxes/${id}/test_classification`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            if (!res.ok) { notify('Test failed', 'error'); return; }
+            const data = await res.json();
+            document.getElementById('testResults').style.display = 'block';
+            document.getElementById('rCategories').textContent = (data.classification.categories || []).join(', ') || '—';
+            document.getElementById('rFolder').textContent = data.plan.delete ? 'Deleted Items (trash)' : (data.plan.move_to_folder || '—');
+            document.getElementById('rForward').textContent = (data.plan.forward_to || []).join(', ') || '—';
+            document.getElementById('rReply').textContent = data.plan.send_reply ? 'Yes — would send auto-reply' : 'No';
+            document.getElementById('rAmount').textContent = data.classification.amount_detected ?? '—';
+            document.getElementById('rReview').textContent = data.plan.requires_human_review ? 'Yes' : 'No — auto-processed';
+        }
+
+        function notify(msg, type = 'success') { const el = document.createElement('div'); el.className = `notification ${type}`; el.textContent = msg; document.body.appendChild(el); setTimeout(() => el.remove(), 2000); }
+        function escapeHtml(s) { if (s == null) return ''; return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+        loadInboxes();
+    </script>
+</body>
+</html>

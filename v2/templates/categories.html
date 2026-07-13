@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MLFA — Categories</title>
+    <link rel="stylesheet" href="/static/shared.css">
+    <style>
+        .rule-row { display: grid; grid-template-columns: 24px 40px minmax(0, 1.2fr) minmax(0, 220px) 80px 100px 160px; gap: 12px; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line-soft); background: var(--panel); cursor: default; }
+        .rule-row:last-child { border-bottom: none; }
+        .rule-row:hover { background: var(--panel-hover); }
+        .rule-row.dragging { opacity: 0.5; }
+        .rule-row.drop-target { border-top: 2px solid var(--accent); }
+        .rule-priority { font-family: monospace; color: var(--text-muted); }
+        .rule-label { font-weight: 600; }
+        .rule-key { font-family: monospace; font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+        .rule-folder { font-size: 12px; color: var(--text-muted); font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .drag-handle { cursor: grab; color: var(--text-soft); user-select: none; text-align: center; font-size: 14px; line-height: 1; }
+        .drag-handle:active { cursor: grabbing; }
+        .drag-handle:hover { color: var(--text-muted); }
+    </style>
+</head>
+<body>
+    <header class="app-header">
+        <div class="brand">MLFA</div>
+        <div class="header-right">
+            <div class="user-chip" title="{{ current_email }}"><div class="avatar">{{ (current_email or "?")[0]|upper }}</div><div class="user-email">{{ current_email }}</div></div>
+            <a href="/settings" class="btn small">Back to settings</a>
+            <a href="/" class="btn small">Hub</a>
+        </div>
+    </header>
+
+    <div class="settings-layout">
+        {% include '_settings_nav.html' %}
+        <main class="settings-content">
+        <h1 class="page-title">Category rules</h1>
+        <p class="page-subtitle">The categories GPT can classify emails into. Order by priority (1 wins in ties).</p>
+
+        <div class="toolbar">
+            <select class="form-select" id="inboxSelect" onchange="loadRules()" style="max-width: 300px;"></select>
+            <button class="btn primary" onclick="openAddModal()">+ Add category</button>
+        </div>
+
+        <div class="card" style="padding: 0;">
+            <div id="rulesList"></div>
+        </div>
+        <div id="empty" class="empty-state" style="display:none;">No rules yet for this inbox.</div>
+        </main>
+    </div>
+
+    <div class="modal-backdrop" id="modal" style="display:none;">
+        <div class="modal">
+            <h3 class="modal-title" id="modalTitle">Add category</h3>
+            <input type="hidden" id="fRuleId">
+
+            <div class="form-group">
+                <label class="form-label">Key (stable id, lowercase, no spaces)</label>
+                <input class="form-input" id="fKey" placeholder="donor">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Display label</label>
+                <input class="form-input" id="fLabel" placeholder="Donor">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Rule text (used in GPT prompt)</label>
+                <textarea class="form-textarea" id="fRuleText"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Amount threshold ($)</label>
+                <input class="form-input" type="number" id="fAmount" placeholder="leave blank if none">
+                <div class="form-hint">Only forward when detected amount meets or exceeds this. Used for donor and invoice rules.</div>
+            </div>
+            <input type="hidden" id="fPriority">
+
+            <div class="form-group">
+                <label class="form-label">Destination folder (use / for nesting)</label>
+                <input class="form-input" id="fFolder" placeholder="Donor_Related/Grant">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Forward to (pick from recipient directory)</label>
+                <div id="fForwardList" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 8px;"></div>
+                <div class="form-hint">Manage the directory on the Recipients page.</div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Reply template (default)</label>
+                <select class="form-select" id="fReplySelect">
+                    <option value="">— No auto-reply —</option>
+                </select>
+                <div class="form-hint">Sent when GPT does not flag the email as needing a personal reply.</div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Reply template (personal — when needs_personal_reply is true)</label>
+                <select class="form-select" id="fReplyPersonalSelect">
+                    <option value="">— Same as default —</option>
+                </select>
+                <div class="form-hint">Used for emails with case-specific details or referrals. Leave empty to use the default template.</div>
+            </div>
+
+            <div class="form-group" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
+                <label class="form-check"><input type="checkbox" id="fActive"> Active</label>
+                <label class="form-check"><input type="checkbox" id="fMarkRead"> Mark as read</label>
+                <label class="form-check"><input type="checkbox" id="fSkip"> Skip processing</label>
+                <label class="form-check"><input type="checkbox" id="fAutoReply"> Send auto-reply</label>
+                <label class="form-check"><input type="checkbox" id="fSafeguard"> Reply safeguard (no duplicates)</label>
+                <label class="form-check"><input type="checkbox" id="fSkipInternal"> Skip if sender is internal</label>
+                <label class="form-check"><input type="checkbox" id="fDeleteImmediately"> Delete immediately (skip folder)</label>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn" onclick="closeModal()">Cancel</button>
+                <button class="btn primary" onclick="saveRule()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentInboxId = null;
+        let rules = [];
+        let recipients = [];
+        let templates = [];
+
+        async function loadInboxes() {
+            const res = await fetch('/api/inboxes');
+            if (!res.ok) return;
+            const inboxes = await res.json();
+            const sel = document.getElementById('inboxSelect');
+            sel.innerHTML = inboxes.map(ib => `<option value="${ib.id}">${escapeHtml(ib.display_name)}</option>`).join('');
+            if (inboxes.length) {
+                currentInboxId = inboxes[0].id;
+                await loadRules();
+            }
+        }
+
+        async function loadRules() {
+            currentInboxId = document.getElementById('inboxSelect').value;
+            if (!currentInboxId) return;
+            const [rulesRes, recipRes, tplRes] = await Promise.all([
+                fetch(`/api/inboxes/${currentInboxId}/rules`),
+                fetch(`/api/inboxes/${currentInboxId}/recipients`),
+                fetch(`/api/inboxes/${currentInboxId}/templates`),
+            ]);
+            if (!rulesRes.ok) return;
+            rules = await rulesRes.json();
+            recipients = recipRes.ok ? await recipRes.json() : [];
+            templates = tplRes.ok ? await tplRes.json() : [];
+            renderRules();
+        }
+
+        function renderRecipientCheckboxes(selectedEmails) {
+            const container = document.getElementById('fForwardList');
+            if (recipients.length === 0) {
+                container.innerHTML = '<div class="text-muted text-small">No recipients yet. Add some on the Recipients page.</div>';
+                return;
+            }
+            const selectedSet = new Set((selectedEmails || []).map(e => (e || '').toLowerCase()));
+            container.innerHTML = recipients.filter(r => r.active).map(r => `
+                <label class="form-check" style="padding: 4px 0;">
+                    <input type="checkbox" class="fRecipCheck" value="${escapeHtml(r.email)}" ${selectedSet.has(r.email.toLowerCase()) ? 'checked' : ''}>
+                    <span><strong>${escapeHtml(r.label_recipient)}</strong> <span class="text-muted text-small">${escapeHtml(r.email)}</span></span>
+                </label>
+            `).join('');
+        }
+
+        function renderTemplateSelect(selectedBody, selectId, blankLabel) {
+            const sel = document.getElementById(selectId);
+            sel.innerHTML = `<option value="">${blankLabel}</option>` +
+                templates.filter(t => t.active).map(t =>
+                    `<option value="${escapeHtml(t.body_html)}">${escapeHtml(t.name_template)}</option>`
+                ).join('');
+            if (selectedBody) {
+                for (const opt of sel.options) {
+                    if (opt.value === selectedBody) { sel.value = selectedBody; return; }
+                }
+                const custom = document.createElement('option');
+                custom.value = selectedBody;
+                custom.textContent = '(custom text — edit templates to change)';
+                sel.appendChild(custom);
+                sel.value = selectedBody;
+            }
+        }
+
+        function renderRules() {
+            const list = document.getElementById('rulesList');
+            document.getElementById('empty').style.display = rules.length ? 'none' : 'block';
+            list.innerHTML = rules.map(r => `
+                <div class="rule-row" draggable="true" data-rule-id="${r.id}">
+                    <span class="drag-handle" title="Drag to reorder">⋮⋮</span>
+                    <span class="rule-priority">${r.priority}</span>
+                    <div>
+                        <div class="rule-label">${escapeHtml(r.label)}</div>
+                        <div class="rule-key">${escapeHtml(r.key)}</div>
+                    </div>
+                    <div class="rule-folder">${escapeHtml(r.folder_path || '—')}</div>
+                    <div class="text-small text-muted">${(r.emails_to_forward || []).length} fwd</div>
+                    <div>${r.active ? '<span class="badge success">Active</span>' : '<span class="badge">Inactive</span>'}</div>
+                    <div class="actions-cell">
+                        <button class="btn small" onclick="openEditModal(${r.id})">Edit</button>
+                        <button class="btn small danger" onclick="deleteRule(${r.id})">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+            attachDragHandlers();
+        }
+
+        // --- Drag and drop reordering ---
+        let draggedRuleId = null;
+
+        function attachDragHandlers() {
+            document.querySelectorAll('.rule-row').forEach(row => {
+                row.addEventListener('dragstart', (e) => {
+                    draggedRuleId = parseInt(row.dataset.ruleId, 10);
+                    row.classList.add('dragging');
+                    e.dataTransfer.effectAllowed = 'move';
+                });
+                row.addEventListener('dragend', () => {
+                    row.classList.remove('dragging');
+                    document.querySelectorAll('.rule-row').forEach(r => r.classList.remove('drop-target'));
+                });
+                row.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    document.querySelectorAll('.rule-row').forEach(r => r.classList.remove('drop-target'));
+                    if (parseInt(row.dataset.ruleId, 10) !== draggedRuleId) {
+                        row.classList.add('drop-target');
+                    }
+                });
+                row.addEventListener('drop', async (e) => {
+                    e.preventDefault();
+                    const targetId = parseInt(row.dataset.ruleId, 10);
+                    if (targetId === draggedRuleId) return;
+                    await reorderRules(draggedRuleId, targetId);
+                });
+            });
+        }
+
+        async function reorderRules(draggedId, targetId) {
+            const fromIdx = rules.findIndex(r => r.id === draggedId);
+            const toIdx = rules.findIndex(r => r.id === targetId);
+            if (fromIdx === -1 || toIdx === -1) return;
+
+            // Move dragged rule into new position
+            const [dragged] = rules.splice(fromIdx, 1);
+            rules.splice(toIdx, 0, dragged);
+
+            // Reassign priorities based on new order
+            rules.forEach((r, i) => { r.priority = i + 1; });
+            renderRules();
+
+            // Persist to backend
+            await Promise.all(rules.map(r =>
+                fetch(`/api/rules/${r.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ priority: r.priority }),
+                })
+            ));
+            notify('Priorities updated');
+        }
+
+        function openAddModal() {
+            document.getElementById('modalTitle').textContent = 'Add category';
+            document.getElementById('fRuleId').value = '';
+            document.getElementById('fKey').value = '';
+            document.getElementById('fLabel').value = '';
+            document.getElementById('fRuleText').value = '';
+            document.getElementById('fPriority').value = '999';
+            document.getElementById('fAmount').value = '';
+            document.getElementById('fFolder').value = '';
+            renderRecipientCheckboxes([]);
+            renderTemplateSelect('', 'fReplySelect', '— No auto-reply —');
+            renderTemplateSelect('', 'fReplyPersonalSelect', '— Same as default —');
+            document.getElementById('fActive').checked = true;
+            document.getElementById('fMarkRead').checked = true;
+            document.getElementById('fSkip').checked = false;
+            document.getElementById('fAutoReply').checked = false;
+            document.getElementById('fSafeguard').checked = false;
+            document.getElementById('fSkipInternal').checked = false;
+            document.getElementById('fDeleteImmediately').checked = false;
+            document.getElementById('modal').style.display = 'flex';
+        }
+
+        async function openEditModal(ruleId) {
+            const res = await fetch(`/api/rules/${ruleId}`);
+            if (!res.ok) return;
+            const r = await res.json();
+            document.getElementById('modalTitle').textContent = 'Edit category';
+            document.getElementById('fRuleId').value = r.id;
+            document.getElementById('fKey').value = r.key || '';
+            document.getElementById('fLabel').value = r.label || '';
+            document.getElementById('fRuleText').value = r.rule_text || '';
+            document.getElementById('fPriority').value = r.priority ?? 999;
+            document.getElementById('fAmount').value = r.amount_threshold ?? '';
+            document.getElementById('fFolder').value = r.folder_path || '';
+            renderRecipientCheckboxes(r.emails_to_forward || []);
+            renderTemplateSelect(r.reply_template || '', 'fReplySelect', '— No auto-reply —');
+            renderTemplateSelect(r.reply_template_personal || '', 'fReplyPersonalSelect', '— Same as default —');
+            document.getElementById('fActive').checked = !!r.active;
+            document.getElementById('fMarkRead').checked = !!r.mark_read;
+            document.getElementById('fSkip').checked = !!r.skip;
+            document.getElementById('fAutoReply').checked = !!r.auto_reply_enabled;
+            document.getElementById('fSafeguard').checked = !!r.auto_reply_safeguard;
+            document.getElementById('fSkipInternal').checked = !!r.skip_if_internal;
+            document.getElementById('fDeleteImmediately').checked = !!r.delete_immediately;
+            document.getElementById('modal').style.display = 'flex';
+        }
+
+        function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+        async function saveRule() {
+            const id = document.getElementById('fRuleId').value;
+            const amtRaw = document.getElementById('fAmount').value.trim();
+            const payload = {
+                key: document.getElementById('fKey').value.trim(),
+                label: document.getElementById('fLabel').value.trim(),
+                rule_text: document.getElementById('fRuleText').value,
+                priority: parseInt(document.getElementById('fPriority').value || '999', 10),
+                amount_threshold: amtRaw ? parseFloat(amtRaw) : null,
+                folder_path: document.getElementById('fFolder').value.trim(),
+                emails_to_forward: Array.from(document.querySelectorAll('.fRecipCheck:checked')).map(el => el.value),
+                reply_template: document.getElementById('fReplySelect').value,
+                reply_template_personal: document.getElementById('fReplyPersonalSelect').value,
+                active: document.getElementById('fActive').checked,
+                mark_read: document.getElementById('fMarkRead').checked,
+                skip: document.getElementById('fSkip').checked,
+                auto_reply_enabled: document.getElementById('fAutoReply').checked,
+                auto_reply_safeguard: document.getElementById('fSafeguard').checked,
+                skip_if_internal: document.getElementById('fSkipInternal').checked,
+                delete_immediately: document.getElementById('fDeleteImmediately').checked,
+            };
+            const url = id ? `/api/rules/${id}` : `/api/inboxes/${currentInboxId}/rules`;
+            const method = id ? 'PATCH' : 'POST';
+            const res = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            if (res.ok) { closeModal(); notify('Saved'); await loadRules(); }
+            else notify('Save failed', 'error');
+        }
+
+        async function deleteRule(ruleId) {
+            if (!confirm('Delete this category rule?')) return;
+            const res = await fetch(`/api/rules/${ruleId}`, { method: 'DELETE' });
+            if (res.ok) { notify('Deleted'); await loadRules(); }
+        }
+
+        function notify(msg, type = 'success') {
+            const el = document.createElement('div');
+            el.className = `notification ${type}`;
+            el.textContent = msg;
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 2000);
+        }
+
+        function escapeHtml(s) {
+            if (s == null) return '';
+            return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        loadInboxes();
+    </script>
+</body>
+</html>

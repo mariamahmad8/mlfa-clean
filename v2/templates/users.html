@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MLFA — Users</title>
+    <link rel="stylesheet" href="/static/shared.css">
+</head>
+<body>
+    <header class="app-header">
+        <div class="brand">MLFA</div>
+        <div class="header-right">
+            <div class="user-chip" title="{{ current_email }}"><div class="avatar">{{ (current_email or "?")[0]|upper }}</div><div class="user-email">{{ current_email }}</div></div>
+            <a href="/settings" class="btn small">Back to settings</a>
+            <a href="/" class="btn small">Hub</a>
+        </div>
+    </header>
+
+    <div class="settings-layout">
+        {% include '_settings_nav.html' %}
+        <main class="settings-content">
+        <h1 class="page-title">Users</h1>
+        <p class="page-subtitle">People who can sign in. Admins can edit settings, reviewers can only work the queue.</p>
+
+        <div class="toolbar">
+            <div></div>
+            <button class="btn primary" onclick="openAddModal()">+ Add user</button>
+        </div>
+
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Email</th>
+                    <th>Display name</th>
+                    <th>Role</th>
+                    <th>Last login</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+        </table>
+        <div id="empty" class="empty-state" style="display:none;">No users yet.</div>
+        </main>
+    </div>
+
+    <div class="modal-backdrop" id="modal" style="display:none;">
+        <div class="modal">
+            <h3 class="modal-title" id="modalTitle">Add user</h3>
+            <input type="hidden" id="fUserId">
+
+            <div class="form-group">
+                <label class="form-label">Email (their Microsoft/work email)</label>
+                <input class="form-input" id="fEmail" placeholder="staff@mlfa.org">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Role</label>
+                <select class="form-select" id="fRole">
+                    <option value="reviewer">Reviewer</option>
+                    <option value="admin">Admin</option>
+                </select>
+                <div class="form-hint">Reviewers only work the queue. Admins can edit settings.</div>
+            </div>
+
+            <div class="form-group" id="assignedInboxesRow">
+                <label class="form-label">Assigned inboxes (for reviewers only)</label>
+                <div id="fAssignedList" style="border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 8px; max-height: 180px; overflow-y: auto;"></div>
+                <div class="form-hint">Reviewers only see queues from checked inboxes. Admins always see everything regardless.</div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-check"><input type="checkbox" id="fActive" checked> Active</label>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn" onclick="closeModal()">Cancel</button>
+                <button class="btn primary" onclick="save()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let users = [];
+        let allInboxes = [];
+
+        async function loadUsers() {
+            const [uRes, iRes] = await Promise.all([
+                fetch('/api/users'),
+                fetch('/api/inboxes'),
+            ]);
+            if (!uRes.ok) return;
+            users = await uRes.json();
+            allInboxes = iRes.ok ? await iRes.json() : [];
+            render();
+        }
+
+        function renderInboxCheckboxes(assignedIds) {
+            const set = new Set((assignedIds || []).map(id => parseInt(id, 10)));
+            document.getElementById('fAssignedList').innerHTML = allInboxes.map(ib => `
+                <label class="form-check" style="padding: 4px 0;">
+                    <input type="checkbox" class="fInboxCheck" value="${ib.id}" ${set.has(ib.id) ? 'checked' : ''}>
+                    <span>${escapeHtml(ib.display_name)} <span class="text-muted text-small">(${escapeHtml(ib.email_to_watch)})</span></span>
+                </label>
+            `).join('') || '<div class="text-muted text-small">No inboxes yet.</div>';
+        }
+
+        function render() {
+            const tbody = document.getElementById('tbody');
+            document.getElementById('empty').style.display = users.length ? 'none' : 'block';
+            tbody.innerHTML = users.map(u => `
+                <tr>
+                    <td><strong>${escapeHtml(u.email)}</strong></td>
+                    <td>${escapeHtml(u.display_name || '—')}</td>
+                    <td>${u.role_user === 'admin' ? '<span class="badge warning">Admin</span>' : '<span class="badge">Reviewer</span>'}</td>
+                    <td class="text-muted text-small">${u.last_login_at ? formatCentral(u.last_login_at) : 'Never'}</td>
+                    <td>${u.active ? '<span class="badge success">Active</span>' : '<span class="badge">Inactive</span>'}</td>
+                    <td class="actions-cell">
+                        <button class="btn small" onclick="openEditModal(${u.id})">Edit</button>
+                        <button class="btn small danger" onclick="del(${u.id})">Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function openAddModal() {
+            document.getElementById('modalTitle').textContent = 'Add user';
+            document.getElementById('fUserId').value = '';
+            document.getElementById('fEmail').value = '';
+            document.getElementById('fEmail').disabled = false;
+            document.getElementById('fRole').value = 'reviewer';
+            document.getElementById('fActive').checked = true;
+            renderInboxCheckboxes([]);
+            document.getElementById('modal').style.display = 'flex';
+        }
+
+        function openEditModal(userId) {
+            const u = users.find(x => x.id === userId);
+            if (!u) return;
+            document.getElementById('modalTitle').textContent = 'Edit user';
+            document.getElementById('fUserId').value = u.id;
+            document.getElementById('fEmail').value = u.email;
+            document.getElementById('fEmail').disabled = true;
+            document.getElementById('fRole').value = u.role_user;
+            document.getElementById('fActive').checked = !!u.active;
+            renderInboxCheckboxes(u.assigned_inbox_ids || []);
+            document.getElementById('modal').style.display = 'flex';
+        }
+
+        function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+        async function save() {
+            const id = document.getElementById('fUserId').value;
+            const assignedIds = Array.from(document.querySelectorAll('.fInboxCheck:checked')).map(el => parseInt(el.value, 10));
+            const payload = {
+                email: document.getElementById('fEmail').value.trim(),
+                role_user: document.getElementById('fRole').value,
+                active: document.getElementById('fActive').checked,
+                assigned_inbox_ids: assignedIds,
+            };
+            const url = id ? `/api/users/${id}` : '/api/users';
+            const method = id ? 'PATCH' : 'POST';
+            const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (res.ok) { closeModal(); notify('Saved'); await loadUsers(); }
+        }
+
+        async function del(userId) {
+            if (!confirm('Delete this user?')) return;
+            const res = await fetch(`/api/users/${userId}`, { method: 'DELETE' });
+            if (res.ok) { notify('Deleted'); await loadUsers(); }
+        }
+
+        function notify(msg, type = 'success') { const el = document.createElement('div'); el.className = `notification ${type}`; el.textContent = msg; document.body.appendChild(el); setTimeout(() => el.remove(), 2000); }
+        function escapeHtml(s) { if (s == null) return ''; return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+        function formatCentral(iso) {
+            const d = new Date(iso.endsWith('Z') ? iso : iso + 'Z');
+            return d.toLocaleString('en-US', { timeZone: 'America/Chicago', dateStyle: 'short', timeStyle: 'medium' });
+        }
+
+        loadUsers();
+    </script>
+</body>
+</html>

@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MLFA — Review Hub</title>
+    <link rel="stylesheet" href="/static/shared.css">
+    <style>
+        .hub-body {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 0;
+            height: calc(100vh - 56px);
+        }
+
+        .queue-panel {
+            border-right: 1px solid var(--line);
+            background: var(--panel);
+            overflow-y: auto;
+        }
+
+        .queue-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--line-soft);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .queue-header h3 {
+            margin: 0;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .queue-item {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--line-soft);
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+        .queue-item:hover { background: var(--panel-hover); }
+        .queue-item.active { background: var(--accent-soft); border-left: 3px solid var(--accent); padding-left: 17px; }
+
+        .queue-item { position: relative; }
+        .queue-item .from { font-weight: 600; font-size: 13px; margin-bottom: 2px; padding-right: 24px; }
+        .queue-item .subject { font-size: 13px; color: var(--text); margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 24px; }
+        .queue-item .meta-line { font-size: 11px; color: var(--text-muted); }
+        .queue-item .queue-dismiss {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: none;
+            background: transparent;
+            color: var(--text-soft);
+            cursor: pointer;
+            font-size: 14px;
+            line-height: 1;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .queue-item:hover .queue-dismiss { display: inline-flex; }
+        .queue-item .queue-dismiss:hover { background: var(--danger); color: white; }
+
+        .detail-panel {
+            padding: 24px 32px;
+            overflow-y: auto;
+        }
+
+        .detail-header {
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--line);
+            margin-bottom: 20px;
+        }
+
+        .detail-subject {
+            font-size: 20px;
+            font-weight: 700;
+            margin: 0 0 12px;
+        }
+
+        .detail-meta-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px 24px;
+            font-size: 13px;
+        }
+        .detail-meta-grid .label {
+            color: var(--text-muted);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 2px;
+        }
+
+        .detail-body {
+            background: var(--panel-2);
+            border-radius: var(--radius);
+            padding: 20px;
+            font-size: 13px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+
+        .detail-actions {
+            display: flex;
+            gap: 8px;
+            padding-top: 20px;
+            border-top: 1px solid var(--line-soft);
+        }
+
+        .automation-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: var(--panel-2);
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .switch {
+            position: relative;
+            width: 32px;
+            height: 18px;
+            background: var(--line);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+        .switch.on { background: var(--accent); }
+        .switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 14px;
+            height: 14px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.2s ease;
+        }
+        .switch.on::after { transform: translateX(14px); }
+    </style>
+</head>
+<body>
+    <header class="app-header">
+        <div class="brand">MLFA</div>
+        <div class="inbox-tabs" id="inboxTabs"></div>
+        <div class="header-right">
+            {% if current_role == 'admin' %}
+            <div class="automation-toggle">
+                <span>Automation</span>
+                <div class="switch" id="automationSwitch" onclick="toggleAutomation()"></div>
+            </div>
+            {% endif %}
+            <a href="/settings" class="icon-btn" title="Settings" id="settingsLink" style="display:{% if current_role == 'admin' %}inline-flex{% else %}none{% endif %};">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                </svg>
+            </a>
+            <div class="user-chip" title="{{ current_email }}">
+                <div class="avatar">{{ (current_email or '?')[0]|upper }}</div>
+                <div class="user-email">{{ current_email }}</div>
+            </div>
+            <a href="/logout" class="btn small">Log out</a>
+        </div>
+    </header>
+
+    <div class="hub-body">
+        <aside class="queue-panel">
+            <div class="queue-header">
+                <h3>Pending review</h3>
+                <span class="badge" id="pendingCount">0</span>
+            </div>
+            <div id="queueList"></div>
+        </aside>
+
+        <main class="detail-panel" id="detailPanel">
+            <div class="empty-state">Select an email to review</div>
+        </main>
+    </div>
+
+    <script>
+        let currentEmail = null;
+        let pendingEmails = [];
+        let currentInboxId = null;
+        let inboxes = [];
+
+        async function loadInboxes() {
+            try {
+                const res = await fetch('/api/my_inboxes');
+                if (!res.ok) return;
+                inboxes = await res.json();
+                if (inboxes.length > 0 && currentInboxId === null) {
+                    currentInboxId = inboxes[0].id;
+                }
+                renderInboxTabs();
+            } catch (_) {}
+        }
+
+        function renderInboxTabs() {
+            const tabs = document.getElementById('inboxTabs');
+            tabs.innerHTML = inboxes.map(ib =>
+                `<button class="inbox-tab ${ib.id === currentInboxId ? 'active' : ''}" onclick="switchInbox(${ib.id})">${escapeHtml(ib.display_name)}</button>`
+            ).join('');
+        }
+
+        async function switchInbox(inboxId) {
+            currentInboxId = inboxId;
+            currentEmail = null;
+            renderInboxTabs();
+            await loadPending();
+            await loadAutomation();
+        }
+
+        async function loadPending() {
+            const url = currentInboxId ? `/api/emails?inbox_id=${currentInboxId}` : '/api/emails';
+            const res = await fetch(url);
+            if (!res.ok) {
+                if (res.status === 401) window.location.href = '/login';
+                return;
+            }
+            pendingEmails = await res.json();
+            document.getElementById('pendingCount').textContent = pendingEmails.length;
+            renderQueue();
+        }
+
+        function renderQueue() {
+            const list = document.getElementById('queueList');
+            if (pendingEmails.length === 0) {
+                list.innerHTML = '<div class="empty-state">Queue empty</div>';
+                return;
+            }
+            list.innerHTML = pendingEmails.map(email => `
+                <div class="queue-item ${currentEmail?.id === email.id ? 'active' : ''}" onclick='selectEmail(${JSON.stringify(email.id)})'>
+                    <button class="queue-dismiss" title="Dismiss" onclick='event.stopPropagation(); dismissById(${JSON.stringify(email.id)})'>×</button>
+                    <div class="from">${escapeHtml(email.senderName || 'Unknown')}</div>
+                    <div class="subject">${escapeHtml(extractSubject(email.meta))}</div>
+                    <div class="meta-line">${escapeHtml(email.category || 'Unclassified')}</div>
+                </div>
+            `).join('');
+        }
+
+        async function dismissById(emailId) {
+            const res = await apiCall(`/api/emails/${emailId}/dismiss`, { method: 'POST' });
+            if (!res) return;
+            if (currentEmail?.id === emailId) currentEmail = null;
+            await loadPending();
+        }
+
+        function extractSubject(meta) {
+            const parts = (meta || '').split('|');
+            return (parts[parts.length - 1] || '').trim();
+        }
+
+        function selectEmail(emailId) {
+            currentEmail = pendingEmails.find(e => e.id === emailId);
+            renderQueue();
+            renderDetail();
+        }
+
+        function renderDetail() {
+            const panel = document.getElementById('detailPanel');
+            if (!currentEmail) {
+                panel.innerHTML = '<div class="empty-state">Select an email to review</div>';
+                return;
+            }
+            const e = currentEmail;
+            panel.innerHTML = `
+                <div class="detail-header">
+                    <h2 class="detail-subject">${escapeHtml(extractSubject(e.meta))}</h2>
+                    <div class="detail-meta-grid">
+                        <div><div class="label">From</div>${escapeHtml(e.senderName || 'Unknown')}</div>
+                        <div><div class="label">Category</div>${escapeHtml(e.category || 'None')}</div>
+                        <div><div class="label">Amount detected</div>${escapeHtml(e.amountDetected || 'None')}</div>
+                        <div><div class="label">Recipients</div>${escapeHtml(e.recipients || 'None')}</div>
+                        <div><div class="label">Needs personal reply</div>${escapeHtml(e.needsReply || 'No')}</div>
+                        <div><div class="label">Reason</div>${escapeHtml(e.reason || 'None')}</div>
+                    </div>
+                </div>
+                <div class="detail-body">${escapeHtml(e.originalContent || '')}</div>
+                <div class="detail-actions">
+                    <button class="btn primary" onclick="showAcceptPanel()">Approve</button>
+                    <button class="btn danger" onclick="showRejectPanel()">Reject</button>
+                    <button class="btn" onclick="dismissEmail()">Dismiss</button>
+                    <div class="spacer"></div>
+                    <button class="btn" onclick="approveAll()">Approve all pending</button>
+                </div>
+
+                <div id="acceptPanel" style="display:none; margin-top: 20px; padding: 16px; background: var(--panel-2); border-radius: var(--radius);">
+                    <label class="form-label">Optional comment (only sent as a notification, no effect on the email itself)</label>
+                    <textarea class="form-textarea" id="acceptText" placeholder="Optional: add context or a note about why you approved."></textarea>
+                    <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px;">
+                        <button class="btn" onclick="hideAcceptPanel()">Cancel</button>
+                        <button class="btn primary" onclick="confirmApprove()">Confirm approve</button>
+                    </div>
+                </div>
+
+                <div id="rejectPanel" style="display:none; margin-top: 20px; padding: 16px; background: var(--panel-2); border-radius: var(--radius);">
+                    <label class="form-label">Reason for rejection (required)</label>
+                    <textarea class="form-textarea" id="rejectText" placeholder="Example: This is a donor inquiry, not legal. The sender asked about donating."></textarea>
+                    <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px;">
+                        <button class="btn" onclick="hideRejectPanel()">Cancel</button>
+                        <button class="btn danger" onclick="confirmReject()">Confirm reject</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function showAcceptPanel() {
+            document.getElementById('acceptPanel').style.display = 'block';
+            document.getElementById('rejectPanel').style.display = 'none';
+        }
+        function hideAcceptPanel() { document.getElementById('acceptPanel').style.display = 'none'; }
+        function showRejectPanel() {
+            document.getElementById('rejectPanel').style.display = 'block';
+            document.getElementById('acceptPanel').style.display = 'none';
+        }
+        function hideRejectPanel() { document.getElementById('rejectPanel').style.display = 'none'; }
+
+        async function apiCall(url, options) {
+            try {
+                const res = await fetch(url, options);
+                if (!res.ok) {
+                    let msg = `Error ${res.status}`;
+                    try { const data = await res.json(); if (data.error) msg = data.error; } catch (_) {}
+                    notify(msg, 'error');
+                    return null;
+                }
+                return res;
+            } catch (e) {
+                notify(`Network error: ${e.message}`, 'error');
+                return null;
+            }
+        }
+
+        async function confirmApprove() {
+            if (!currentEmail) return;
+            const comment = (document.getElementById('acceptText').value || '').trim();
+            const res = await apiCall(`/api/emails/${currentEmail.id}/approve`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ comment }),
+            });
+            if (!res) return;
+            notify('Approved');
+            currentEmail = null;
+            await loadPending();
+        }
+
+        async function confirmReject() {
+            if (!currentEmail) return;
+            const reason = (document.getElementById('rejectText').value || '').trim();
+            if (!reason) { notify('Please provide a reason', 'error'); return; }
+            const res = await apiCall(`/api/emails/${currentEmail.id}/reject`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reason }),
+            });
+            if (!res) return;
+            notify('Rejected');
+            currentEmail = null;
+            await loadPending();
+        }
+
+        async function dismissEmail() {
+            if (!currentEmail) return;
+            const res = await apiCall(`/api/emails/${currentEmail.id}/dismiss`, { method: 'POST' });
+            if (!res) return;
+            notify('Dismissed');
+            currentEmail = null;
+            await loadPending();
+        }
+
+        async function approveAll() {
+            if (!confirm(`Approve all ${pendingEmails.length} pending emails?`)) return;
+            const res = await apiCall('/api/emails/approve_all', { method: 'POST' });
+            if (!res) return;
+            notify('All approved');
+            currentEmail = null;
+            await loadPending();
+        }
+
+        async function loadAutomation() {
+            const res = await fetch('/api/settings/automation');
+            if (!res.ok) return;
+            const data = await res.json();
+            const sw = document.getElementById('automationSwitch');
+            if (data.automationEnabled) sw.classList.add('on');
+            else sw.classList.remove('on');
+        }
+
+        async function toggleAutomation() {
+            const sw = document.getElementById('automationSwitch');
+            const enabled = !sw.classList.contains('on');
+            await fetch('/api/settings/automation', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ automationEnabled: enabled }),
+            });
+            if (enabled) sw.classList.add('on');
+            else sw.classList.remove('on');
+            notify(enabled ? 'Automation enabled' : 'Automation disabled');
+        }
+
+        function notify(msg, type = 'success') {
+            const el = document.createElement('div');
+            el.className = `notification ${type}`;
+            el.textContent = msg;
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 2000);
+        }
+
+        function escapeHtml(s) {
+            if (s == null) return '';
+            return String(s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        // Boot
+        loadInboxes();
+        loadPending();
+        loadAutomation();
+        setInterval(loadPending, 15000);
+    </script>
+</body>
+</html>

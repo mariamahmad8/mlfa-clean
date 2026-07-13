@@ -1,0 +1,18 @@
+<aside class="settings-sidebar">
+    <div class="sidebar-section">Settings</div>
+    <a href="/settings/inboxes" class="nav-item" data-path="/settings/inboxes">Inboxes</a>
+    <a href="/settings/categories" class="nav-item" data-path="/settings/categories">Categories</a>
+    <a href="/settings/recipients" class="nav-item" data-path="/settings/recipients">Recipients</a>
+    <a href="/settings/templates" class="nav-item" data-path="/settings/templates">Reply templates</a>
+    <a href="/settings/users" class="nav-item" data-path="/settings/users">Users</a>
+    <a href="/settings/audit" class="nav-item" data-path="/settings/audit">Audit log</a>
+    <a href="/settings/preview" class="nav-item" data-path="/settings/preview">Test &amp; preview</a>
+</aside>
+<script>
+    (function() {
+        const path = window.location.pathname;
+        document.querySelectorAll('.nav-item').forEach(el => {
+            if (el.dataset.path === path) el.classList.add('active');
+        });
+    })();
+</script>

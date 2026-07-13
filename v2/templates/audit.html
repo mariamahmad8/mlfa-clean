@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MLFA — Audit Log</title>
+    <link rel="stylesheet" href="/static/shared.css">
+</head>
+<body>
+    <header class="app-header">
+        <div class="brand">MLFA</div>
+        <div class="header-right">
+            <div class="user-chip" title="{{ current_email }}"><div class="avatar">{{ (current_email or "?")[0]|upper }}</div><div class="user-email">{{ current_email }}</div></div>
+            <a href="/settings" class="btn small">Back to settings</a>
+            <a href="/" class="btn small">Hub</a>
+        </div>
+    </header>
+
+    <div class="settings-layout">
+        {% include '_settings_nav.html' %}
+        <main class="settings-content">
+        <h1 class="page-title">Audit log</h1>
+        <p class="page-subtitle">Every action taken on every email in this inbox.</p>
+
+        <div class="toolbar">
+            <select class="form-select" id="inboxSelect" onchange="loadEvents()" style="max-width: 300px;"></select>
+            <button class="btn small" onclick="loadEvents()">Refresh</button>
+        </div>
+
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>When</th>
+                    <th>Action</th>
+                    <th>Actor</th>
+                    <th>Target</th>
+                    <th>Comment</th>
+                </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+        </table>
+        <div id="empty" class="empty-state" style="display:none;">No events yet.</div>
+        </main>
+    </div>
+
+    <script>
+        let currentInboxId = null;
+
+        async function loadInboxes() {
+            const res = await fetch('/api/inboxes');
+            if (!res.ok) return;
+            const inboxes = await res.json();
+            const sel = document.getElementById('inboxSelect');
+            sel.innerHTML = inboxes.map(ib => `<option value="${ib.id}">${escapeHtml(ib.display_name)}</option>`).join('');
+            if (inboxes.length) { currentInboxId = inboxes[0].id; await loadEvents(); }
+        }
+
+        async function loadEvents() {
+            currentInboxId = document.getElementById('inboxSelect').value;
+            if (!currentInboxId) return;
+            const res = await fetch(`/api/inboxes/${currentInboxId}/audit`);
+            if (!res.ok) return;
+            const events = await res.json();
+            document.getElementById('empty').style.display = events.length ? 'none' : 'block';
+            const tbody = document.getElementById('tbody');
+            tbody.innerHTML = events.map(e => `
+                <tr>
+                    <td class="text-small text-muted">${e.created_at ? formatCentral(e.created_at) : '—'}</td>
+                    <td>${badgeForAction(e.action)}</td>
+                    <td>${escapeHtml(e.actor || '—')}</td>
+                    <td class="text-small" style="font-family: monospace;" title="${escapeHtml(e.email_id || '')}">${formatTarget(e.email_id)}</td>
+                    <td class="text-muted text-small">${escapeHtml(e.comment || '')}</td>
+                </tr>
+            `).join('');
+        }
+
+        function badgeForAction(a) {
+            if (a === 'approved' || a === 'approved_bulk') return '<span class="badge success">Approved</span>';
+            if (a === 'rejected') return '<span class="badge danger">Rejected</span>';
+            if (a === 'dismissed') return '<span class="badge">Dismissed</span>';
+            if (a === 'auto_processed' || a === 'auto_processed_on_toggle') return '<span class="badge warning">Auto</span>';
+            if (a === 'queued_for_review') return '<span class="badge">Queued</span>';
+            if (a && a.endsWith('_created')) return '<span class="badge success">Created</span>';
+            if (a && a.endsWith('_updated')) return '<span class="badge">Updated</span>';
+            if (a && a.endsWith('_deleted')) return '<span class="badge danger">Deleted</span>';
+            if (a === 'inbox_cloned') return '<span class="badge success">Cloned</span>';
+            return `<span class="badge">${escapeHtml(a || '')}</span>`;
+        }
+
+        function escapeHtml(s) { if (s == null) return ''; return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+        function formatTarget(t) {
+            if (!t) return '—';
+            // Readable settings-style targets show fully; long Outlook message IDs get truncated
+            if (t.includes(':')) return escapeHtml(t);
+            if (t.length > 16) return escapeHtml(t.slice(0, 12)) + '…';
+            return escapeHtml(t);
+        }
+        function formatCentral(iso) {
+            const d = new Date(iso.endsWith('Z') ? iso : iso + 'Z'); // treat as UTC
+            return d.toLocaleString('en-US', { timeZone: 'America/Chicago', dateStyle: 'short', timeStyle: 'medium' });
+        }
+
+        loadInboxes();
+    </script>
+</body>
+</html>

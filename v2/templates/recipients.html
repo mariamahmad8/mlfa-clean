@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MLFA — Recipients</title>
+    <link rel="stylesheet" href="/static/shared.css">
+</head>
+<body>
+    <header class="app-header">
+        <div class="brand">MLFA</div>
+        <div class="header-right">
+            <div class="user-chip" title="{{ current_email }}"><div class="avatar">{{ (current_email or "?")[0]|upper }}</div><div class="user-email">{{ current_email }}</div></div>
+            <a href="/settings" class="btn small">Back to settings</a>
+            <a href="/" class="btn small">Hub</a>
+        </div>
+    </header>
+
+    <div class="settings-layout">
+        {% include '_settings_nav.html' %}
+        <main class="settings-content">
+        <h1 class="page-title">Recipients</h1>
+        <p class="page-subtitle">Staff email directory. Categories forward to entries from this list.</p>
+
+        <div class="toolbar">
+            <select class="form-select" id="inboxSelect" onchange="loadRecipients()" style="max-width: 300px;"></select>
+            <button class="btn primary" onclick="openAddModal()">+ Add recipient</button>
+        </div>
+
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Label</th>
+                    <th>Email</th>
+                    <th>Notes</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+        </table>
+        <div id="empty" class="empty-state" style="display:none;">No recipients yet.</div>
+        </main>
+    </div>
+
+    <div class="modal-backdrop" id="modal" style="display:none;">
+        <div class="modal">
+            <h3 class="modal-title" id="modalTitle">Add recipient</h3>
+            <input type="hidden" id="fId">
+
+            <div class="form-group">
+                <label class="form-label">Label (display name)</label>
+                <input class="form-input" id="fLabel" placeholder="Mujahid Rasul">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Email address</label>
+                <input class="form-input" id="fEmail" placeholder="mujahid.rasul@mlfa.org">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Notes (optional)</label>
+                <input class="form-input" id="fNotes" placeholder="Legal team">
+            </div>
+
+            <div class="form-group">
+                <label class="form-check"><input type="checkbox" id="fActive" checked> Active</label>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn" onclick="closeModal()">Cancel</button>
+                <button class="btn primary" onclick="save()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentInboxId = null;
+        let recipients = [];
+
+        async function loadInboxes() {
+            const res = await fetch('/api/inboxes');
+            if (!res.ok) return;
+            const inboxes = await res.json();
+            const sel = document.getElementById('inboxSelect');
+            sel.innerHTML = inboxes.map(ib => `<option value="${ib.id}">${escapeHtml(ib.display_name)}</option>`).join('');
+            if (inboxes.length) { currentInboxId = inboxes[0].id; await loadRecipients(); }
+        }
+
+        async function loadRecipients() {
+            currentInboxId = document.getElementById('inboxSelect').value;
+            if (!currentInboxId) return;
+            const res = await fetch(`/api/inboxes/${currentInboxId}/recipients`);
+            if (!res.ok) return;
+            recipients = await res.json();
+            render();
+        }
+
+        function render() {
+            const tbody = document.getElementById('tbody');
+            document.getElementById('empty').style.display = recipients.length ? 'none' : 'block';
+            tbody.innerHTML = recipients.map(r => `
+                <tr>
+                    <td><strong>${escapeHtml(r.label_recipient)}</strong></td>
+                    <td>${escapeHtml(r.email)}</td>
+                    <td class="text-muted">${escapeHtml(r.notes || '—')}</td>
+                    <td>${r.active ? '<span class="badge success">Active</span>' : '<span class="badge">Inactive</span>'}</td>
+                    <td class="actions-cell">
+                        <button class="btn small" onclick="openEditModal(${r.id})">Edit</button>
+                        <button class="btn small danger" onclick="del(${r.id})">Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function openAddModal() {
+            document.getElementById('modalTitle').textContent = 'Add recipient';
+            document.getElementById('fId').value = '';
+            document.getElementById('fLabel').value = '';
+            document.getElementById('fEmail').value = '';
+            document.getElementById('fNotes').value = '';
+            document.getElementById('fActive').checked = true;
+            document.getElementById('modal').style.display = 'flex';
+        }
+
+        function openEditModal(recipientId) {
+            const r = recipients.find(x => x.id === recipientId);
+            if (!r) return;
+            document.getElementById('modalTitle').textContent = 'Edit recipient';
+            document.getElementById('fId').value = r.id;
+            document.getElementById('fLabel').value = r.label_recipient || '';
+            document.getElementById('fEmail').value = r.email || '';
+            document.getElementById('fNotes').value = r.notes || '';
+            document.getElementById('fActive').checked = !!r.active;
+            document.getElementById('modal').style.display = 'flex';
+        }
+
+        function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+        async function save() {
+            const id = document.getElementById('fId').value;
+            const payload = {
+                label_recipient: document.getElementById('fLabel').value.trim(),
+                email: document.getElementById('fEmail').value.trim(),
+                notes: document.getElementById('fNotes').value.trim() || null,
+                active: document.getElementById('fActive').checked,
+                inbox_id: currentInboxId,
+            };
+            const url = id ? `/api/recipients/${id}` : `/api/inboxes/${currentInboxId}/recipients`;
+            const method = id ? 'PATCH' : 'POST';
+            const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (res.ok) { closeModal(); notify('Saved'); await loadRecipients(); }
+        }
+
+        async function del(id) {
+            if (!confirm('Delete this recipient?')) return;
+            const res = await fetch(`/api/recipients/${id}`, { method: 'DELETE' });
+            if (res.ok) { notify('Deleted'); await loadRecipients(); }
+        }
+
+        function notify(msg, type = 'success') {
+            const el = document.createElement('div');
+            el.className = `notification ${type}`;
+            el.textContent = msg;
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 2000);
+        }
+        function escapeHtml(s) { if (s == null) return ''; return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+        loadInboxes();
+    </script>
+</body>
+</html>

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MLFA — Settings</title>
+    <link rel="stylesheet" href="/static/shared.css">
+    <style>
+        .settings-card { text-decoration: none; }
+        .settings-card .card-title { display: flex; align-items: center; gap: 8px; }
+        .settings-card svg { color: var(--accent); }
+    </style>
+</head>
+<body>
+    <header class="app-header">
+        <div class="brand">MLFA</div>
+        <div class="header-right">
+            <a href="/" class="btn small">Back to hub</a>
+            <a href="/logout" class="btn small">Log out</a>
+        </div>
+    </header>
+
+    <div class="container">
+        <h1 class="page-title">Settings</h1>
+        <p class="page-subtitle">Manage inboxes, category rules, recipients, templates, users, and audit logs.</p>
+
+        <div class="card-grid">
+            <a href="/settings/inboxes" class="card-link settings-card">
+                <div class="card-title">Inboxes</div>
+                <p class="card-desc">Add and edit the mailboxes the system watches, including automation mode and blocked senders.</p>
+            </a>
+
+            <a href="/settings/categories" class="card-link settings-card">
+                <div class="card-title">Categories</div>
+                <p class="card-desc">Edit the category rules per inbox — routing, forwarding, replies, priority.</p>
+            </a>
+
+            <a href="/settings/recipients" class="card-link settings-card">
+                <div class="card-title">Recipients</div>
+                <p class="card-desc">Manage the staff email directory used when configuring category forwarding.</p>
+            </a>
+
+            <a href="/settings/templates" class="card-link settings-card">
+                <div class="card-title">Reply templates</div>
+                <p class="card-desc">Editable library of reusable reply content that categories can pick from.</p>
+            </a>
+
+            <a href="/settings/users" class="card-link settings-card">
+                <div class="card-title">Users</div>
+                <p class="card-desc">Add admin and reviewer accounts. Only listed users can sign in.</p>
+            </a>
+
+            <a href="/settings/audit" class="card-link settings-card">
+                <div class="card-title">Audit log</div>
+                <p class="card-desc">History of every action taken on every email — who did what, when.</p>
+            </a>
+
+            <a href="/settings/preview" class="card-link settings-card">
+                <div class="card-title">Test rules &amp; preview</div>
+                <p class="card-desc">Preview the classification prompt or test how a fake email would be handled.</p>
+            </a>
+        </div>
+    </div>
+</body>
+</html>

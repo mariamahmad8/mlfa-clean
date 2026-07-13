@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MLFA — Inboxes</title>
+    <link rel="stylesheet" href="/static/shared.css">
+</head>
+<body>
+    <header class="app-header">
+        <div class="brand">MLFA</div>
+        <div class="header-right">
+            <div class="user-chip" title="{{ current_email }}"><div class="avatar">{{ (current_email or "?")[0]|upper }}</div><div class="user-email">{{ current_email }}</div></div>
+            <a href="/settings" class="btn small">Back to settings</a>
+            <a href="/" class="btn small">Hub</a>
+        </div>
+    </header>
+
+    <div class="settings-layout">
+        {% include '_settings_nav.html' %}
+        <main class="settings-content">
+        <h1 class="page-title">Inboxes</h1>
+        <p class="page-subtitle">Mailboxes the system watches. Adding one here starts polling on the next cycle.</p>
+
+        <details class="card" style="margin-bottom: 20px;">
+            <summary style="cursor: pointer; font-weight: 600;">Setup requirements — read before adding a mailbox</summary>
+            <div style="margin-top: 12px; font-size: 13px; color: var(--text-muted); line-height: 1.7;">
+                <p><strong>Before an inbox will work, Microsoft-side setup must be done:</strong></p>
+                <ol>
+                    <li><strong>The mailbox must exist</strong> in your Microsoft 365 tenant (e.g. <code>give@mlfa.org</code>).</li>
+                    <li><strong>The Azure App Registration for this system needs application permissions:</strong> <code>Mail.ReadWrite</code>, <code>Mail.Send</code>, <code>MailboxSettings.ReadWrite</code>. Admin consent must be granted.</li>
+                    <li><strong>If IT set up an Application Access Policy</strong> (scoping which mailboxes the app can touch), the new mailbox must be added to the whitelist. Ask IT to run:
+                        <pre style="background: var(--panel-2); padding: 8px; border-radius: 4px; font-size: 12px;">Add-DistributionGroupMember -Identity "PairAppAccessGroup" -Member "give@mlfa.org"</pre>
+                        If IT did NOT set up scoped access, the app can already reach any mailbox — nothing to do here.
+                    </li>
+                    <li>Once Microsoft-side is done, add the inbox below. The worker will pick it up on the next poll cycle (roughly 10 seconds).</li>
+                </ol>
+                <p><strong>Cloning:</strong> if a similar inbox already exists, use "Clone from" in the Add form to copy over all category rules, recipients, and templates. Much faster than starting from scratch.</p>
+            </div>
+        </details>
+
+        <div class="toolbar">
+            <div></div>
+            <button class="btn primary" onclick="openAddModal()">+ Add inbox</button>
+        </div>
+
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Display name</th>
+                    <th>Email</th>
+                    <th>Automation</th>
+                    <th>Blocked senders</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="inboxTbody"></tbody>
+        </table>
+
+        <div id="empty" class="empty-state" style="display:none;">No inboxes yet. Add one to get started.</div>
+        </main>
+    </div>
+
+    <div class="modal-backdrop" id="modal" style="display:none;">
+        <div class="modal">
+            <h3 class="modal-title" id="modalTitle">Add inbox</h3>
+            <input type="hidden" id="fInboxId">
+
+            <div class="form-group" id="cloneRow">
+                <label class="form-label">Clone from existing inbox (optional)</label>
+                <select class="form-select" id="fCloneSource">
+                    <option value="">— Start blank —</option>
+                </select>
+                <div class="form-hint">Copies all category rules, recipients, and templates from the selected inbox. You can still edit everything after.</div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Display name</label>
+                <input class="form-input" id="fDisplayName" placeholder="MLFA Info Inbox">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Email address to watch</label>
+                <input class="form-input" id="fEmail" placeholder="info@mlfa.org">
+            </div>
+
+            <div class="form-group">
+                <label class="form-check">
+                    <input type="checkbox" id="fAutomation">
+                    <span>Enable full automation (skip human review)</span>
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Blocked senders (one per line)</label>
+                <textarea class="form-textarea" id="fBlocked" placeholder="spam@example.com"></textarea>
+                <div class="form-hint">Emails from these addresses are silently skipped.</div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Internal domains (one per line)</label>
+                <textarea class="form-textarea" id="fInternalDomains" placeholder="mlfa.org"></textarea>
+                <div class="form-hint">Anything @these-domains is treated as an internal/staff sender. Used to skip outbound actions on internal messages and for categories with "skip if internal" enabled.</div>
+            </div>
+
+<div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div>
+                    <label class="form-label">Backfill days</label>
+                    <input class="form-input" type="number" id="fBackfill" placeholder="2">
+                    <div class="form-hint">How many days back to scan on first run.</div>
+                </div>
+                <div>
+                    <label class="form-label">&nbsp;</label>
+                    <label class="form-check"><input type="checkbox" id="fUseThreadContext"> Use thread context in classification</label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-check"><input type="checkbox" id="fInternalBridge"> Enable internal reply bridge (staff SEND: replies)</label>
+                <div class="form-hint">When enabled, staff can respond to forwarded emails and the system relays their reply to the original sender.</div>
+            </div>
+
+            <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div>
+                    <label class="form-label">Internal prefix (keeps it internal)</label>
+                    <input class="form-input" id="fInternalPrefix" placeholder="[INTERNAL]">
+                </div>
+                <div>
+                    <label class="form-label">External prefix (send to original sender)</label>
+                    <input class="form-input" id="fExternalPrefix" placeholder="[EXTERNAL]">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">System preamble</label>
+                <textarea class="form-textarea" id="fPreamble"></textarea>
+                <div class="form-hint">Intro text for the GPT prompt describing what this inbox does.</div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Global guidelines</label>
+                <textarea class="form-textarea" id="fGuidelines"></textarea>
+                <div class="form-hint">Closing rules and JSON output format for GPT.</div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn" onclick="closeModal()">Cancel</button>
+                <button class="btn primary" onclick="saveInbox()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let inboxes = [];
+
+        async function loadInboxes() {
+            const res = await fetch('/api/inboxes');
+            if (!res.ok) return;
+            inboxes = await res.json();
+            renderTable();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('inboxTbody');
+            document.getElementById('empty').style.display = inboxes.length ? 'none' : 'block';
+            tbody.innerHTML = inboxes.map(ib => `
+                <tr>
+                    <td><strong>${escapeHtml(ib.display_name)}</strong></td>
+                    <td>${escapeHtml(ib.email_to_watch)}</td>
+                    <td>${ib.automation_mode ? '<span class="badge success">Auto</span>' : '<span class="badge">Manual</span>'}</td>
+                    <td class="text-muted text-small">${(ib.blocked_senders || []).length} blocked</td>
+                    <td class="actions-cell">
+                        <button class="btn small" onclick="openEditModal(${ib.id})">Edit</button>
+                        <button class="btn small danger" onclick="deleteInbox(${ib.id})">Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function openAddModal() {
+            document.getElementById('modalTitle').textContent = 'Add inbox';
+            document.getElementById('fInboxId').value = '';
+            // Populate clone dropdown
+            const cloneSel = document.getElementById('fCloneSource');
+            cloneSel.innerHTML = '<option value="">— Start blank —</option>' +
+                inboxes.map(ib => `<option value="${ib.id}">${escapeHtml(ib.display_name)}</option>`).join('');
+            cloneSel.value = '';
+            document.getElementById('cloneRow').style.display = 'block';
+            document.getElementById('fDisplayName').value = '';
+            document.getElementById('fEmail').value = '';
+            document.getElementById('fAutomation').checked = false;
+            document.getElementById('fBlocked').value = '';
+            document.getElementById('fInternalDomains').value = '';
+            document.getElementById('fBackfill').value = '2';
+            document.getElementById('fUseThreadContext').checked = true;
+            document.getElementById('fInternalBridge').checked = false;
+            document.getElementById('fInternalPrefix').value = '[INTERNAL]';
+            document.getElementById('fExternalPrefix').value = '[EXTERNAL]';
+            document.getElementById('fPreamble').value = '';
+            document.getElementById('fGuidelines').value = '';
+            document.getElementById('modal').style.display = 'flex';
+        }
+
+        async function openEditModal(inboxId) {
+            const res = await fetch(`/api/inboxes/${inboxId}`);
+            if (!res.ok) return;
+            const ib = await res.json();
+            document.getElementById('modalTitle').textContent = 'Edit inbox';
+            document.getElementById('fInboxId').value = ib.id;
+            // Clone dropdown only makes sense when adding, hide it during edit
+            document.getElementById('cloneRow').style.display = 'none';
+            document.getElementById('fDisplayName').value = ib.display_name || '';
+            document.getElementById('fEmail').value = ib.email_to_watch || '';
+            document.getElementById('fAutomation').checked = !!ib.automation_mode;
+            document.getElementById('fBlocked').value = (ib.blocked_senders || []).join('\n');
+            document.getElementById('fInternalDomains').value = (ib.internal_domains || []).join('\n');
+            document.getElementById('fBackfill').value = ib.backfill_days ?? 2;
+            document.getElementById('fUseThreadContext').checked = ib.use_thread_context !== false;
+            document.getElementById('fInternalBridge').checked = !!ib.internal_reply_bridge_enabled;
+            document.getElementById('fInternalPrefix').value = ib.internal_reply_internal_prefix || '[INTERNAL]';
+            document.getElementById('fExternalPrefix').value = ib.internal_reply_external_prefix || '[EXTERNAL]';
+            document.getElementById('fPreamble').value = ib.system_preamble || '';
+            document.getElementById('fGuidelines').value = ib.global_guidelines || '';
+            document.getElementById('modal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+        }
+
+        async function saveInbox() {
+            const id = document.getElementById('fInboxId').value;
+            const payload = {
+                display_name: document.getElementById('fDisplayName').value,
+                email_to_watch: document.getElementById('fEmail').value,
+                automation_mode: document.getElementById('fAutomation').checked,
+                blocked_senders: document.getElementById('fBlocked').value.split('\n').map(s => s.trim()).filter(Boolean),
+                skip_sender_pairs: [],
+                system_preamble: document.getElementById('fPreamble').value,
+                global_guidelines: document.getElementById('fGuidelines').value,
+                internal_domains: document.getElementById('fInternalDomains').value.split('\n').map(s => s.trim()).filter(Boolean),
+                backfill_days: parseInt(document.getElementById('fBackfill').value || '2', 10),
+                use_thread_context: document.getElementById('fUseThreadContext').checked,
+                internal_reply_bridge_enabled: document.getElementById('fInternalBridge').checked,
+                internal_reply_internal_prefix: document.getElementById('fInternalPrefix').value,
+                internal_reply_external_prefix: document.getElementById('fExternalPrefix').value,
+            };
+            // If Clone-from is selected on a new inbox, use the clone endpoint
+            const cloneSource = document.getElementById('fCloneSource').value;
+            let url, method;
+            if (id) {
+                url = `/api/inboxes/${id}`;
+                method = 'PATCH';
+            } else if (cloneSource) {
+                url = `/api/inboxes/${cloneSource}/clone`;
+                method = 'POST';
+            } else {
+                url = '/api/inboxes';
+                method = 'POST';
+            }
+            const res = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            if (res.ok) {
+                closeModal();
+                notify('Saved');
+                await loadInboxes();
+            } else {
+                notify('Save failed', 'error');
+            }
+        }
+
+        async function deleteInbox(inboxId) {
+            if (!confirm('Delete this inbox and all its category rules?')) return;
+            const res = await fetch(`/api/inboxes/${inboxId}`, { method: 'DELETE' });
+            if (res.ok) {
+                notify('Deleted');
+                await loadInboxes();
+            }
+        }
+
+        function notify(msg, type = 'success') {
+            const el = document.createElement('div');
+            el.className = `notification ${type}`;
+            el.textContent = msg;
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 2000);
+        }
+
+        function escapeHtml(s) {
+            if (s == null) return '';
+            return String(s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        loadInboxes();
+    </script>
+</body>
+</html>

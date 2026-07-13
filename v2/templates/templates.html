@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MLFA — Reply Templates</title>
+    <link rel="stylesheet" href="/static/shared.css">
+    <style>
+        .tpl-preview { font-size: 12px; color: var(--text-muted); max-width: 400px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    </style>
+</head>
+<body>
+    <header class="app-header">
+        <div class="brand">MLFA</div>
+        <div class="header-right">
+            <div class="user-chip" title="{{ current_email }}"><div class="avatar">{{ (current_email or "?")[0]|upper }}</div><div class="user-email">{{ current_email }}</div></div>
+            <a href="/settings" class="btn small">Back to settings</a>
+            <a href="/" class="btn small">Hub</a>
+        </div>
+    </header>
+
+    <div class="settings-layout">
+        {% include '_settings_nav.html' %}
+        <main class="settings-content">
+        <h1 class="page-title">Reply templates</h1>
+        <p class="page-subtitle">Reusable HTML content categories can reference for auto-replies.</p>
+
+        <div class="toolbar">
+            <select class="form-select" id="inboxSelect" onchange="loadTemplates()" style="max-width: 300px;"></select>
+            <button class="btn primary" onclick="openAddModal()">+ Add template</button>
+        </div>
+
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Preview</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+        </table>
+        <div id="empty" class="empty-state" style="display:none;">No templates yet.</div>
+        </main>
+    </div>
+
+    <div class="modal-backdrop" id="modal" style="display:none;">
+        <div class="modal" style="max-width: 800px;">
+            <h3 class="modal-title" id="modalTitle">Add template</h3>
+            <input type="hidden" id="fId">
+
+            <div class="form-group">
+                <label class="form-label">Name</label>
+                <input class="form-input" id="fName" placeholder="Legal default reply">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Message body</label>
+                <textarea class="form-textarea" id="fBody" style="min-height: 300px;" placeholder="Type your reply here. Blank lines create new paragraphs. Type URLs and they become clickable. For custom link text, write like: Application form (https://example.com/apply)"></textarea>
+                <div class="form-hint">Use <code>{{greeting}}</code> where you want an automatic greeting to appear (like "Dear John," or "Good morning,").</div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-check"><input type="checkbox" id="fActive" checked> Active</label>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn" onclick="closeModal()">Cancel</button>
+                <button class="btn primary" onclick="save()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentInboxId = null;
+        let templates = [];
+
+        async function loadInboxes() {
+            const res = await fetch('/api/inboxes');
+            if (!res.ok) return;
+            const inboxes = await res.json();
+            const sel = document.getElementById('inboxSelect');
+            sel.innerHTML = inboxes.map(ib => `<option value="${ib.id}">${escapeHtml(ib.display_name)}</option>`).join('');
+            if (inboxes.length) { currentInboxId = inboxes[0].id; await loadTemplates(); }
+        }
+
+        async function loadTemplates() {
+            currentInboxId = document.getElementById('inboxSelect').value;
+            if (!currentInboxId) return;
+            const res = await fetch(`/api/inboxes/${currentInboxId}/templates`);
+            if (!res.ok) return;
+            templates = await res.json();
+            render();
+        }
+
+        function render() {
+            const tbody = document.getElementById('tbody');
+            document.getElementById('empty').style.display = templates.length ? 'none' : 'block';
+            tbody.innerHTML = templates.map(t => `
+                <tr>
+                    <td><strong>${escapeHtml(t.name_template)}</strong></td>
+                    <td class="tpl-preview">${escapeHtml(stripHtml(t.body_html).slice(0, 120))}</td>
+                    <td>${t.active ? '<span class="badge success">Active</span>' : '<span class="badge">Inactive</span>'}</td>
+                    <td class="actions-cell">
+                        <button class="btn small" onclick="openEditModal(${t.id})">Edit</button>
+                        <button class="btn small danger" onclick="del(${t.id})">Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function openAddModal() {
+            document.getElementById('modalTitle').textContent = 'Add template';
+            document.getElementById('fId').value = '';
+            document.getElementById('fName').value = '';
+            document.getElementById('fBody').value = '';
+            document.getElementById('fActive').checked = true;
+            document.getElementById('modal').style.display = 'flex';
+        }
+
+        function openEditModal(templateId) {
+            const t = templates.find(x => x.id === templateId);
+            if (!t) return;
+            document.getElementById('modalTitle').textContent = 'Edit template';
+            document.getElementById('fId').value = t.id;
+            document.getElementById('fName').value = t.name_template || '';
+            document.getElementById('fBody').value = htmlToPlain(t.body_html || '');
+            document.getElementById('fActive').checked = !!t.active;
+            document.getElementById('modal').style.display = 'flex';
+        }
+
+        function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+        async function save() {
+            const id = document.getElementById('fId').value;
+            const payload = {
+                name_template: document.getElementById('fName').value.trim(),
+                body_html: plainToHtml(document.getElementById('fBody').value),
+                active: document.getElementById('fActive').checked,
+                inbox_id: currentInboxId,
+            };
+            const url = id ? `/api/templates/${id}` : `/api/inboxes/${currentInboxId}/templates`;
+            const method = id ? 'PATCH' : 'POST';
+            const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (res.ok) { closeModal(); notify('Saved'); await loadTemplates(); }
+        }
+
+        async function del(id) {
+            if (!confirm('Delete this template?')) return;
+            const res = await fetch(`/api/templates/${id}`, { method: 'DELETE' });
+            if (res.ok) { notify('Deleted'); await loadTemplates(); }
+        }
+
+        function stripHtml(s) { const d = document.createElement('div'); d.innerHTML = s || ''; return d.textContent || ''; }
+
+        // Convert plain text (as typed by users) to safe HTML for storage.
+        // - Blank lines separate paragraphs
+        // - Single newlines within a paragraph become <br>
+        // - URLs become <a href="..."> links
+        // - "Custom text (https://url)" becomes a link with that custom text
+        function plainToHtml(txt) {
+            if (!txt) return '';
+            const escape = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            const paragraphs = txt.split(/\n\s*\n/);
+            return paragraphs.map(p => {
+                let escaped = escape(p);
+                // "text (https://url)" pattern first
+                escaped = escaped.replace(/([^\s(]+(?:[^\s()]*[^\s(),.!?])?)\s*\((https?:\/\/[^\s)]+)\)/g,
+                    (_, text, url) => `<a href="${url}">${text}</a>`);
+                // Bare URLs
+                escaped = escaped.replace(/(https?:\/\/[^\s<]+)/g, (m) =>
+                    m.includes('href=') ? m : `<a href="${m}">${m}</a>`);
+                // Line breaks
+                escaped = escaped.replace(/\n/g, '<br>');
+                return `<p>${escaped}</p>`;
+            }).join('\n');
+        }
+
+        // Convert stored HTML back to plain text for the editor.
+        // Preserves paragraphs (blank line between), keeps links as "text (url)".
+        function htmlToPlain(html) {
+            if (!html) return '';
+            const d = document.createElement('div');
+            d.innerHTML = html;
+            // Convert links to "text (url)" format
+            d.querySelectorAll('a').forEach(a => {
+                const url = a.getAttribute('href') || '';
+                const text = a.textContent || '';
+                a.replaceWith(text === url ? url : `${text} (${url})`);
+            });
+            // Convert <br> to newline
+            d.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
+            // Each <p> becomes its own paragraph separated by blank line
+            const parts = [];
+            d.querySelectorAll('p').forEach(p => parts.push((p.textContent || '').trim()));
+            if (parts.length === 0) return (d.textContent || '').trim();
+            return parts.join('\n\n');
+        }
+        function notify(msg, type = 'success') { const el = document.createElement('div'); el.className = `notification ${type}`; el.textContent = msg; document.body.appendChild(el); setTimeout(() => el.remove(), 2000); }
+        function escapeHtml(s) { if (s == null) return ''; return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+        loadInboxes();
+    </script>
+</body>
+</html>
