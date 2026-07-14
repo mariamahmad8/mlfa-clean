@@ -269,14 +269,14 @@ def mlfa_biglogo():
     )
 
 
-@reviewer_bp.route('/info-icon.png')
+@reviewer_bp.route('/info-icon.svg')
 def info_icon():
-    """Serve the Material-style info icon used by tooltips."""
+    """Serve the Material-style info icon (SVG) used by tooltips."""
     base_dir = os.path.dirname(os.path.abspath(__file__))
     return send_from_directory(
         os.path.join(base_dir, '..'),
-        'info_24dp_E3E3E3_FILL0_wght400_GRAD0_opsz24.png',
-        mimetype='image/png',
+        'info_24dp_E3E3E3_FILL0_wght400_GRAD0_opsz24.svg',
+        mimetype='image/svg+xml',
     )
 
 
