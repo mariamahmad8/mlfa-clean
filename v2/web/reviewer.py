@@ -19,6 +19,7 @@ import os
 import re
 import hmac
 import hashlib
+import html
 import secrets
 import time
 from functools import wraps
@@ -130,6 +131,7 @@ def login():
         # Build the login link
         base = (current_app.config.get('PUBLIC_BASE_URL') or request.host_url).rstrip('/')
         link = f"{base}/login/verify?token={plaintext_token}"
+        safe_link = html.escape(link, quote=True)
 
         # Send via the first active inbox (uses the MLFA mailbox to send)
         inboxes = inbox_storage.get_active_inboxes()
@@ -142,7 +144,7 @@ def login():
                     body_html=f"""
                         <p>Hi,</p>
                         <p>Click the link below to sign in to the MLFA hub. It expires in 15 minutes.</p>
-                        <p><a href="{link}">{link}</a></p>
+                        <p><a href="{safe_link}">{safe_link}</a></p>
                         <p>If you didn't request this, you can ignore this email.</p>
                     """,
                 )
@@ -374,16 +376,21 @@ def approve_email(email_id):
         notify_to = os.getenv('REVIEW_NOTIFY_EMAIL', '')
         if notify_to:
             try:
+                safe_reviewer = html.escape(str(session.get('user_email', 'unknown')), quote=True)
+                safe_comment = html.escape(reviewer_comment, quote=True)
+                safe_categories = html.escape(str(plan.tag or 'none'), quote=True)
+                safe_subject = html.escape(str(row.get('subject_email', '')), quote=True)
+                safe_sender = html.escape(str(row.get('sender', '')), quote=True)
                 o365.send_email(
                     inbox,
                     to=notify_to,
                     subject=f"[Review] Approved: {row.get('subject_email', '')}",
                     body_html=(
-                        f"<p><strong>Reviewer:</strong> {session.get('user_email', 'unknown')}</p>"
-                        f"<p><strong>Comment:</strong> {reviewer_comment}</p>"
-                        f"<p><strong>Categories:</strong> {plan.tag or 'none'}</p>"
-                        f"<p><strong>Subject:</strong> {row.get('subject_email', '')}</p>"
-                        f"<p><strong>From:</strong> {row.get('sender', '')}</p>"
+                        f"<p><strong>Reviewer:</strong> {safe_reviewer}</p>"
+                        f"<p><strong>Comment:</strong> {safe_comment}</p>"
+                        f"<p><strong>Categories:</strong> {safe_categories}</p>"
+                        f"<p><strong>Subject:</strong> {safe_subject}</p>"
+                        f"<p><strong>From:</strong> {safe_sender}</p>"
                     ),
                 )
             except Exception as e:

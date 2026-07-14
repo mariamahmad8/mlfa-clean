@@ -18,6 +18,9 @@ critical production security configuration is missing.
    both a Railway domain and custom domain must work.
 5. Leave `ALLOWED_ORIGINS` unset while the UI and API share the same domain.
 6. Apply `migrations/022_create_login_rate_limits.sql` to Railway Postgres.
+7. When v2 is ready to replace v1, set Railway's Start Command to
+   `./v2/start.sh`. Do not change the current command before migration and
+   login testing are complete.
 
 ## Controls implemented
 
@@ -38,7 +41,7 @@ critical production security configuration is missing.
 
 - Replace magic-link-only authentication with Microsoft Entra ID and enforced MFA
 - Move inline scripts/styles into static assets and remove `unsafe-inline` from CSP
-- Run Flask behind a production WSGI server and separate the worker process
+- Separate the web and email-worker processes into different Railway services
 - Review and minimize Microsoft Graph/O365 application permissions
 - Encrypt or minimize stored email bodies and define retention/deletion rules
 - Add dependency vulnerability scanning, secret scanning, and automated tests in CI
