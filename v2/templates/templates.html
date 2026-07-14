@@ -62,9 +62,17 @@
             </div>
 
             <div class="form-group">
-                <label class="form-label">Message body<span class="info-tip">i<span class="info-content">Type the reply as you would in an email. Blank lines make paragraphs. URLs become clickable automatically. For custom link text, write: <b>Application form (https://example.com/apply)</b>. Use <b>{{greeting}}</b> anywhere you want an auto-greeting like "Dear John,".</span></span></label>
+                <label class="form-label">Message body<span class="info-tip">i<span class="info-content">Type the reply as you would in an email. Blank lines make paragraphs. URLs become clickable automatically. For custom link text, write: <b>Application form (https://example.com/apply)</b>. Click the greeting chip below to add an auto-greeting like "Dear John,".</span></span></label>
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+                    <span class="text-small text-muted">Quick insert:</span>
+                    <button type="button" class="chip-insert" draggable="true" id="greetingChip"
+                            onclick="insertGreeting()"
+                            title="Click or drag into the message to add an automatic greeting like 'Dear John,'">
+                        + Insert automatic greeting
+                    </button>
+                </div>
                 <textarea class="form-textarea" id="fBody" style="min-height: 300px;" placeholder="Type your reply here. Blank lines create new paragraphs. Type URLs and they become clickable. For custom link text, write like: Application form (https://example.com/apply)"></textarea>
-                <div class="form-hint">Use <code>{{greeting}}</code> where you want an automatic greeting to appear (like "Dear John," or "Good morning,").</div>
+                <div class="form-hint">Click the chip above (or drag it into the message) to add an automatic greeting like "Dear John," or "Good morning,".</div>
             </div>
 
             <div class="form-group">

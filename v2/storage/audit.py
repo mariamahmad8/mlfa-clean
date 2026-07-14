@@ -57,11 +57,8 @@ def get_events(inbox_id: int, limit: int = 200) -> List[dict]:
 
 def get_stats(inbox_id: int, today_start_utc: datetime) -> dict:
     """
-    Efficiency stats for one inbox.
-    - total_processed: all successful actions ever
-    - processed_today: those since today's midnight Central Time
-    - total_duration_ms: cumulative pipeline time
-    - avg_duration_ms: mean duration per processed message
+    Today-scoped efficiency stats for one inbox (Central-Time midnight boundary).
+    Counts + timing all filter to today so the demo reflects fresh activity.
     """
     processed_actions = ('auto_processed', 'approved', 'approved_bulk', 'auto_processed_on_toggle')
     session = get_db_session()
@@ -69,13 +66,12 @@ def get_stats(inbox_id: int, today_start_utc: datetime) -> dict:
         result = session.execute(
             text("""
                 SELECT
-                    COUNT(*) FILTER (WHERE action_taken = ANY(:actions)) AS total_processed,
                     COUNT(*) FILTER (WHERE action_taken = ANY(:actions) AND created_at >= :today_start) AS processed_today,
-                    COALESCE(SUM(duration_ms) FILTER (WHERE action_taken = ANY(:actions)), 0) AS total_duration_ms,
-                    COALESCE(AVG(duration_ms) FILTER (WHERE action_taken = ANY(:actions) AND duration_ms IS NOT NULL), 0) AS avg_duration_ms,
-                    COUNT(*) FILTER (WHERE action_taken = 'queued_for_review') AS total_queued,
-                    COUNT(*) FILTER (WHERE action_taken = 'rejected') AS total_rejected,
-                    COUNT(*) FILTER (WHERE action_taken = 'dismissed') AS total_dismissed
+                    COALESCE(SUM(duration_ms) FILTER (WHERE action_taken = ANY(:actions) AND created_at >= :today_start), 0) AS total_duration_ms,
+                    COALESCE(AVG(duration_ms) FILTER (WHERE action_taken = ANY(:actions) AND duration_ms IS NOT NULL AND created_at >= :today_start), 0) AS avg_duration_ms,
+                    COUNT(*) FILTER (WHERE action_taken = 'queued_for_review' AND created_at >= :today_start) AS queued_today,
+                    COUNT(*) FILTER (WHERE action_taken = 'rejected' AND created_at >= :today_start) AS rejected_today,
+                    COUNT(*) FILTER (WHERE action_taken = 'dismissed' AND created_at >= :today_start) AS dismissed_today
                 FROM audit_log
                 WHERE inbox_id = :inbox_id
             """),

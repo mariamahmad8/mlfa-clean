@@ -3,6 +3,9 @@
  * Muted, warm, paper-like. No harsh blue/white.
  */
 
+/* MLFA brand font (Oswald) — used for headings and titles */
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
 :root {
   /* Palette */
   --bg: #F5F1EA;
@@ -20,8 +23,13 @@
   --accent-soft: rgba(107, 124, 90, 0.10);
 
   --success: #6B8E5A;
-  --danger: #A85B4E;
-  --danger-hover: #904A3F;
+  /* MLFA brand rust — used sparingly for accents + destructive actions */
+  --mlfa-orange: #B83D26;
+  --mlfa-orange-hover: #9E3220;
+  --mlfa-orange-soft: rgba(184, 61, 38, 0.10);
+
+  --danger: #B83D26;
+  --danger-hover: #9E3220;
   --warning: #C88F3F;
 
   --radius: 8px;
@@ -30,7 +38,18 @@
   --shadow: 0 1px 4px rgba(42, 40, 35, 0.06);
 
   --font: "Inter", "Segoe UI", -apple-system, sans-serif;
+  --font-display: "Oswald", "Inter", "Segoe UI", -apple-system, sans-serif;
 }
+
+/* Headings + section titles use Oswald for MLFA brand consistency */
+h1, h2, .page-title, .modal-title, .card-title, .brand span, .stat-value {
+  font-family: var(--font-display);
+  letter-spacing: 0.02em;
+}
+.page-title { font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
+.modal-title { font-weight: 600; }
+.card-title { font-weight: 500; }
+.brand span { font-family: var(--font-display); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
 
 * { box-sizing: border-box; }
 

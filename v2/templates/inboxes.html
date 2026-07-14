@@ -218,39 +218,35 @@
             const res = await fetch(`/api/inboxes/${inboxId}/stats`);
             if (!res.ok) { notify('Could not load stats', 'error'); return; }
             const s = await res.json();
-            // Assume a human takes ~2 minutes per email — configurable via prompt below
             const HUMAN_MIN_PER_EMAIL = 2;
-            const timeSavedMs = (s.total_processed || 0) * HUMAN_MIN_PER_EMAIL * 60 * 1000;
+            const timeSavedMs = (s.processed_today || 0) * HUMAN_MIN_PER_EMAIL * 60 * 1000;
 
             document.getElementById('statsBody').innerHTML = `
+                <div class="text-small text-muted" style="margin-bottom: 12px;">All counts below reflect activity since midnight (Central Time) today.</div>
                 <div class="stats-grid">
                     <div class="stat-card">
-                        <div class="stat-label">Total processed</div>
-                        <div class="stat-value accent">${s.total_processed || 0}</div>
-                    </div>
-                    <div class="stat-card">
                         <div class="stat-label">Processed today</div>
-                        <div class="stat-value success">${s.processed_today || 0}</div>
+                        <div class="stat-value accent">${s.processed_today || 0}</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-label">In review queue</div>
-                        <div class="stat-value">${s.total_queued || 0}</div>
+                        <div class="stat-label">In review queue (now)</div>
+                        <div class="stat-value">${s.in_review_now || 0}</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-label">Rejected / dismissed</div>
-                        <div class="stat-value">${(s.total_rejected || 0) + (s.total_dismissed || 0)}</div>
+                        <div class="stat-label">Rejected / dismissed today</div>
+                        <div class="stat-value">${(s.rejected_today || 0) + (s.dismissed_today || 0)}</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-label">Total processing time</div>
+                        <div class="stat-label">Total processing time today</div>
                         <div class="stat-value">${formatDuration(s.total_duration_ms)}</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-label">Average per email</div>
                         <div class="stat-value">${formatDuration(s.avg_duration_ms)}</div>
                     </div>
-                    <div class="stat-card" style="grid-column: 1 / -1; background: var(--accent-soft); border-color: var(--accent);">
-                        <div class="stat-label">Estimated time saved</div>
-                        <div class="stat-value accent">${formatDuration(timeSavedMs)}</div>
+                    <div class="stat-card" style="grid-column: 1 / -1; background: var(--mlfa-orange-soft); border-color: var(--mlfa-orange);">
+                        <div class="stat-label" style="color: var(--mlfa-orange);">Estimated time saved today</div>
+                        <div class="stat-value" style="color: var(--mlfa-orange);">${formatDuration(timeSavedMs)}</div>
                         <div class="text-small text-muted" style="margin-top: 4px;">
                             Assuming a person would need ~${HUMAN_MIN_PER_EMAIL} min per email to triage manually.
                         </div>

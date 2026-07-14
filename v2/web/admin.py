@@ -22,6 +22,7 @@ from storage import recipients as recipients_storage
 from storage import templates as templates_storage
 from storage import users as users_storage
 from storage import audit as audit_storage
+from storage import queue as queue_storage
 
 from models.InboxConfig import InboxConfig
 from models.CategoryRule import CategoryRule
@@ -541,17 +542,18 @@ def inbox_stats(inbox_id):
 
     stats = audit_storage.get_stats(inbox_id, today_start_utc)
     inbox = inbox_storage.get_inbox(inbox_id)
+    in_review_now = len(queue_storage.get_pending(inbox_id))
     return jsonify({
         "inbox_id": inbox_id,
         "display_name": inbox.display_name if inbox else "",
         "email_to_watch": inbox.email_to_watch if inbox else "",
-        "total_processed": stats.get("total_processed", 0),
         "processed_today": stats.get("processed_today", 0),
+        "in_review_now": in_review_now,
+        "rejected_today": stats.get("rejected_today", 0),
+        "dismissed_today": stats.get("dismissed_today", 0),
+        "queued_today": stats.get("queued_today", 0),
         "total_duration_ms": int(stats.get("total_duration_ms") or 0),
         "avg_duration_ms": int(stats.get("avg_duration_ms") or 0),
-        "total_queued": stats.get("total_queued", 0),
-        "total_rejected": stats.get("total_rejected", 0),
-        "total_dismissed": stats.get("total_dismissed", 0),
     })
 
 
