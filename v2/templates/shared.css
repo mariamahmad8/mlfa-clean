@@ -64,33 +64,30 @@ a:hover { color: var(--accent-hover); }
 }
 
 .app-header .brand {
-  width: 58px;
-  align-self: stretch;
   display: inline-flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  justify-content: center;
-  gap: 1px;
+  gap: 10px;
   color: var(--text);
   text-decoration: none;
   flex: 0 0 auto;
 }
 
 .app-header .brand img {
-  width: 31px;
-  height: 31px;
+  width: 32px;
+  height: 32px;
   display: block;
   object-fit: cover;
-  border-radius: 7px;
+  border-radius: 6px;
 }
 
 .app-header .brand span {
-  color: var(--text-muted);
-  font-size: 8px;
+  color: var(--text);
+  font-size: 14px;
   font-weight: 700;
-  line-height: 1;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
+  line-height: 1.1;
+  letter-spacing: 0.01em;
+  text-transform: none;
   white-space: nowrap;
 }
 

@@ -8,6 +8,35 @@
     <meta name="csrf-token" content="{{ csrf_token }}">
     <script src="/static/security.js"></script>
     <link rel="stylesheet" href="/static/shared.css?v=3">
+    <style>
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 12px;
+        }
+        .stat-card {
+            background: var(--panel-2);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 16px;
+        }
+        .stat-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text);
+            line-height: 1.1;
+        }
+        .stat-value.accent { color: var(--accent); }
+        .stat-value.success { color: var(--success); }
+    </style>
 </head>
 <body>
     <header class="app-header">
@@ -39,10 +68,7 @@
                     <th>Display name</th>
                     <th>Email</th>
                     <th>Automation</th>
-                    <th>Total processed</th>
-                    <th>Today</th>
-                    <th>Avg time</th>
-                    <th>In queue</th>
+                    <th>Blocked senders</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -51,6 +77,16 @@
 
         <div id="empty" class="empty-state" style="display:none;">No inboxes yet. Add one to get started.</div>
         </main>
+    </div>
+
+    <div class="modal-backdrop" id="statsModal" style="display:none;">
+        <div class="modal" style="max-width: 720px;">
+            <h3 class="modal-title" id="statsTitle">Stats</h3>
+            <div id="statsBody"></div>
+            <div class="modal-actions">
+                <button class="btn primary" onclick="closeStats()">Close</button>
+            </div>
+        </div>
     </div>
 
     <div class="modal-backdrop" id="modal" style="display:none;">
@@ -144,18 +180,11 @@
 
     <script>
         let inboxes = [];
-        let statsById = {};
 
         async function loadInboxes() {
             const res = await fetch('/api/inboxes');
             if (!res.ok) return;
             inboxes = await res.json();
-            // Fetch stats for each inbox in parallel
-            const results = await Promise.all(inboxes.map(ib =>
-                fetch(`/api/inboxes/${ib.id}/stats`).then(r => r.ok ? r.json() : null).catch(() => null)
-            ));
-            statsById = {};
-            results.filter(Boolean).forEach(s => { statsById[s.inbox_id] = s; });
             renderTable();
         }
 
@@ -170,24 +199,70 @@
         function renderTable() {
             const tbody = document.getElementById('inboxTbody');
             document.getElementById('empty').style.display = inboxes.length ? 'none' : 'block';
-            tbody.innerHTML = inboxes.map(ib => {
-                const s = statsById[ib.id] || {};
-                return `
+            tbody.innerHTML = inboxes.map(ib => `
                 <tr>
                     <td><strong>${escapeHtml(ib.display_name)}</strong></td>
                     <td>${escapeHtml(ib.email_to_watch)}</td>
                     <td>${ib.automation_mode ? '<span class="badge success">Auto</span>' : '<span class="badge">Manual</span>'}</td>
-                    <td><strong>${s.total_processed ?? 0}</strong></td>
-                    <td>${s.processed_today ?? 0}</td>
-                    <td class="text-small text-muted" title="Total: ${formatDuration(s.total_duration_ms)}">${formatDuration(s.avg_duration_ms)}</td>
-                    <td>${s.total_queued ?? 0}</td>
+                    <td class="text-muted text-small">${(ib.blocked_senders || []).length} blocked</td>
                     <td class="actions-cell">
+                        <button class="btn small" onclick="openStats(${ib.id})">Stats</button>
                         <button class="btn small" onclick="openEditModal(${ib.id})">Edit</button>
                         <button class="btn small danger" onclick="deleteInbox(${ib.id})">Delete</button>
                     </td>
                 </tr>
-                `;
-            }).join('');
+            `).join('');
+        }
+
+        async function openStats(inboxId) {
+            const res = await fetch(`/api/inboxes/${inboxId}/stats`);
+            if (!res.ok) { notify('Could not load stats', 'error'); return; }
+            const s = await res.json();
+            // Assume a human takes ~2 minutes per email — configurable via prompt below
+            const HUMAN_MIN_PER_EMAIL = 2;
+            const timeSavedMs = (s.total_processed || 0) * HUMAN_MIN_PER_EMAIL * 60 * 1000;
+
+            document.getElementById('statsBody').innerHTML = `
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">Total processed</div>
+                        <div class="stat-value accent">${s.total_processed || 0}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Processed today</div>
+                        <div class="stat-value success">${s.processed_today || 0}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">In review queue</div>
+                        <div class="stat-value">${s.total_queued || 0}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Rejected / dismissed</div>
+                        <div class="stat-value">${(s.total_rejected || 0) + (s.total_dismissed || 0)}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Total processing time</div>
+                        <div class="stat-value">${formatDuration(s.total_duration_ms)}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Average per email</div>
+                        <div class="stat-value">${formatDuration(s.avg_duration_ms)}</div>
+                    </div>
+                    <div class="stat-card" style="grid-column: 1 / -1; background: var(--accent-soft); border-color: var(--accent);">
+                        <div class="stat-label">Estimated time saved</div>
+                        <div class="stat-value accent">${formatDuration(timeSavedMs)}</div>
+                        <div class="text-small text-muted" style="margin-top: 4px;">
+                            Assuming a person would need ~${HUMAN_MIN_PER_EMAIL} min per email to triage manually.
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('statsTitle').textContent = `Stats — ${s.display_name}`;
+            document.getElementById('statsModal').style.display = 'flex';
+        }
+
+        function closeStats() {
+            document.getElementById('statsModal').style.display = 'none';
         }
 
         function openAddModal() {
