@@ -61,7 +61,7 @@
             </div>
 
             <div class="form-group">
-                <label class="form-label">Role</label>
+                <label class="form-label">Role<span class="info-tip">i<span class="info-content"><b>Admin</b> can edit settings, add users, and see the audit log. <b>Reviewer</b> can only work the review queue — no settings access.</span></span></label>
                 <select class="form-select" id="fRole">
                     <option value="reviewer">Reviewer</option>
                     <option value="admin">Admin</option>
@@ -70,7 +70,7 @@
             </div>
 
             <div class="form-group" id="assignedInboxesRow">
-                <label class="form-label">Assigned inboxes (for reviewers only)</label>
+                <label class="form-label">Assigned inboxes<span class="info-tip">i<span class="info-content">Only reviewers use this. Check the inboxes this reviewer should see the queue for. Admins always see all inboxes regardless.</span></span></label>
                 <div id="fAssignedList" style="border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 8px; max-height: 180px; overflow-y: auto;"></div>
                 <div class="form-hint">Reviewers only see queues from checked inboxes. Admins always see everything regardless.</div>
             </div>

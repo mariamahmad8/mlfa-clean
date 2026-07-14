@@ -327,55 +327,68 @@ a:hover { color: var(--accent-hover); }
   cursor: pointer;
 }
 
-/* Info tooltip — "i" icon next to a label that shows help on hover */
+/* Info tooltip — modern "i" icon that shows help on hover */
 .info-tip {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   background: var(--panel-2);
   color: var(--text-muted);
-  font-size: 10px;
-  font-weight: 700;
-  font-family: serif;
-  font-style: italic;
+  border: 1px solid var(--line);
+  font-size: 0;  /* hides raw text children; ::before restores its own size */
   cursor: help;
   margin-left: 6px;
-  position: relative;
   vertical-align: middle;
-  text-transform: none;
-  letter-spacing: normal;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  overflow: hidden;
 }
-.info-tip:hover { background: var(--accent); color: white; }
-.info-tip .info-content {
-  visibility: hidden;
-  opacity: 0;
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
-  width: 240px;
-  background: var(--text);
-  color: white;
-  padding: 8px 10px;
-  border-radius: var(--radius-sm);
-  font-size: 12px;
-  font-weight: 400;
-  line-height: 1.45;
-  z-index: 200;
-  text-transform: none;
+.info-tip::before {
+  content: 'i';
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-weight: 600;
+  font-size: 11px;
+  line-height: 1;
   letter-spacing: normal;
-  transition: opacity 0.12s ease;
-  pointer-events: none;
+  text-transform: none;
+}
+.info-tip .info-content { display: none; }  /* raw payload stays in DOM but hidden; JS reads from it */
+.info-tip:hover { background: var(--accent); color: white; border-color: var(--accent); }
+
+/* The floating tooltip that appears on hover.
+   Uses position: fixed via JS so it escapes any overflow: hidden parent. */
+.info-floating {
+  position: fixed;
+  max-width: 280px;
+  background: #2f2c26;
+  color: #f5f1ea;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 400;
+  font-family: var(--font);
+  font-style: normal;
+  line-height: 1.5;
+  letter-spacing: 0.01em;
+  text-transform: none;
   text-align: left;
   white-space: normal;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  z-index: 10000;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 0.12s ease, transform 0.12s ease;
 }
-.info-tip:hover .info-content {
-  visibility: visible;
+.info-floating.visible {
   opacity: 1;
+  transform: translateY(0);
 }
+.info-floating b, .info-floating strong { color: white; font-weight: 600; }
 
 /* Modals */
 .modal-backdrop {

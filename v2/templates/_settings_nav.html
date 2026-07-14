@@ -15,4 +15,49 @@
             if (el.dataset.path === path) el.classList.add('active');
         });
     })();
+
+    // Modern info tooltip: creates a fixed-position floating box so it never
+    // gets clipped by scrollable modals or overflow parents.
+    (function() {
+        let floating = null;
+        function ensureFloating() {
+            if (!floating) {
+                floating = document.createElement('div');
+                floating.className = 'info-floating';
+                document.body.appendChild(floating);
+            }
+            return floating;
+        }
+        function positionTooltip(tip, box) {
+            const rect = tip.getBoundingClientRect();
+            const boxRect = box.getBoundingClientRect();
+            // Prefer above; if not enough space, place below
+            let top = rect.top - boxRect.height - 8;
+            if (top < 8) top = rect.bottom + 8;
+            let left = rect.left + rect.width / 2 - boxRect.width / 2;
+            if (left < 8) left = 8;
+            if (left + boxRect.width > window.innerWidth - 8) {
+                left = window.innerWidth - boxRect.width - 8;
+            }
+            box.style.left = left + 'px';
+            box.style.top = top + 'px';
+        }
+        document.addEventListener('mouseover', (e) => {
+            const tip = e.target.closest('.info-tip');
+            if (!tip) return;
+            const content = tip.querySelector('.info-content');
+            if (!content) return;
+            const box = ensureFloating();
+            box.innerHTML = content.innerHTML;
+            box.classList.add('visible');
+            box.style.left = '-9999px';
+            box.style.top = '0';
+            requestAnimationFrame(() => positionTooltip(tip, box));
+        });
+        document.addEventListener('mouseout', (e) => {
+            const tip = e.target.closest('.info-tip');
+            if (!tip) return;
+            if (floating) floating.classList.remove('visible');
+        });
+    })();
 </script>
