@@ -10,6 +10,16 @@
     <link rel="stylesheet" href="/static/shared.css?v=3">
     <style>
         .tpl-preview { font-size: 12px; color: var(--text-muted); max-width: 400px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .chip-insert {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 4px 10px; font-size: 12px; font-weight: 600;
+            background: var(--mlfa-orange-soft); color: var(--mlfa-orange);
+            border: 1px solid var(--mlfa-orange); border-radius: 999px;
+            cursor: grab; user-select: none;
+        }
+        .chip-insert:hover { background: var(--mlfa-orange); color: #fff; }
+        .chip-insert:active { cursor: grabbing; }
+        .form-textarea.drag-over { border-color: var(--mlfa-orange); box-shadow: 0 0 0 3px var(--mlfa-orange-soft); }
     </style>
 </head>
 <body>
@@ -165,6 +175,49 @@
             const res = await fetch(`/api/templates/${id}`, { method: 'DELETE' });
             if (res.ok) { notify('Deleted'); await loadTemplates(); }
         }
+
+        // Insert {{greeting}} at the current cursor position in the body textarea.
+        function insertGreeting() {
+            const ta = document.getElementById('fBody');
+            const token = '{' + '{greeting}} ';
+            const start = ta.selectionStart ?? ta.value.length;
+            const end = ta.selectionEnd ?? ta.value.length;
+            ta.value = ta.value.slice(0, start) + token + ta.value.slice(end);
+            const pos = start + token.length;
+            ta.focus();
+            ta.setSelectionRange(pos, pos);
+        }
+
+        // Drag the greeting chip into the textarea to drop the token where you release.
+        (function() {
+            const chip = document.getElementById('greetingChip');
+            const ta = document.getElementById('fBody');
+            if (!chip || !ta) return;
+            chip.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', '{' + '{greeting}} ');
+                e.dataTransfer.effectAllowed = 'copy';
+            });
+            ta.addEventListener('dragover', (e) => {
+                if (!e.dataTransfer.types.includes('text/plain')) return;
+                e.preventDefault();
+                ta.classList.add('drag-over');
+            });
+            ta.addEventListener('dragleave', () => ta.classList.remove('drag-over'));
+            ta.addEventListener('drop', (e) => {
+                e.preventDefault();
+                ta.classList.remove('drag-over');
+                const token = e.dataTransfer.getData('text/plain') || '{' + '{greeting}} ';
+                // Try to drop at caret position from the drop event when supported.
+                let pos = ta.selectionStart ?? ta.value.length;
+                if (document.caretPositionFromPoint) {
+                    const p = document.caretPositionFromPoint(e.clientX, e.clientY);
+                    if (p && p.offsetNode === ta) pos = p.offset;
+                }
+                ta.value = ta.value.slice(0, pos) + token + ta.value.slice(pos);
+                ta.focus();
+                ta.setSelectionRange(pos + token.length, pos + token.length);
+            });
+        })();
 
         function stripHtml(s) { const d = document.createElement('div'); d.innerHTML = s || ''; return d.textContent || ''; }
 
