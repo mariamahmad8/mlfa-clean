@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MLFA — Stats</title>
+    <link rel="stylesheet" href="/static/shared.css?v=3">
+    <style>
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .stat-card {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 20px;
+        }
+        .stat-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+        }
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text);
+            line-height: 1.1;
+        }
+        .stat-value.accent { color: var(--accent); }
+        .stat-value.success { color: var(--success); }
+        .stat-unit {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-left: 4px;
+        }
+        .inbox-block { margin-bottom: 32px; }
+        .inbox-header {
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .inbox-header h2 { margin: 0; font-size: 16px; font-weight: 700; }
+        .inbox-header .email { font-size: 13px; color: var(--text-muted); font-family: monospace; }
+    </style>
+</head>
+<body>
+    <header class="app-header">
+        <div class="brand">MLFA</div>
+        <div class="header-right">
+            <div class="user-chip" title="{{ current_email }}"><div class="avatar">{{ (current_email or "?")[0]|upper }}</div><div class="user-email">{{ current_email }}</div></div>
+            <a href="/settings" class="btn small">Back to settings</a>
+            <a href="/" class="btn small">Hub</a>
+        </div>
+    </header>
+
+    <div class="settings-layout">
+        {% include '_settings_nav.html' %}
+        <main class="settings-content">
+            <h1 class="page-title">Stats</h1>
+            <p class="page-subtitle">Volume and efficiency per inbox. Time is total pipeline processing (classification, routing, and Outlook actions).</p>
+
+            <button class="btn small" onclick="loadStats()" style="margin-bottom: 20px;">Refresh</button>
+            <div id="content"></div>
+        </main>
+    </div>
+
+    <script>
+        async function loadStats() {
+            const content = document.getElementById('content');
+            content.innerHTML = '<div class="text-muted">Loading…</div>';
+
+            const inboxRes = await fetch('/api/inboxes');
+            if (!inboxRes.ok) { content.innerHTML = '<div class="text-muted">Could not load inboxes.</div>'; return; }
+            const inboxes = await inboxRes.json();
+
+            const blocks = await Promise.all(inboxes.map(ib =>
+                fetch(`/api/inboxes/${ib.id}/stats`).then(r => r.ok ? r.json() : null).catch(() => null)
+            ));
+
+            content.innerHTML = blocks.filter(Boolean).map(s => `
+                <div class="inbox-block">
+                    <div class="inbox-header">
+                        <h2>${escapeHtml(s.display_name)}</h2>
+                        <span class="email">${escapeHtml(s.email_to_watch)}</span>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-label">Total processed</div>
+                            <div class="stat-value accent">${s.total_processed}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Processed today</div>
+                            <div class="stat-value success">${s.processed_today}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Total processing time</div>
+                            <div class="stat-value">${formatDuration(s.total_duration_ms)}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Avg per email</div>
+                            <div class="stat-value">${formatDuration(s.avg_duration_ms)}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">In review queue</div>
+                            <div class="stat-value">${s.total_queued}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Rejected / dismissed</div>
+                            <div class="stat-value">${s.total_rejected + s.total_dismissed}</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('') || '<div class="text-muted">No inboxes.</div>';
+        }
+
+        function formatDuration(ms) {
+            if (!ms || ms === 0) return '<span class="stat-unit">—</span>';
+            if (ms < 1000) return `${ms}<span class="stat-unit">ms</span>`;
+            if (ms < 60000) return `${(ms / 1000).toFixed(1)}<span class="stat-unit">sec</span>`;
+            if (ms < 3600000) return `${(ms / 60000).toFixed(1)}<span class="stat-unit">min</span>`;
+            return `${(ms / 3600000).toFixed(1)}<span class="stat-unit">hr</span>`;
+        }
+
+        function escapeHtml(s) { if (s == null) return ''; return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+        loadStats();
+    </script>
+</body>
+</html>

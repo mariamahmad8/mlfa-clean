@@ -14,6 +14,15 @@ def create_token(email: str, token_hash: str, expires_in_minutes: int = 15) -> N
     """Insert a new magic-link token for an email address."""
     session = get_db_session()
     try:
+        session.execute(
+            text("""
+                UPDATE login_tokens
+                SET used = true
+                WHERE email = :email
+                  AND used = false
+            """),
+            {"email": email},
+        )
         expires_at = datetime.utcnow() + timedelta(minutes=expires_in_minutes)
         session.execute(
             text("""
@@ -55,5 +64,27 @@ def mark_used(token_hash: str) -> None:
             {"token_hash": token_hash},
         )
         session.commit()
+    finally:
+        session.close()
+
+
+def consume_valid_token(token_hash: str) -> Optional[dict]:
+    """Atomically consume a valid token so concurrent requests cannot reuse it."""
+    session = get_db_session()
+    try:
+        result = session.execute(
+            text("""
+                UPDATE login_tokens
+                SET used = true
+                WHERE token_hash = :token_hash
+                  AND used = false
+                  AND expires_at > NOW()
+                RETURNING *
+            """),
+            {"token_hash": token_hash},
+        )
+        row = result.mappings().first()
+        session.commit()
+        return dict(row) if row else None
     finally:
         session.close()

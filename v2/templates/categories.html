@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MLFA — Categories</title>
     <link rel="icon" type="image/png" href="/mlfa-favicon.png?v=2">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <script src="/static/security.js"></script>
     <link rel="stylesheet" href="/static/shared.css?v=3">
     <style>
         .rule-row { display: grid; grid-template-columns: 24px 40px minmax(0, 1.2fr) minmax(0, 220px) 80px 100px 160px; gap: 12px; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line-soft); background: var(--panel); cursor: default; }
@@ -58,40 +60,40 @@
             <input type="hidden" id="fRuleId">
 
             <div class="form-group">
-                <label class="form-label">Key (stable id, lowercase, no spaces)</label>
+                <label class="form-label">Key<span class="info-tip">i<span class="info-content">A permanent internal name for this category (e.g. <b>donor</b>, <b>legal</b>). GPT uses this exact word when classifying. Don't change after creating.</span></span></label>
                 <input class="form-input" id="fKey" placeholder="donor">
             </div>
 
             <div class="form-group">
-                <label class="form-label">Display label</label>
+                <label class="form-label">Display label<span class="info-tip">i<span class="info-content">Human-readable name shown in the UI (e.g. "Donor Inquiry"). Different from the key. Can be edited anytime.</span></span></label>
                 <input class="form-input" id="fLabel" placeholder="Donor">
             </div>
 
             <div class="form-group">
-                <label class="form-label">Rule text (used in GPT prompt)</label>
+                <label class="form-label">Rule text<span class="info-tip">i<span class="info-content">The description GPT reads to decide if an email belongs to this category. Be specific and use plain language. Include examples like "emails about donations, tax receipts, or gift matching".</span></span></label>
                 <textarea class="form-textarea" id="fRuleText"></textarea>
             </div>
 
             <div class="form-group">
-                <label class="form-label">Amount threshold ($)</label>
+                <label class="form-label">Amount threshold ($)<span class="info-tip">i<span class="info-content">Only forward emails where GPT detected a dollar amount at or above this. Use for donor and invoice categories. Leave blank if amount doesn't matter.</span></span></label>
                 <input class="form-input" type="number" id="fAmount" placeholder="leave blank if none">
                 <div class="form-hint">Only forward when detected amount meets or exceeds this. Used for donor and invoice rules.</div>
             </div>
             <input type="hidden" id="fPriority">
 
             <div class="form-group">
-                <label class="form-label">Destination folder (use / for nesting)</label>
+                <label class="form-label">Destination folder<span class="info-tip">i<span class="info-content">Which Outlook folder to move the email to after processing. Use forward slashes for nested folders (e.g. <b>Donor_Related/Grant</b>). Folder is created if it doesn't exist.</span></span></label>
                 <input class="form-input" id="fFolder" placeholder="Donor_Related/Grant">
             </div>
 
             <div class="form-group">
-                <label class="form-label">Forward to (pick from recipient directory)</label>
+                <label class="form-label">Forward to<span class="info-tip">i<span class="info-content">Which staff addresses to forward matching emails to. Pick from the Recipients directory. If none checked, no forward happens.</span></span></label>
                 <div id="fForwardList" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 8px;"></div>
                 <div class="form-hint">Manage the directory on the Recipients page.</div>
             </div>
 
             <div class="form-group">
-                <label class="form-label">Reply template (default)</label>
+                <label class="form-label">Reply template (default)<span class="info-tip">i<span class="info-content">The auto-reply sent when a matching email arrives. Pick from the Templates library. Choose "No auto-reply" if this category shouldn't send anything.</span></span></label>
                 <select class="form-select" id="fReplySelect">
                     <option value="">— No auto-reply —</option>
                 </select>
@@ -99,7 +101,7 @@
             </div>
 
             <div class="form-group">
-                <label class="form-label">Reply template (personal — when needs_personal_reply is true)</label>
+                <label class="form-label">Reply template (personal)<span class="info-tip">i<span class="info-content">Used when GPT detects the email has personal details (a real case, referral, or specific facts). Falls back to the default template if left empty.</span></span></label>
                 <select class="form-select" id="fReplyPersonalSelect">
                     <option value="">— Same as default —</option>
                 </select>
@@ -107,13 +109,13 @@
             </div>
 
             <div class="form-group" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
-                <label class="form-check"><input type="checkbox" id="fActive"> Active</label>
-                <label class="form-check"><input type="checkbox" id="fMarkRead"> Mark as read</label>
-                <label class="form-check"><input type="checkbox" id="fSkip"> Skip processing</label>
-                <label class="form-check"><input type="checkbox" id="fAutoReply"> Send auto-reply</label>
-                <label class="form-check"><input type="checkbox" id="fSafeguard"> Reply safeguard (no duplicates)</label>
-                <label class="form-check"><input type="checkbox" id="fSkipInternal"> Skip if sender is internal</label>
-                <label class="form-check"><input type="checkbox" id="fDeleteImmediately"> Delete immediately (skip folder)</label>
+                <label class="form-check"><input type="checkbox" id="fActive"> Active <span class="info-tip">i<span class="info-content">Turn off to temporarily disable this category without deleting it. Inactive categories are ignored by GPT and the router.</span></span></label>
+                <label class="form-check"><input type="checkbox" id="fMarkRead"> Mark as read <span class="info-tip">i<span class="info-content">Automatically mark the email as read after processing. Uncheck for categories where you want the email to stay bold in Outlook (like donor or active_communication).</span></span></label>
+                <label class="form-check"><input type="checkbox" id="fSkip"> Skip processing <span class="info-tip">i<span class="info-content">If checked, do nothing at all when an email matches this category. No folder move, no forward, no reply. Rare — use only for categories that should just be tagged and ignored.</span></span></label>
+                <label class="form-check"><input type="checkbox" id="fAutoReply"> Send auto-reply <span class="info-tip">i<span class="info-content">Master switch for whether this category ever sends an auto-reply. If off, no template is sent even if one is selected above.</span></span></label>
+                <label class="form-check"><input type="checkbox" id="fSafeguard"> Reply safeguard <span class="info-tip">i<span class="info-content">Prevents sending the same auto-reply twice in a conversation. Highly recommended for auto-reply categories like legal or volunteer, so senders don't get spammed if they follow up.</span></span></label>
+                <label class="form-check"><input type="checkbox" id="fSkipInternal"> Skip if sender is internal <span class="info-tip">i<span class="info-content">Don't apply this category if the email came from a staff member (matches internal domains set on the inbox). Useful for categories that shouldn't fire on internal forwards.</span></span></label>
+                <label class="form-check"><input type="checkbox" id="fDeleteImmediately"> Delete immediately <span class="info-tip">i<span class="info-content">Skip the folder move and send the email straight to Trash. Used for spam-like categories (auto_reply, delete_internal) that don't need archiving.</span></span></label>
             </div>
 
             <div class="modal-actions">

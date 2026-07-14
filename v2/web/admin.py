@@ -113,6 +113,8 @@ def settings_preview():
     return render_template("preview.html")
 
 
+
+
 # ---------------------------------------------------------------------------
 # Auth decorator — must be admin role (not reviewer)
 # ---------------------------------------------------------------------------
@@ -525,6 +527,32 @@ def delete_template(template_id):
 def list_users():
     users = users_storage.get_all_users()
     return jsonify([_user_to_dict(u) for u in users])
+
+
+@admin_bp.route("/api/inboxes/<int:inbox_id>/stats", methods=["GET"])
+@admin_required
+def inbox_stats(inbox_id):
+    """Efficiency metrics for one inbox."""
+    from datetime import datetime
+    import pytz
+    central = pytz.timezone('America/Chicago')
+    today_start_ct = datetime.now(central).replace(hour=0, minute=0, second=0, microsecond=0)
+    today_start_utc = today_start_ct.astimezone(pytz.utc).replace(tzinfo=None)
+
+    stats = audit_storage.get_stats(inbox_id, today_start_utc)
+    inbox = inbox_storage.get_inbox(inbox_id)
+    return jsonify({
+        "inbox_id": inbox_id,
+        "display_name": inbox.display_name if inbox else "",
+        "email_to_watch": inbox.email_to_watch if inbox else "",
+        "total_processed": stats.get("total_processed", 0),
+        "processed_today": stats.get("processed_today", 0),
+        "total_duration_ms": int(stats.get("total_duration_ms") or 0),
+        "avg_duration_ms": int(stats.get("avg_duration_ms") or 0),
+        "total_queued": stats.get("total_queued", 0),
+        "total_rejected": stats.get("total_rejected", 0),
+        "total_dismissed": stats.get("total_dismissed", 0),
+    })
 
 
 @admin_bp.route("/api/inboxes/<int:inbox_id>/audit", methods=["GET"])

@@ -20,8 +20,9 @@ import re
 import hmac
 import hashlib
 import secrets
+import time
 from functools import wraps
-from flask import Blueprint, request, session, redirect, url_for, render_template, send_from_directory, jsonify
+from flask import Blueprint, current_app, request, session, redirect, url_for, render_template, send_from_directory, jsonify
 
 from storage import inbox as inbox_storage
 from storage import rules as rules_storage
@@ -29,6 +30,7 @@ from storage import queue as queue_storage
 from storage import audit as audit_storage
 from storage import users as users_storage
 from storage import login_tokens as tokens_storage
+from storage import login_rate_limits as rate_limits_storage
 from adapters import o365
 from engine import router, pipeline
 
@@ -80,18 +82,45 @@ def _hash_token(plaintext: str) -> str:
     return hashlib.sha256(plaintext.encode('utf-8')).hexdigest()
 
 
+def _rate_limit_key(scope: str, value: str) -> str:
+    secret_key = str(current_app.config['SECRET_KEY']).encode('utf-8')
+    payload = f"{scope}:{value.strip().lower()}".encode('utf-8')
+    return hmac.new(secret_key, payload, hashlib.sha256).hexdigest()
+
+
 @reviewer_bp.route('/login', methods=['GET', 'POST'])
 def login():
     """Magic-link login: enter email, get a login link sent to your inbox."""
     if request.method == 'POST':
         email = (request.form.get('email') or '').strip().lower()
         if not email:
-            return render_template('login.html', error='Please enter your email or password.')
+            return render_template('login.html', error='Please enter your work email.')
+
+        generic_message = 'If that email is authorized, a login link is on its way.'
+        remote_ip = request.remote_addr or 'unknown'
+        try:
+            ip_attempts = rate_limits_storage.record_attempt(
+                _rate_limit_key('login-ip', remote_ip),
+                window_seconds=3600,
+            )
+            email_attempts = rate_limits_storage.record_attempt(
+                _rate_limit_key('login-email', email),
+                window_seconds=900,
+            )
+        except Exception as e:
+            print(f"Login rate-limit error: {e}")
+            return render_template(
+                'login.html',
+                error='Sign-in is temporarily unavailable. Please try again shortly.',
+            ), 503
+
+        if ip_attempts > 20 or email_attempts > 5:
+            return render_template('login.html', info=generic_message), 429, {'Retry-After': '900'}
 
         user = users_storage.get_user_by_email(email)
         if not user or not user.active:
             # Deliberately generic message so we don't leak which emails exist
-            return render_template('login.html', info='If that email is authorized, a login link is on its way.')
+            return render_template('login.html', info=generic_message)
 
         # Generate a token, hash it, save the hash, send the plaintext in the email
         plaintext_token = secrets.token_urlsafe(32)
@@ -99,7 +128,7 @@ def login():
         tokens_storage.create_token(email, token_hash, expires_in_minutes=15)
 
         # Build the login link
-        base = request.host_url.rstrip('/')
+        base = (current_app.config.get('PUBLIC_BASE_URL') or request.host_url).rstrip('/')
         link = f"{base}/login/verify?token={plaintext_token}"
 
         # Send via the first active inbox (uses the MLFA mailbox to send)
@@ -120,7 +149,7 @@ def login():
             except Exception as e:
                 print(f"Login email send error: {e}")
 
-        return render_template('login.html', info='Login link sent. Check your inbox.')
+        return render_template('login.html', info=generic_message)
 
     return render_template('login.html')
 
@@ -133,11 +162,9 @@ def login_verify():
         return render_template('login.html', error='Invalid or missing link.')
 
     token_hash = _hash_token(plaintext)
-    row = tokens_storage.get_valid_token(token_hash)
+    row = tokens_storage.consume_valid_token(token_hash)
     if not row:
         return render_template('login.html', error='Link is invalid or expired.')
-
-    tokens_storage.mark_used(token_hash)
 
     user = users_storage.get_user_by_email(row['email'])
     if not user or not user.active:
@@ -153,15 +180,18 @@ def login_verify():
     except Exception as e:
         print(f"update_last_login error: {e}")
 
+    session.clear()
     session['logged_in'] = True
     session['role'] = user.role_user
     session['user_email'] = user.email
     session['user_id'] = user.id
+    session['authenticated_at'] = int(time.time())
+    session['last_activity_at'] = int(time.time())
     session.permanent = True
     return redirect(url_for('reviewer.index'))
 
 
-@reviewer_bp.route('/logout')
+@reviewer_bp.route('/logout', methods=['POST'])
 def logout():
     session.clear()
     return redirect(url_for('reviewer.login'))
@@ -284,6 +314,8 @@ def approve_email(email_id):
     Re-runs the router against current rules so any rule changes since
     queuing are honored. Removes the row from the queue and logs the action.
     """
+    import time as _time
+    _started = _time.time()
     inbox = _get_current_inbox()
     if inbox is None:
         return jsonify({"error": "No active inbox"}), 400
@@ -342,6 +374,7 @@ def approve_email(email_id):
         action="approved",
         actor=session.get('user_email', 'unknown'),
         comment=reviewer_comment or plan.tag,
+        duration_ms=int((_time.time() - _started) * 1000),
     )
     return jsonify({"status": "approved"})
 

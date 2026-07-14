@@ -12,6 +12,7 @@ The adapter needs the real O365 object to act on it. The NormalizedMessage
 is what classifier/router work with.
 """
 
+import time
 from typing import List
 
 from models.InboxConfig import InboxConfig
@@ -43,6 +44,8 @@ def process_message(
     normalized_msg is the clean dataclass for classification/routing.
     raw_msg is the underlying O365 library message for performing actions.
     """
+
+    started = time.time()
 
     # Step 0 — enrich with thread context and thread-wide tags (for safeguards)
     if inbox.use_thread_context and normalized_msg.conversation_id:
@@ -85,6 +88,7 @@ def process_message(
             action="queued_for_review",
             actor="system",
             comment=",".join(result.categories),
+            duration_ms=int((time.time() - started) * 1000),
         )
     else:
         # Auto-process: actually do the actions on Microsoft
@@ -95,6 +99,7 @@ def process_message(
             action="auto_processed",
             actor="system",
             comment=plan.tag,
+            duration_ms=int((time.time() - started) * 1000),
         )
 
 

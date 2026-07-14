@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MLFA — Inboxes</title>
     <link rel="icon" type="image/png" href="/mlfa-favicon.png?v=2">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <script src="/static/security.js"></script>
     <link rel="stylesheet" href="/static/shared.css?v=3">
 </head>
 <body>
@@ -26,23 +28,6 @@
         <h1 class="page-title">Inboxes</h1>
         <p class="page-subtitle">Mailboxes the system watches. Adding one here starts polling on the next cycle.</p>
 
-        <details class="card" style="margin-bottom: 20px;">
-            <summary style="cursor: pointer; font-weight: 600;">Setup requirements — read before adding a mailbox</summary>
-            <div style="margin-top: 12px; font-size: 13px; color: var(--text-muted); line-height: 1.7;">
-                <p><strong>Before an inbox will work, Microsoft-side setup must be done:</strong></p>
-                <ol>
-                    <li><strong>The mailbox must exist</strong> in your Microsoft 365 tenant (e.g. <code>give@mlfa.org</code>).</li>
-                    <li><strong>The Azure App Registration for this system needs application permissions:</strong> <code>Mail.ReadWrite</code>, <code>Mail.Send</code>, <code>MailboxSettings.ReadWrite</code>. Admin consent must be granted.</li>
-                    <li><strong>If IT set up an Application Access Policy</strong> (scoping which mailboxes the app can touch), the new mailbox must be added to the whitelist. Ask IT to run:
-                        <pre style="background: var(--panel-2); padding: 8px; border-radius: 4px; font-size: 12px;">Add-DistributionGroupMember -Identity "PairAppAccessGroup" -Member "give@mlfa.org"</pre>
-                        If IT did NOT set up scoped access, the app can already reach any mailbox — nothing to do here.
-                    </li>
-                    <li>Once Microsoft-side is done, add the inbox below. The worker will pick it up on the next poll cycle (roughly 10 seconds).</li>
-                </ol>
-                <p><strong>Cloning:</strong> if a similar inbox already exists, use "Clone from" in the Add form to copy over all category rules, recipients, and templates. Much faster than starting from scratch.</p>
-            </div>
-        </details>
-
         <div class="toolbar">
             <div></div>
             <button class="btn primary" onclick="openAddModal()">+ Add inbox</button>
@@ -54,7 +39,10 @@
                     <th>Display name</th>
                     <th>Email</th>
                     <th>Automation</th>
-                    <th>Blocked senders</th>
+                    <th>Total processed</th>
+                    <th>Today</th>
+                    <th>Avg time</th>
+                    <th>In queue</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -102,25 +90,25 @@
             </div>
 
             <div class="form-group">
-                <label class="form-label">Internal domains (one per line)</label>
+                <label class="form-label">Internal domains (one per line)<span class="info-tip">i<span class="info-content">Email domains treated as internal/staff (e.g. <b>mlfa.org</b>). Used to detect when staff themselves are the sender so the system doesn't send replies or forwards outbound.</span></span></label>
                 <textarea class="form-textarea" id="fInternalDomains" placeholder="mlfa.org"></textarea>
                 <div class="form-hint">Anything @these-domains is treated as an internal/staff sender. Used to skip outbound actions on internal messages and for categories with "skip if internal" enabled.</div>
             </div>
 
 <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                 <div>
-                    <label class="form-label">Backfill days</label>
+                    <label class="form-label">Backfill days<span class="info-tip">i<span class="info-content">On the very first run for this inbox, how many days back to scan for unread emails. Default 2. Only matters for initial setup — after that, delta sync handles new emails.</span></span></label>
                     <input class="form-input" type="number" id="fBackfill" placeholder="2">
                     <div class="form-hint">How many days back to scan on first run.</div>
                 </div>
                 <div>
                     <label class="form-label">&nbsp;</label>
-                    <label class="form-check"><input type="checkbox" id="fUseThreadContext"> Use thread context in classification</label>
+                    <label class="form-check"><input type="checkbox" id="fUseThreadContext"> Use thread context in classification <span class="info-tip">i<span class="info-content">Include earlier messages in the same thread when GPT classifies. Helps distinguish "new legal help request" from "following up on my case". Recommended: on.</span></span></label>
                 </div>
             </div>
 
             <div class="form-group">
-                <label class="form-check"><input type="checkbox" id="fInternalBridge"> Enable internal reply bridge (staff SEND: replies)</label>
+                <label class="form-check"><input type="checkbox" id="fInternalBridge"> Enable internal reply bridge <span class="info-tip">i<span class="info-content">Advanced feature. Staff can reply to forwarded emails with a special prefix ([EXTERNAL] or [INTERNAL]) and the system relays their reply back to the original sender. Leave off unless MLFA staff use this workflow.</span></span></label>
                 <div class="form-hint">When enabled, staff can respond to forwarded emails and the system relays their reply to the original sender.</div>
             </div>
 
@@ -156,29 +144,50 @@
 
     <script>
         let inboxes = [];
+        let statsById = {};
 
         async function loadInboxes() {
             const res = await fetch('/api/inboxes');
             if (!res.ok) return;
             inboxes = await res.json();
+            // Fetch stats for each inbox in parallel
+            const results = await Promise.all(inboxes.map(ib =>
+                fetch(`/api/inboxes/${ib.id}/stats`).then(r => r.ok ? r.json() : null).catch(() => null)
+            ));
+            statsById = {};
+            results.filter(Boolean).forEach(s => { statsById[s.inbox_id] = s; });
             renderTable();
+        }
+
+        function formatDuration(ms) {
+            if (!ms || ms === 0) return '—';
+            if (ms < 1000) return `${ms} ms`;
+            if (ms < 60000) return `${(ms / 1000).toFixed(1)} s`;
+            if (ms < 3600000) return `${(ms / 60000).toFixed(1)} min`;
+            return `${(ms / 3600000).toFixed(1)} hr`;
         }
 
         function renderTable() {
             const tbody = document.getElementById('inboxTbody');
             document.getElementById('empty').style.display = inboxes.length ? 'none' : 'block';
-            tbody.innerHTML = inboxes.map(ib => `
+            tbody.innerHTML = inboxes.map(ib => {
+                const s = statsById[ib.id] || {};
+                return `
                 <tr>
                     <td><strong>${escapeHtml(ib.display_name)}</strong></td>
                     <td>${escapeHtml(ib.email_to_watch)}</td>
                     <td>${ib.automation_mode ? '<span class="badge success">Auto</span>' : '<span class="badge">Manual</span>'}</td>
-                    <td class="text-muted text-small">${(ib.blocked_senders || []).length} blocked</td>
+                    <td><strong>${s.total_processed ?? 0}</strong></td>
+                    <td>${s.processed_today ?? 0}</td>
+                    <td class="text-small text-muted" title="Total: ${formatDuration(s.total_duration_ms)}">${formatDuration(s.avg_duration_ms)}</td>
+                    <td>${s.total_queued ?? 0}</td>
                     <td class="actions-cell">
                         <button class="btn small" onclick="openEditModal(${ib.id})">Edit</button>
                         <button class="btn small danger" onclick="deleteInbox(${ib.id})">Delete</button>
                     </td>
                 </tr>
-            `).join('');
+                `;
+            }).join('');
         }
 
         function openAddModal() {

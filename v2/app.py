@@ -21,21 +21,19 @@ from flask_cors import CORS
 from worker import loop as worker_loop
 from web.reviewer import reviewer_bp
 from web.admin import admin_bp
+from security import configure_security
 
 
 def create_app() -> Flask:
     """Build the Flask app and register both blueprints."""
     app = Flask(__name__, template_folder='templates')
-    app.secret_key = os.getenv('SECRET_KEY', 'mlfa-email-hub-2024')
-    app.config['SESSION_COOKIE_SECURE'] = os.getenv('SESSION_COOKIE_SECURE', 'false').strip().lower() == 'true'
-    app.config['SESSION_COOKIE_SAMESITE'] = os.getenv('SESSION_COOKIE_SAMESITE', 'Lax')
+    security_settings = configure_security(app)
+    app.config['PUBLIC_BASE_URL'] = security_settings['public_base_url']
 
     allowed_origins = os.getenv('ALLOWED_ORIGINS', '').strip()
     if allowed_origins:
         origins = [o.strip() for o in allowed_origins.split(',') if o.strip()]
         CORS(app, supports_credentials=True, origins=origins)
-    else:
-        CORS(app, supports_credentials=True)
 
     app.register_blueprint(reviewer_bp)
     app.register_blueprint(admin_bp)
@@ -47,6 +45,7 @@ def create_app() -> Flask:
         return {
             "current_email": session.get("user_email", ""),
             "current_role": session.get("role", ""),
+            "csrf_token": session.get("csrf_token", ""),
         }
 
     return app
