@@ -131,6 +131,7 @@ def configure_security(app) -> dict:
             "reviewer.shared_css",
             "reviewer.favicon",
             "reviewer.mlfa_logo",
+            "reviewer.mlfa_biglogo",
             "static",
         }:
             return None
@@ -184,7 +185,8 @@ def configure_security(app) -> dict:
             "form-action 'self'; "
             "object-src 'none'; "
             "img-src 'self' data:; "
-            "style-src 'self' 'unsafe-inline'; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "font-src 'self' https://fonts.gstatic.com; "
             "script-src 'self' 'unsafe-inline'; "
             "connect-src 'self'"
         )
@@ -193,7 +195,7 @@ def configure_security(app) -> dict:
                 "max-age=31536000; includeSubDomains"
             )
 
-        if not request.path.startswith(("/static/", "/mlfa-logo", "/mlfa-favicon")):
+        if not request.path.startswith(("/static/", "/mlfa-logo", "/mlfa-favicon", "/mlfa-biglogo")):
             response.headers["Cache-Control"] = "no-store, max-age=0"
             response.headers["Pragma"] = "no-cache"
 

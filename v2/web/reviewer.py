@@ -258,6 +258,17 @@ def mlfa_logo():
     )
 
 
+@reviewer_bp.route('/mlfa-biglogo.png')
+def mlfa_biglogo():
+    """Serve the high-resolution MLFA logo used in the header + branding."""
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    return send_from_directory(
+        os.path.join(base_dir, '..'),
+        'mlfabiglogo.png',
+        mimetype='image/png',
+    )
+
+
 @reviewer_bp.route('/api/my_inboxes')
 @login_required
 def my_inboxes():

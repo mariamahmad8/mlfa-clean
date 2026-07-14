@@ -7,7 +7,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
-  /* Palette */
+  /* Palette — muted paper base with MLFA teal + rust accents */
   --bg: #F5F1EA;
   --panel: #FFFFFF;
   --panel-2: #EDE7DC;
@@ -18,12 +18,22 @@
   --text-muted: #7A7264;
   --text-soft: #A29886;
 
-  --accent: #6B7C5A;
-  --accent-hover: #5A6B4B;
-  --accent-soft: rgba(107, 124, 90, 0.10);
+  /* MLFA brand teal — used for header + primary buttons + brand emphasis */
+  --mlfa-teal: #014438;
+  --mlfa-teal-hover: #0A5C4B;
+  --mlfa-teal-soft: rgba(1, 68, 56, 0.08);
+
+  /* Accent = MLFA teal so primary buttons + focus states match the brand */
+  --accent: #014438;
+  --accent-hover: #0A5C4B;
+  --accent-soft: rgba(1, 68, 56, 0.08);
+
+  /* Sage green — softer secondary green for badges + subtle highlights */
+  --sage: #6B7C5A;
+  --sage-soft: rgba(107, 124, 90, 0.12);
 
   --success: #6B8E5A;
-  /* MLFA brand rust — used sparingly for accents + destructive actions */
+  /* MLFA brand rust — accent color for warnings, delete, "time saved" callout */
   --mlfa-orange: #B83D26;
   --mlfa-orange-hover: #9E3220;
   --mlfa-orange-soft: rgba(184, 61, 38, 0.10);
@@ -67,12 +77,12 @@ html, body {
 a { color: var(--accent); text-decoration: none; }
 a:hover { color: var(--accent-hover); }
 
-/* Header */
+/* Header — MLFA-branded dark teal bar with cream text */
 .app-header {
-  height: 56px;
+  height: 64px;
   padding: 0 24px;
-  background: var(--panel);
-  border-bottom: 1px solid var(--line);
+  background: var(--mlfa-teal);
+  border-bottom: 3px solid var(--mlfa-orange);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -80,34 +90,35 @@ a:hover { color: var(--accent-hover); }
   position: sticky;
   top: 0;
   z-index: 10;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
 }
 
 .app-header .brand {
   display: inline-flex;
   flex-direction: row;
   align-items: center;
-  gap: 10px;
-  color: var(--text);
+  gap: 12px;
+  color: #F5F1EA;
   text-decoration: none;
   flex: 0 0 auto;
 }
 
 .app-header .brand img {
-  width: 32px;
-  height: 32px;
+  height: 42px;
+  width: auto;
   display: block;
-  object-fit: cover;
-  border-radius: 6px;
+  object-fit: contain;
 }
 
 .app-header .brand span {
-  color: var(--text);
-  font-size: 14px;
-  font-weight: 700;
+  color: #F5F1EA;
+  font-size: 16px;
+  font-weight: 600;
   line-height: 1.1;
-  letter-spacing: 0.01em;
-  text-transform: none;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   white-space: nowrap;
+  font-family: var(--font-display);
 }
 
 .app-header .inbox-tabs {
@@ -120,7 +131,7 @@ a:hover { color: var(--accent-hover); }
   padding: 8px 14px;
   border-radius: var(--radius-sm);
   background: transparent;
-  color: var(--text-muted);
+  color: rgba(245, 241, 234, 0.75);
   border: none;
   cursor: pointer;
   font-size: 13px;
@@ -128,11 +139,31 @@ a:hover { color: var(--accent-hover); }
   font-family: inherit;
   transition: all 0.15s ease;
 }
-.app-header .inbox-tab:hover { color: var(--text); background: var(--panel-2); }
+.app-header .inbox-tab:hover { color: #F5F1EA; background: rgba(245, 241, 234, 0.10); }
 .app-header .inbox-tab.active {
-  color: var(--accent);
-  background: var(--accent-soft);
+  color: var(--mlfa-teal);
+  background: #F5F1EA;
   font-weight: 600;
+}
+
+/* Header buttons + user chip get light-on-dark treatment */
+.app-header .btn {
+  background: rgba(245, 241, 234, 0.12);
+  color: #F5F1EA;
+  border-color: rgba(245, 241, 234, 0.25);
+}
+.app-header .btn:hover {
+  background: rgba(245, 241, 234, 0.22);
+  color: #FFFFFF;
+  border-color: rgba(245, 241, 234, 0.4);
+}
+.app-header .user-chip {
+  background: rgba(245, 241, 234, 0.12);
+  color: #F5F1EA;
+  border: 1px solid rgba(245, 241, 234, 0.15);
+}
+.app-header .user-chip .avatar {
+  background: var(--mlfa-orange);
 }
 
 .app-header .header-right {
