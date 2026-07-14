@@ -293,6 +293,19 @@ def tag_email(msg, categories: List[str], reply_tag: bool = False) -> None:
         msg.save_message()
 
 
+def remove_email_tags(msg, tags: List[str]) -> None:
+    """Remove specific Outlook category tags without disturbing other labels."""
+    existing = set(msg.categories or [])
+    remove_set = {t for t in (tags or []) if t}
+    if not remove_set:
+        return
+
+    updated = existing - remove_set
+    if updated != existing:
+        msg.categories = sorted(updated)
+        msg.save_message()
+
+
 def mark_as_read(msg) -> None:
     """Mark a message as read in Outlook."""
     try:

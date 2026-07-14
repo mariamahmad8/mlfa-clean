@@ -206,6 +206,17 @@ def shared_css():
     return send_from_directory(os.path.join(base_dir, '..', 'templates'), 'shared.css')
 
 
+@reviewer_bp.route('/favicon.ico')
+def favicon():
+    """Serve the MLFA logo used in the browser tab."""
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    return send_from_directory(
+        os.path.join(base_dir, '..'),
+        'mlfa_logo.jpeg',
+        mimetype='image/jpeg',
+    )
+
+
 @reviewer_bp.route('/api/my_inboxes')
 @login_required
 def my_inboxes():
@@ -337,6 +348,7 @@ def reject_email(email_id):
 
     raw_msg = o365.fetch_message_safely(inbox, email_id)
     if raw_msg is not None:
+        o365.remove_email_tags(raw_msg, ['PAIRActioned/queued'])
         o365.move_to_trash(inbox, raw_msg)
         o365.tag_email(raw_msg, ['dismissed'], reply_tag=False)
 
@@ -361,6 +373,7 @@ def dismiss_email(email_id):
 
     raw_msg = o365.fetch_message_safely(inbox, email_id)
     if raw_msg is not None:
+        o365.remove_email_tags(raw_msg, ['PAIRActioned/queued'])
         o365.mark_as_read(raw_msg)
         o365.tag_email(raw_msg, ['dismissed'], reply_tag=False)
 
@@ -518,5 +531,3 @@ def _classification_from_dict(d):
         name_sender=d.get('name_sender'),
         amount_money_detected=d.get('amount_detected'),
     )
-
-

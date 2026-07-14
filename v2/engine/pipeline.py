@@ -107,6 +107,8 @@ def execute_plan(plan: MessageActionPlan, inbox: InboxConfig, raw_msg) -> None:
     on a message we've already moved out of view.
     """
 
+    o365.remove_email_tags(raw_msg, ["PAIRActioned/queued"])
+
     # 1. Delete → trash → done
     if plan.delete:
         o365.move_to_trash(inbox, raw_msg)
