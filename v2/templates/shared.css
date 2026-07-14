@@ -3,8 +3,8 @@
  * Muted, warm, paper-like. No harsh blue/white.
  */
 
-/* MLFA brand font (Oswald) — used for headings and titles */
-@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+/* MLFA brand fonts — Oswald for display / Nunito Sans (Avenir-alike) for body */
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Nunito+Sans:wght@400;500;600;700&display=swap');
 
 :root {
   /* Palette — muted paper base with MLFA teal + rust accents */
@@ -47,8 +47,8 @@
   --shadow-sm: 0 1px 2px rgba(42, 40, 35, 0.04);
   --shadow: 0 1px 4px rgba(42, 40, 35, 0.06);
 
-  --font: "Inter", "Segoe UI", -apple-system, sans-serif;
-  --font-display: "Oswald", "Inter", "Segoe UI", -apple-system, sans-serif;
+  --font: "Nunito Sans", "Avenir Next", "Avenir", "Segoe UI", -apple-system, sans-serif;
+  --font-display: "Oswald", "Nunito Sans", "Avenir Next", "Segoe UI", -apple-system, sans-serif;
 }
 
 /* Headings + section titles use Oswald for MLFA brand consistency */
@@ -146,25 +146,109 @@ a:hover { color: var(--accent-hover); }
   font-weight: 600;
 }
 
-/* Header buttons + user chip get light-on-dark treatment */
+/* Header buttons — clean ghost pills, cream on teal */
 .app-header .btn {
-  background: rgba(245, 241, 234, 0.12);
+  background: transparent;
   color: #F5F1EA;
-  border-color: rgba(245, 241, 234, 0.25);
+  border: 1px solid rgba(245, 241, 234, 0.35);
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 500;
+  font-size: 12px;
+  padding: 6px 14px;
+  border-radius: 6px;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 .app-header .btn:hover {
-  background: rgba(245, 241, 234, 0.22);
+  background: rgba(245, 241, 234, 0.14);
+  border-color: rgba(245, 241, 234, 0.7);
   color: #FFFFFF;
-  border-color: rgba(245, 241, 234, 0.4);
 }
-.app-header .user-chip {
-  background: rgba(245, 241, 234, 0.12);
+.app-header .btn:active {
+  background: rgba(245, 241, 234, 0.22);
+}
+
+/* Icon button (gear) */
+.app-header .icon-btn {
+  background: transparent;
   color: #F5F1EA;
-  border: 1px solid rgba(245, 241, 234, 0.15);
+  border: 1px solid rgba(245, 241, 234, 0.35);
+  border-radius: 6px;
+  padding: 6px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  display: inline-flex;
+  align-items: center;
 }
+.app-header .icon-btn:hover { background: rgba(245, 241, 234, 0.14); border-color: rgba(245, 241, 234, 0.7); }
+
+/* User menu — clickable chip with dropdown */
+.user-menu { position: relative; }
+.app-header .user-chip {
+  background: transparent;
+  color: #F5F1EA;
+  border: 1px solid rgba(245, 241, 234, 0.35);
+  cursor: pointer;
+  padding: 4px 12px 4px 4px;
+  transition: background 0.15s, border-color 0.15s;
+  gap: 10px;
+  max-width: 260px;
+}
+.app-header .user-chip:hover { background: rgba(245, 241, 234, 0.14); border-color: rgba(245, 241, 234, 0.7); }
 .app-header .user-chip .avatar {
   background: var(--mlfa-orange);
+  color: #FFFFFF;
+  font-family: var(--font-display);
 }
+.app-header .user-chip .user-email { color: #F5F1EA; font-size: 13px; }
+.app-header .user-chip .chev {
+  margin-left: 4px;
+  opacity: 0.7;
+  transition: transform 0.15s;
+}
+.user-menu.open .app-header .user-chip .chev,
+.user-menu.open .chev { transform: rotate(180deg); }
+
+.user-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 200px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  padding: 6px;
+  display: none;
+  z-index: 100;
+}
+.user-menu.open .user-dropdown { display: block; }
+.user-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: left;
+}
+.user-dropdown-item:hover { background: var(--panel-2); }
+.user-dropdown-item.danger { color: var(--mlfa-orange); }
+.user-dropdown-item.danger:hover { background: var(--mlfa-orange-soft); }
+.user-dropdown-header {
+  padding: 8px 12px 10px;
+  border-bottom: 1px solid var(--line-soft);
+  margin-bottom: 4px;
+}
+.user-dropdown-header .u-name { font-weight: 600; font-size: 13px; color: var(--text); }
+.user-dropdown-header .u-role { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; }
 
 .app-header .header-right {
   display: flex;

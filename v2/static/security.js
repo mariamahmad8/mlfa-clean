@@ -22,3 +22,23 @@
     return originalFetch(input, init);
   };
 })();
+
+// Header user-menu dropdown — click chip to open, click outside / Esc to close.
+window.toggleUserMenu = function(e) {
+  e.stopPropagation();
+  const menu = e.currentTarget.closest('.user-menu');
+  if (!menu) return;
+  const opening = !menu.classList.contains('open');
+  document.querySelectorAll('.user-menu.open').forEach(m => m.classList.remove('open'));
+  if (opening) menu.classList.add('open');
+};
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.user-menu')) {
+    document.querySelectorAll('.user-menu.open').forEach(m => m.classList.remove('open'));
+  }
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.user-menu.open').forEach(m => m.classList.remove('open'));
+  }
+});
