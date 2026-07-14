@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" href="/mlfa-favicon.png?v=2">
     <meta name="csrf-token" content="{{ csrf_token }}">
     <script src="/static/security.js"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="/static/shared.css?v=6">
+    <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="/static/shared.css?v=7">
     <style>
         .stats-grid {
             display: grid;
@@ -36,6 +36,17 @@
         }
         .stat-value.accent { color: var(--accent); }
         .stat-value.success { color: var(--success); }
+        .stats-section-title {
+            font-family: var(--font-display);
+            font-size: 15px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--mlfa-teal);
+            margin: 4px 0 10px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--line);
+        }
     </style>
 </head>
 <body>
@@ -219,39 +230,46 @@
             if (!res.ok) { notify('Could not load stats', 'error'); return; }
             const s = await res.json();
             const HUMAN_MIN_PER_EMAIL = 2;
-            const timeSavedMs = (s.processed_today || 0) * HUMAN_MIN_PER_EMAIL * 60 * 1000;
+            const savedTodayMs = (s.today.processed || 0) * HUMAN_MIN_PER_EMAIL * 60 * 1000;
+            const savedAllMs = (s.all_time.processed || 0) * HUMAN_MIN_PER_EMAIL * 60 * 1000;
 
-            document.getElementById('statsBody').innerHTML = `
-                <div class="text-small text-muted" style="margin-bottom: 12px;">All counts below reflect activity since midnight (Central Time) today.</div>
+            const sectionHtml = (label, d, savedMs) => `
+                <div class="stats-section-title">${label}</div>
                 <div class="stats-grid">
                     <div class="stat-card">
-                        <div class="stat-label">Processed today</div>
-                        <div class="stat-value accent">${s.processed_today || 0}</div>
+                        <div class="stat-label">Processed</div>
+                        <div class="stat-value accent">${d.processed || 0}</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-label">In review queue (now)</div>
-                        <div class="stat-value">${s.in_review_now || 0}</div>
+                        <div class="stat-label">Rejected / dismissed</div>
+                        <div class="stat-value">${(d.rejected || 0) + (d.dismissed || 0)}</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-label">Rejected / dismissed today</div>
-                        <div class="stat-value">${(s.rejected_today || 0) + (s.dismissed_today || 0)}</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Total processing time today</div>
-                        <div class="stat-value">${formatDuration(s.total_duration_ms)}</div>
+                        <div class="stat-label">Total processing time</div>
+                        <div class="stat-value">${formatDuration(d.duration_ms)}</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-label">Average per email</div>
-                        <div class="stat-value">${formatDuration(s.avg_duration_ms)}</div>
+                        <div class="stat-value">${formatDuration(d.avg_duration_ms)}</div>
                     </div>
                     <div class="stat-card" style="grid-column: 1 / -1; background: var(--mlfa-orange-soft); border-color: var(--mlfa-orange);">
-                        <div class="stat-label" style="color: var(--mlfa-orange);">Estimated time saved today</div>
-                        <div class="stat-value" style="color: var(--mlfa-orange);">${formatDuration(timeSavedMs)}</div>
+                        <div class="stat-label" style="color: var(--mlfa-orange);">Estimated time saved</div>
+                        <div class="stat-value" style="color: var(--mlfa-orange);">${formatDuration(savedMs)}</div>
                         <div class="text-small text-muted" style="margin-top: 4px;">
                             Assuming a person would need ~${HUMAN_MIN_PER_EMAIL} min per email to triage manually.
                         </div>
                     </div>
                 </div>
+            `;
+
+            document.getElementById('statsBody').innerHTML = `
+                <div class="stat-card" style="margin-bottom: 16px; background: var(--accent-soft); border-color: var(--accent);">
+                    <div class="stat-label" style="color: var(--accent);">In review queue right now</div>
+                    <div class="stat-value" style="color: var(--accent);">${s.in_review_now || 0}</div>
+                </div>
+                ${sectionHtml('Today (since midnight Central Time)', s.today, savedTodayMs)}
+                <div style="height: 24px;"></div>
+                ${sectionHtml('All time', s.all_time, savedAllMs)}
             `;
             document.getElementById('statsTitle').textContent = `Stats — ${s.display_name}`;
             document.getElementById('statsModal').style.display = 'flex';

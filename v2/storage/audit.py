@@ -57,8 +57,9 @@ def get_events(inbox_id: int, limit: int = 200) -> List[dict]:
 
 def get_stats(inbox_id: int, today_start_utc: datetime) -> dict:
     """
-    Today-scoped efficiency stats for one inbox (Central-Time midnight boundary).
-    Counts + timing all filter to today so the demo reflects fresh activity.
+    Efficiency stats for one inbox — today-scoped AND all-time.
+    Central-Time midnight boundary. Past entries without duration_ms still
+    count in processed totals; time sums only include rows with recorded duration.
     """
     processed_actions = ('auto_processed', 'approved', 'approved_bulk', 'auto_processed_on_toggle')
     session = get_db_session()
@@ -66,12 +67,18 @@ def get_stats(inbox_id: int, today_start_utc: datetime) -> dict:
         result = session.execute(
             text("""
                 SELECT
+                    -- Today
                     COUNT(*) FILTER (WHERE action_taken = ANY(:actions) AND created_at >= :today_start) AS processed_today,
-                    COALESCE(SUM(duration_ms) FILTER (WHERE action_taken = ANY(:actions) AND created_at >= :today_start), 0) AS total_duration_ms,
-                    COALESCE(AVG(duration_ms) FILTER (WHERE action_taken = ANY(:actions) AND duration_ms IS NOT NULL AND created_at >= :today_start), 0) AS avg_duration_ms,
-                    COUNT(*) FILTER (WHERE action_taken = 'queued_for_review' AND created_at >= :today_start) AS queued_today,
+                    COALESCE(SUM(duration_ms) FILTER (WHERE action_taken = ANY(:actions) AND created_at >= :today_start), 0) AS duration_ms_today,
+                    COALESCE(AVG(duration_ms) FILTER (WHERE action_taken = ANY(:actions) AND duration_ms IS NOT NULL AND created_at >= :today_start), 0) AS avg_duration_ms_today,
                     COUNT(*) FILTER (WHERE action_taken = 'rejected' AND created_at >= :today_start) AS rejected_today,
-                    COUNT(*) FILTER (WHERE action_taken = 'dismissed' AND created_at >= :today_start) AS dismissed_today
+                    COUNT(*) FILTER (WHERE action_taken = 'dismissed' AND created_at >= :today_start) AS dismissed_today,
+                    -- All-time
+                    COUNT(*) FILTER (WHERE action_taken = ANY(:actions)) AS processed_all,
+                    COALESCE(SUM(duration_ms) FILTER (WHERE action_taken = ANY(:actions)), 0) AS duration_ms_all,
+                    COALESCE(AVG(duration_ms) FILTER (WHERE action_taken = ANY(:actions) AND duration_ms IS NOT NULL), 0) AS avg_duration_ms_all,
+                    COUNT(*) FILTER (WHERE action_taken = 'rejected') AS rejected_all,
+                    COUNT(*) FILTER (WHERE action_taken = 'dismissed') AS dismissed_all
                 FROM audit_log
                 WHERE inbox_id = :inbox_id
             """),

@@ -547,13 +547,21 @@ def inbox_stats(inbox_id):
         "inbox_id": inbox_id,
         "display_name": inbox.display_name if inbox else "",
         "email_to_watch": inbox.email_to_watch if inbox else "",
-        "processed_today": stats.get("processed_today", 0),
         "in_review_now": in_review_now,
-        "rejected_today": stats.get("rejected_today", 0),
-        "dismissed_today": stats.get("dismissed_today", 0),
-        "queued_today": stats.get("queued_today", 0),
-        "total_duration_ms": int(stats.get("total_duration_ms") or 0),
-        "avg_duration_ms": int(stats.get("avg_duration_ms") or 0),
+        "today": {
+            "processed": stats.get("processed_today", 0),
+            "rejected": stats.get("rejected_today", 0),
+            "dismissed": stats.get("dismissed_today", 0),
+            "duration_ms": int(stats.get("duration_ms_today") or 0),
+            "avg_duration_ms": int(stats.get("avg_duration_ms_today") or 0),
+        },
+        "all_time": {
+            "processed": stats.get("processed_all", 0),
+            "rejected": stats.get("rejected_all", 0),
+            "dismissed": stats.get("dismissed_all", 0),
+            "duration_ms": int(stats.get("duration_ms_all") or 0),
+            "avg_duration_ms": int(stats.get("avg_duration_ms_all") or 0),
+        },
     })
 
 
