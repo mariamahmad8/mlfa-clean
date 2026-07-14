@@ -7,32 +7,237 @@
     <link rel="icon" type="image/png" href="/mlfa-favicon.png?v=2">
     <link rel="stylesheet" href="/static/shared.css">
     <style>
-        body { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-        .login-card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 32px; width: 380px; box-shadow: var(--shadow); }
-        .brand-title { font-size: 20px; font-weight: 700; margin: 0 0 4px; }
-        .brand-sub { font-size: 13px; color: var(--text-muted); margin: 0 0 24px; }
-        .msg { padding: 10px 12px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 16px; }
+        :root {
+            --login-green: #0d4b3f;
+            --login-green-deep: #083a31;
+            --login-gold: #d3a84f;
+            --login-cream: #f7f3ea;
+        }
+
+        body {
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            padding: 40px;
+            background-color: var(--login-cream);
+            background-image:
+                linear-gradient(rgba(13, 75, 63, 0.035) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(13, 75, 63, 0.035) 1px, transparent 1px);
+            background-size: 32px 32px;
+        }
+
+        .login-shell {
+            width: min(920px, 100%);
+            min-height: 520px;
+            display: grid;
+            grid-template-columns: 0.9fr 1.1fr;
+            overflow: hidden;
+            background: var(--panel);
+            border: 1px solid rgba(13, 75, 63, 0.16);
+            border-radius: 22px;
+            box-shadow: 0 24px 70px rgba(30, 42, 34, 0.14);
+        }
+
+        .brand-panel {
+            position: relative;
+            overflow: hidden;
+            padding: 52px 48px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            color: #fff;
+            background: var(--login-green);
+        }
+
+        .brand-panel::before,
+        .brand-panel::after {
+            content: "";
+            position: absolute;
+            border: 1px solid rgba(255, 255, 255, 0.13);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .brand-panel::before { width: 330px; height: 330px; right: -205px; top: -120px; }
+        .brand-panel::after { width: 230px; height: 230px; left: -130px; bottom: -120px; }
+
+        .brand-lockup,
+        .brand-copy,
+        .brand-footer { position: relative; z-index: 1; }
+
+        .brand-lockup {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        .brand-logo {
+            width: 62px;
+            height: 62px;
+            border-radius: 15px;
+            object-fit: cover;
+            box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18);
+        }
+
+        .brand-copy h2 {
+            max-width: 340px;
+            margin: 0 0 18px;
+            font-size: clamp(30px, 4vw, 42px);
+            line-height: 1.08;
+            letter-spacing: -0.035em;
+        }
+
+        .brand-copy p {
+            max-width: 330px;
+            margin: 0;
+            color: rgba(255, 255, 255, 0.72);
+            font-size: 15px;
+            line-height: 1.7;
+        }
+
+        .brand-footer {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: rgba(255, 255, 255, 0.66);
+            font-size: 12px;
+        }
+
+        .brand-footer::before {
+            content: "";
+            width: 28px;
+            height: 2px;
+            background: var(--login-gold);
+        }
+
+        .form-panel {
+            padding: 68px 66px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .eyebrow {
+            margin: 0 0 12px;
+            color: var(--login-green);
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        .brand-title {
+            margin: 0 0 10px;
+            font-size: 32px;
+            line-height: 1.2;
+            letter-spacing: -0.025em;
+        }
+
+        .brand-sub {
+            max-width: 390px;
+            margin: 0 0 34px;
+            color: var(--text-muted);
+            font-size: 14px;
+            line-height: 1.65;
+        }
+
+        .form-label { margin-bottom: 8px; color: var(--text); letter-spacing: 0.05em; }
+        .form-input { height: 48px; padding: 0 15px; font-size: 14px; }
+        .form-input:focus { border-color: var(--login-green); box-shadow: 0 0 0 3px rgba(13, 75, 63, 0.10); }
+
+        .login-submit {
+            width: 100%;
+            min-height: 48px;
+            justify-content: center;
+            margin-top: 4px;
+            background: var(--login-green) !important;
+            border-color: var(--login-green) !important;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .login-submit:hover {
+            background: var(--login-green-deep) !important;
+            border-color: var(--login-green-deep) !important;
+            transform: translateY(-1px);
+            box-shadow: 0 8px 20px rgba(13, 75, 63, 0.18);
+        }
+
+        .login-note {
+            display: flex;
+            align-items: flex-start;
+            gap: 9px;
+            margin: 20px 0 0;
+            color: var(--text-soft);
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .login-note svg { flex: 0 0 auto; margin-top: 1px; color: var(--login-green); }
+        .msg { padding: 11px 13px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 18px; }
         .msg.error { background: rgba(168, 91, 78, 0.10); color: var(--danger); }
         .msg.info { background: var(--accent-soft); color: var(--accent); }
-        .divider { border: none; border-top: 1px solid var(--line-soft); margin: 20px 0; }
-        details summary { font-size: 12px; color: var(--text-muted); cursor: pointer; }
+
+        @media (max-width: 760px) {
+            body { padding: 20px; place-items: start center; }
+            .login-shell { grid-template-columns: 1fr; min-height: 0; }
+            .brand-panel { min-height: 250px; padding: 30px; }
+            .brand-copy { margin: 38px 0 22px; }
+            .brand-copy h2 { font-size: 30px; }
+            .brand-footer { display: none; }
+            .form-panel { padding: 38px 30px 42px; }
+            .brand-title { font-size: 27px; }
+        }
+
+        @media (max-width: 420px) {
+            body { padding: 0; background: var(--panel); }
+            .login-shell { border: 0; border-radius: 0; box-shadow: none; }
+            .brand-panel { min-height: 220px; }
+        }
     </style>
 </head>
 <body>
-    <div class="login-card">
-        <h1 class="brand-title">MLFA hub</h1>
-        <p class="brand-sub">Sign in to review and manage automated email routing.</p>
-
-        {% if error %}<div class="msg error">{{ error }}</div>{% endif %}
-        {% if info %}<div class="msg info">{{ info }}</div>{% endif %}
-
-        <form method="POST" action="/login">
-            <div class="form-group">
-                <label class="form-label">Work email</label>
-                <input class="form-input" type="email" name="email" placeholder="you@mlfa.org" autofocus required>
+    <main class="login-shell">
+        <section class="brand-panel" aria-label="Muslim Legal Fund of America">
+            <div class="brand-lockup">
+                <img class="brand-logo" src="/mlfa-logo.jpeg" alt="MLFA logo">
+                <span>Muslim Legal Fund of America</span>
             </div>
-            <button class="btn primary" type="submit" style="width: 100%;">Send me a login link</button>
-        </form>
-    </div>
+
+            <div class="brand-copy">
+                <h2>MLFA Email Hub</h2>
+            </div>
+
+            <div class="brand-footer">Secure internal workspace</div>
+        </section>
+
+        <section class="form-panel">
+            <p class="eyebrow">MLFA Operations Hub</p>
+            <h1 class="brand-title">Welcome back</h1>
+            <p class="brand-sub">Enter your approved work email and we&rsquo;ll send you a secure sign-in link.</p>
+
+            {% if error %}<div class="msg error">{{ error }}</div>{% endif %}
+            {% if info %}<div class="msg info">{{ info }}</div>{% endif %}
+
+            <form method="POST" action="/login">
+                <div class="form-group">
+                    <label class="form-label" for="email">Work email</label>
+                    <input class="form-input" id="email" type="email" name="email" placeholder="name@mlfa.org" autocomplete="email" autofocus required>
+                </div>
+                <button class="btn primary login-submit" type="submit">Send secure sign-in link</button>
+            </form>
+
+            <p class="login-note">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M7 10V8a5 5 0 0 1 10 0v2M6 10h12v10H6V10Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Access is limited to approved MLFA team members. No password required.
+            </p>
+        </section>
+    </main>
 </body>
 </html>

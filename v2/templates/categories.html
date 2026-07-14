@@ -23,7 +23,10 @@
 </head>
 <body>
     <header class="app-header">
-        <div class="brand">MLFA</div>
+        <a href="/" class="brand" aria-label="MLFA Email Hub">
+            <img src="/mlfa-logo.jpeg" alt="MLFA">
+            <span>Email Hub</span>
+        </a>
         <div class="header-right">
             <div class="user-chip" title="{{ current_email }}"><div class="avatar">{{ (current_email or "?")[0]|upper }}</div><div class="user-email">{{ current_email }}</div></div>
             <a href="/settings" class="btn small">Back to settings</a>

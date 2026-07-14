@@ -64,10 +64,34 @@ a:hover { color: var(--accent-hover); }
 }
 
 .app-header .brand {
-  font-weight: 700;
-  font-size: 15px;
-  letter-spacing: 0.02em;
+  width: 58px;
+  align-self: stretch;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
   color: var(--text);
+  text-decoration: none;
+  flex: 0 0 auto;
+}
+
+.app-header .brand img {
+  width: 31px;
+  height: 31px;
+  display: block;
+  object-fit: cover;
+  border-radius: 7px;
+}
+
+.app-header .brand span {
+  color: var(--text-muted);
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .app-header .inbox-tabs {

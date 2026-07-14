@@ -217,6 +217,17 @@ def favicon():
     )
 
 
+@reviewer_bp.route('/mlfa-logo.jpeg')
+def mlfa_logo():
+    """Serve the full-size MLFA logo used by the sign-in page."""
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    return send_from_directory(
+        os.path.join(base_dir, '..'),
+        'mlfa_logo.jpeg',
+        mimetype='image/jpeg',
+    )
+
+
 @reviewer_bp.route('/api/my_inboxes')
 @login_required
 def my_inboxes():

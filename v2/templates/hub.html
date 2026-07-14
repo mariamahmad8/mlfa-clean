@@ -156,7 +156,10 @@
 </head>
 <body>
     <header class="app-header">
-        <div class="brand">MLFA</div>
+        <a href="/" class="brand" aria-label="MLFA Email Hub">
+            <img src="/mlfa-logo.jpeg" alt="MLFA">
+            <span>Email Hub</span>
+        </a>
         <div class="inbox-tabs" id="inboxTabs"></div>
         <div class="header-right">
             {% if current_role == 'admin' %}
