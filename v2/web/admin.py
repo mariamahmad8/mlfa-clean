@@ -35,6 +35,7 @@ from engine import classifier, router
 
 
 admin_bp = Blueprint("admin", __name__)
+VALID_USER_ROLES = {"admin", "owner", "reviewer"}
 
 
 # ---------------------------------------------------------------------------
@@ -535,10 +536,13 @@ def create_recipient(inbox_id):
 def update_recipient(recipient_id):
     denied = _guard_resource_access("recipients", recipient_id)
     if denied: return denied
+    resource_inbox_id = _resource_inbox_id("recipients", recipient_id)
+    if resource_inbox_id is None:
+        return jsonify({"error": "Not found"}), 404
     data = request.get_json() or {}
     recip = Recipient(
         id=recipient_id,
-        inbox_id=data.get("inbox_id"),
+        inbox_id=resource_inbox_id,
         label_recipient=data.get("label_recipient", ""),
         email=data.get("email", ""),
         notes=data.get("notes"),
@@ -608,10 +612,13 @@ def create_template(inbox_id):
 def update_template(template_id):
     denied = _guard_resource_access("reply_templates", template_id)
     if denied: return denied
+    resource_inbox_id = _resource_inbox_id("reply_templates", template_id)
+    if resource_inbox_id is None:
+        return jsonify({"error": "Not found"}), 404
     data = request.get_json() or {}
     tpl = ReplyTemplate(
         id=template_id,
-        inbox_id=data.get("inbox_id"),
+        inbox_id=resource_inbox_id,
         name_template=data.get("name_template", ""),
         body_html=data.get("body_html", ""),
         active=bool(data.get("active", True)),
@@ -713,9 +720,12 @@ def list_audit(inbox_id):
 @admin_required
 def update_user(user_id):
     data = request.get_json() or {}
+    role_user = data.get("role_user", "reviewer")
+    if role_user not in VALID_USER_ROLES:
+        return jsonify({"error": "Invalid role"}), 400
     users_storage.update_user(
         user_id,
-        role_user=data.get("role_user", "reviewer"),
+        role_user=role_user,
         active=bool(data.get("active", True)),
         assigned_inbox_ids=data.get("assigned_inbox_ids", []),
     )
@@ -747,12 +757,15 @@ def delete_user(user_id):
 @admin_required
 def create_user():
     data = request.get_json() or {}
+    role_user = data.get("role_user", "reviewer")
+    if role_user not in VALID_USER_ROLES:
+        return jsonify({"error": "Invalid role"}), 400
     new = User(
         id=None,
         email=data.get("email", ""),
         display_name=None,
         microsoft_oid=None,
-        role_user=data.get("role_user", "reviewer"),
+        role_user=role_user,
         last_login_at=None,
         created_at=None,
         active=bool(data.get("active", True)),
