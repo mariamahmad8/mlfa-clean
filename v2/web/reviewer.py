@@ -206,14 +206,14 @@ def shared_css():
     return send_from_directory(os.path.join(base_dir, '..', 'templates'), 'shared.css')
 
 
-@reviewer_bp.route('/favicon.ico')
+@reviewer_bp.route('/mlfa-favicon.png')
 def favicon():
     """Serve the MLFA logo used in the browser tab."""
     base_dir = os.path.dirname(os.path.abspath(__file__))
     return send_from_directory(
         os.path.join(base_dir, '..'),
-        'mlfa_logo.jpeg',
-        mimetype='image/jpeg',
+        'mlfa_favicon.png',
+        mimetype='image/png',
     )
 
 
