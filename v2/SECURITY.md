@@ -36,6 +36,7 @@ critical production security configuration is missing.
 - Previous unused magic links invalidated when a new one is requested
 - HSTS, CSP, clickjacking, MIME-sniffing, referrer, and permissions headers
 - No-store caching for authenticated and sensitive responses
+- Production access logs omit query strings so magic-link tokens are not logged
 
 ## Remaining high-priority work
 

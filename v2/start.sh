@@ -11,5 +11,6 @@ exec gunicorn \
   --max-requests 1000 \
   --max-requests-jitter 100 \
   --access-logfile - \
+  --access-logformat '%(m)s %(U)s %(H)s %(s)s %(L)s' \
   --error-logfile - \
   wsgi:app

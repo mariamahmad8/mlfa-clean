@@ -4,7 +4,9 @@
     <a href="/settings/categories" class="nav-item" data-path="/settings/categories">Categories</a>
     <a href="/settings/recipients" class="nav-item" data-path="/settings/recipients">Recipients</a>
     <a href="/settings/templates" class="nav-item" data-path="/settings/templates">Reply templates</a>
+    {% if session.get('role') == 'admin' %}
     <a href="/settings/users" class="nav-item" data-path="/settings/users">Users</a>
+    {% endif %}
     <a href="/settings/audit" class="nav-item" data-path="/settings/audit">Audit log</a>
     <a href="/settings/preview" class="nav-item" data-path="/settings/preview">Test &amp; preview</a>
 </aside>

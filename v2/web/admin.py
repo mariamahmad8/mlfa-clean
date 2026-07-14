@@ -48,53 +48,121 @@ def _require_login_or_redirect():
     return None
 
 
+def _require_settings_access_or_redirect():
+    """For settings HTML routes: admins and owners can see settings.
+    Reviewers get sent back to the hub."""
+    if not session.get("logged_in"):
+        return redirect(url_for("reviewer.login"))
+    if session.get("role") not in {"admin", "owner"}:
+        return redirect(url_for("reviewer.index"))
+    return None
+
+
 def _require_admin_or_redirect():
-    """For admin HTML routes: must be logged in AND have admin role."""
+    """For admin-only HTML routes (user management)."""
     if not session.get("logged_in"):
         return redirect(url_for("reviewer.login"))
     if session.get("role") != "admin":
-        # Send reviewers back to the hub — they don't get to see settings
         return redirect(url_for("reviewer.index"))
+    return None
+
+
+def _accessible_inbox_ids():
+    """Set of inbox ids the current user is allowed to touch.
+    Admins → all active inboxes. Owners + reviewers → their assigned ids only."""
+    role = session.get("role")
+    all_inboxes = inbox_storage.get_active_inboxes()
+    if role == "admin":
+        return {ib.id for ib in all_inboxes}
+    user_email = session.get("user_email")
+    if not user_email:
+        return set()
+    user = users_storage.get_user_by_email(user_email)
+    if not user:
+        return set()
+    assigned = set(user.assigned_inbox_ids or [])
+    return {ib.id for ib in all_inboxes if ib.id in assigned}
+
+
+def _current_user_can_access(inbox_id: int) -> bool:
+    """True if the logged-in user is allowed to see/edit this inbox."""
+    try:
+        return int(inbox_id) in _accessible_inbox_ids()
+    except (TypeError, ValueError):
+        return False
+
+
+def _resource_inbox_id(table: str, resource_id: int):
+    """Look up the inbox_id that owns a specific rule / recipient / template row.
+    Returns None if the row doesn't exist. Used to enforce owner scoping on
+    resource-based routes like PATCH /api/rules/<id>."""
+    from adapters.db import get_db_session
+    from sqlalchemy import text
+    allowed = {"category_rules", "recipients", "reply_templates"}
+    if table not in allowed:
+        return None
+    session_db = get_db_session()
+    try:
+        row = session_db.execute(
+            text(f"SELECT inbox_id FROM {table} WHERE id = :id"),
+            {"id": resource_id},
+        ).mappings().first()
+        return row["inbox_id"] if row else None
+    finally:
+        session_db.close()
+
+
+def _guard_resource_access(table: str, resource_id: int):
+    """Verify the current user can touch the resource. Returns None if OK,
+    a Flask jsonify tuple if forbidden — callers must `return` the value."""
+    if session.get("role") == "admin":
+        return None
+    inbox_id = _resource_inbox_id(table, resource_id)
+    if inbox_id is None:
+        return jsonify({"error": "Not found"}), 404
+    if not _current_user_can_access(inbox_id):
+        return jsonify({"error": "You don't have access to that resource"}), 403
     return None
 
 
 @admin_bp.route("/settings")
 def settings_home():
-    r = _require_admin_or_redirect()
+    r = _require_settings_access_or_redirect()
     if r: return r
     return redirect("/settings/inboxes")
 
 
 @admin_bp.route("/settings/inboxes")
 def settings_inboxes():
-    r = _require_admin_or_redirect()
+    r = _require_settings_access_or_redirect()
     if r: return r
     return render_template("inboxes.html")
 
 
 @admin_bp.route("/settings/categories")
 def settings_categories():
-    r = _require_admin_or_redirect()
+    r = _require_settings_access_or_redirect()
     if r: return r
     return render_template("categories.html")
 
 
 @admin_bp.route("/settings/recipients")
 def settings_recipients():
-    r = _require_admin_or_redirect()
+    r = _require_settings_access_or_redirect()
     if r: return r
     return render_template("recipients.html")
 
 
 @admin_bp.route("/settings/templates")
 def settings_templates():
-    r = _require_admin_or_redirect()
+    r = _require_settings_access_or_redirect()
     if r: return r
     return render_template("templates.html")
 
 
 @admin_bp.route("/settings/users")
 def settings_users():
+    # Admin only — user management is a global privilege
     r = _require_admin_or_redirect()
     if r: return r
     return render_template("users.html")
@@ -102,14 +170,14 @@ def settings_users():
 
 @admin_bp.route("/settings/audit")
 def settings_audit():
-    r = _require_admin_or_redirect()
+    r = _require_settings_access_or_redirect()
     if r: return r
     return render_template("audit.html")
 
 
 @admin_bp.route("/settings/preview")
 def settings_preview():
-    r = _require_admin_or_redirect()
+    r = _require_settings_access_or_redirect()
     if r: return r
     return render_template("preview.html")
 
@@ -135,7 +203,8 @@ def _audit(action: str, target: str, comment: str = "", inbox_id=None):
 
 
 def admin_required(f):
-    """Decorator: block any user whose role isn't 'admin'."""
+    """Strict admin-only decorator — for user management, inbox create/delete,
+    and anything that grants power beyond one inbox."""
     @wraps(f)
     def decorated(*args, **kwargs):
         if not session.get("logged_in"):
@@ -146,19 +215,54 @@ def admin_required(f):
     return decorated
 
 
+def settings_access_required(f):
+    """Allow admins and owners; block reviewers.
+    For settings CRUD that owners can perform on their assigned inboxes."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get("logged_in"):
+            return jsonify({"error": "Authentication required"}), 401
+        if session.get("role") not in {"admin", "owner"}:
+            return jsonify({"error": "Settings access required"}), 403
+        return f(*args, **kwargs)
+    return decorated
+
+
+def inbox_scoped(f):
+    """Decorator for routes that touch a specific inbox_id (in the URL).
+    Enforces that owners can only touch their assigned inboxes.
+    Admins pass through unchanged."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get("logged_in"):
+            return jsonify({"error": "Authentication required"}), 401
+        if session.get("role") == "admin":
+            return f(*args, **kwargs)
+        inbox_id = kwargs.get("inbox_id")
+        if inbox_id is None or not _current_user_can_access(inbox_id):
+            return jsonify({"error": "You don't have access to that inbox"}), 403
+        return f(*args, **kwargs)
+    return decorated
+
+
 # ---------------------------------------------------------------------------
 # INBOXES
 # ---------------------------------------------------------------------------
 
 @admin_bp.route("/api/inboxes", methods=["GET"])
-@admin_required
+@settings_access_required
 def list_inboxes():
+    """Admins see all; owners see only their assigned inboxes."""
     inboxes = inbox_storage.get_active_inboxes()
+    if session.get("role") != "admin":
+        allowed = _accessible_inbox_ids()
+        inboxes = [i for i in inboxes if i.id in allowed]
     return jsonify([_inbox_to_dict(i) for i in inboxes])
 
 
 @admin_bp.route("/api/inboxes/<int:inbox_id>", methods=["GET"])
-@admin_required
+@settings_access_required
+@inbox_scoped
 def get_inbox(inbox_id):
     inbox = inbox_storage.get_inbox(inbox_id)
     if not inbox:
@@ -192,7 +296,8 @@ def create_inbox():
 
 
 @admin_bp.route("/api/inboxes/<int:inbox_id>", methods=["PATCH"])
-@admin_required
+@settings_access_required
+@inbox_scoped
 def update_inbox(inbox_id):
     inbox = inbox_storage.get_inbox(inbox_id)
     if not inbox:
@@ -297,15 +402,18 @@ def delete_inbox(inbox_id):
 # ---------------------------------------------------------------------------
 
 @admin_bp.route("/api/inboxes/<int:inbox_id>/rules", methods=["GET"])
-@admin_required
+@settings_access_required
+@inbox_scoped
 def list_rules(inbox_id):
     rules = rules_storage.get_rules_for_inbox(inbox_id)
     return jsonify([_rule_to_dict(r) for r in rules])
 
 
 @admin_bp.route("/api/rules/<int:rule_id>", methods=["GET"])
-@admin_required
+@settings_access_required
 def get_rule(rule_id):
+    denied = _guard_resource_access("category_rules", rule_id)
+    if denied: return denied
     rule = rules_storage.get_rule(rule_id)
     if not rule:
         return jsonify({"error": "Not found"}), 404
@@ -313,7 +421,8 @@ def get_rule(rule_id):
 
 
 @admin_bp.route("/api/inboxes/<int:inbox_id>/rules", methods=["POST"])
-@admin_required
+@settings_access_required
+@inbox_scoped
 def create_rule(inbox_id):
     data = request.get_json() or {}
     new_key = (data.get("key") or "").strip()
@@ -351,8 +460,10 @@ def create_rule(inbox_id):
 
 
 @admin_bp.route("/api/rules/<int:rule_id>", methods=["PATCH"])
-@admin_required
+@settings_access_required
 def update_rule(rule_id):
+    denied = _guard_resource_access("category_rules", rule_id)
+    if denied: return denied
     rule = rules_storage.get_rule(rule_id)
     if not rule:
         return jsonify({"error": "Not found"}), 404
@@ -377,8 +488,10 @@ def update_rule(rule_id):
 
 
 @admin_bp.route("/api/rules/<int:rule_id>", methods=["DELETE"])
-@admin_required
+@settings_access_required
 def delete_rule(rule_id):
+    denied = _guard_resource_access("category_rules", rule_id)
+    if denied: return denied
     existing = rules_storage.get_rule(rule_id)
     rules_storage.delete_rule(rule_id)
     if existing:
@@ -391,14 +504,16 @@ def delete_rule(rule_id):
 # ---------------------------------------------------------------------------
 
 @admin_bp.route("/api/inboxes/<int:inbox_id>/recipients", methods=["GET"])
-@admin_required
+@settings_access_required
+@inbox_scoped
 def list_recipients(inbox_id):
     recips = recipients_storage.get_recipients_for_inbox(inbox_id)
     return jsonify([_recipient_to_dict(r) for r in recips])
 
 
 @admin_bp.route("/api/inboxes/<int:inbox_id>/recipients", methods=["POST"])
-@admin_required
+@settings_access_required
+@inbox_scoped
 def create_recipient(inbox_id):
     data = request.get_json() or {}
     new = Recipient(
@@ -416,8 +531,10 @@ def create_recipient(inbox_id):
 
 
 @admin_bp.route("/api/recipients/<int:recipient_id>", methods=["PATCH"])
-@admin_required
+@settings_access_required
 def update_recipient(recipient_id):
+    denied = _guard_resource_access("recipients", recipient_id)
+    if denied: return denied
     data = request.get_json() or {}
     recip = Recipient(
         id=recipient_id,
@@ -434,8 +551,10 @@ def update_recipient(recipient_id):
 
 
 @admin_bp.route("/api/recipients/<int:recipient_id>", methods=["DELETE"])
-@admin_required
+@settings_access_required
 def delete_recipient(recipient_id):
+    denied = _guard_resource_access("recipients", recipient_id)
+    if denied: return denied
     # Find the recipient before deleting so we can log a readable name
     all_inboxes = inbox_storage.get_active_inboxes()
     target_recip = None
@@ -459,14 +578,16 @@ def delete_recipient(recipient_id):
 # ---------------------------------------------------------------------------
 
 @admin_bp.route("/api/inboxes/<int:inbox_id>/templates", methods=["GET"])
-@admin_required
+@settings_access_required
+@inbox_scoped
 def list_templates(inbox_id):
     tpls = templates_storage.get_templates_for_inbox(inbox_id)
     return jsonify([_template_to_dict(t) for t in tpls])
 
 
 @admin_bp.route("/api/inboxes/<int:inbox_id>/templates", methods=["POST"])
-@admin_required
+@settings_access_required
+@inbox_scoped
 def create_template(inbox_id):
     data = request.get_json() or {}
     new = ReplyTemplate(
@@ -483,8 +604,10 @@ def create_template(inbox_id):
 
 
 @admin_bp.route("/api/templates/<int:template_id>", methods=["PATCH"])
-@admin_required
+@settings_access_required
 def update_template(template_id):
+    denied = _guard_resource_access("reply_templates", template_id)
+    if denied: return denied
     data = request.get_json() or {}
     tpl = ReplyTemplate(
         id=template_id,
@@ -500,8 +623,10 @@ def update_template(template_id):
 
 
 @admin_bp.route("/api/templates/<int:template_id>", methods=["DELETE"])
-@admin_required
+@settings_access_required
 def delete_template(template_id):
+    denied = _guard_resource_access("reply_templates", template_id)
+    if denied: return denied
     all_inboxes = inbox_storage.get_active_inboxes()
     target_tpl = None
     for ib in all_inboxes:
@@ -531,7 +656,8 @@ def list_users():
 
 
 @admin_bp.route("/api/inboxes/<int:inbox_id>/stats", methods=["GET"])
-@admin_required
+@settings_access_required
+@inbox_scoped
 def inbox_stats(inbox_id):
     """Efficiency metrics for one inbox."""
     from datetime import datetime
@@ -566,7 +692,8 @@ def inbox_stats(inbox_id):
 
 
 @admin_bp.route("/api/inboxes/<int:inbox_id>/audit", methods=["GET"])
-@admin_required
+@settings_access_required
+@inbox_scoped
 def list_audit(inbox_id):
     events = audit_storage.get_events(inbox_id, limit=200)
     return jsonify([
@@ -641,7 +768,8 @@ def create_user():
 # ---------------------------------------------------------------------------
 
 @admin_bp.route("/api/inboxes/<int:inbox_id>/prompt_preview", methods=["GET"])
-@admin_required
+@settings_access_required
+@inbox_scoped
 def prompt_preview(inbox_id):
     """Assemble and return what the classification prompt looks like for an inbox."""
     inbox = inbox_storage.get_inbox(inbox_id)
@@ -669,7 +797,8 @@ def prompt_preview(inbox_id):
 # ---------------------------------------------------------------------------
 
 @admin_bp.route("/api/inboxes/<int:inbox_id>/test_classification", methods=["POST"])
-@admin_required
+@settings_access_required
+@inbox_scoped
 def test_classification(inbox_id):
     """Run a fake email through the classifier + router without touching Outlook."""
     inbox = inbox_storage.get_inbox(inbox_id)

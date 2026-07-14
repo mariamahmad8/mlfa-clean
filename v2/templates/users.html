@@ -61,16 +61,17 @@
             </div>
 
             <div class="form-group">
-                <label class="form-label">Role<span class="info-tip">i<span class="info-content"><b>Admin</b> can edit settings, add users, and see the audit log. <b>Reviewer</b> can only work the review queue — no settings access.</span></span></label>
+                <label class="form-label">Role<span class="info-tip">i<span class="info-content"><b>Reviewer:</b> approves emails in the queue for their assigned inboxes. <b>Owner:</b> reviewer access plus can edit settings (categories, recipients, templates) for their assigned inboxes. <b>Admin:</b> full access to everything and can manage users.</span></span></label>
                 <select class="form-select" id="fRole">
                     <option value="reviewer">Reviewer</option>
+                    <option value="owner">Owner</option>
                     <option value="admin">Admin</option>
                 </select>
-                <div class="form-hint">Reviewers only work the queue. Admins can edit settings.</div>
+                <div class="form-hint">Reviewers only work the queue. Owners edit settings for their assigned inboxes. Admins can do everything.</div>
             </div>
 
             <div class="form-group" id="assignedInboxesRow">
-                <label class="form-label">Assigned inboxes<span class="info-tip">i<span class="info-content">Only reviewers use this. Check the inboxes this reviewer should see the queue for. Admins always see all inboxes regardless.</span></span></label>
+                <label class="form-label">Assigned inboxes<span class="info-tip">i<span class="info-content">For reviewers and owners: check the inboxes they should have access to. Admins always see all inboxes regardless of what's checked.</span></span></label>
                 <div id="fAssignedList" style="border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 8px; max-height: 180px; overflow-y: auto;"></div>
                 <div class="form-hint">Reviewers only see queues from checked inboxes. Admins always see everything regardless.</div>
             </div>
@@ -118,7 +119,7 @@
                 <tr>
                     <td><strong>${escapeHtml(u.email)}</strong></td>
                     <td>${escapeHtml(u.display_name || '—')}</td>
-                    <td>${u.role_user === 'admin' ? '<span class="badge warning">Admin</span>' : '<span class="badge">Reviewer</span>'}</td>
+                    <td>${roleBadge(u.role_user)}</td>
                     <td class="text-muted text-small">${u.last_login_at ? formatCentral(u.last_login_at) : 'Never'}</td>
                     <td>${u.active ? '<span class="badge success">Active</span>' : '<span class="badge">Inactive</span>'}</td>
                     <td class="actions-cell">
@@ -178,6 +179,11 @@
 
         function notify(msg, type = 'success') { const el = document.createElement('div'); el.className = `notification ${type}`; el.textContent = msg; document.body.appendChild(el); setTimeout(() => el.remove(), 2000); }
         function escapeHtml(s) { if (s == null) return ''; return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+        function roleBadge(r) {
+            if (r === 'admin')  return '<span class="badge warning">Admin</span>';
+            if (r === 'owner')  return '<span class="badge success">Owner</span>';
+            return '<span class="badge">Reviewer</span>';
+        }
         function formatCentral(iso) {
             const d = new Date(iso.endsWith('Z') ? iso : iso + 'Z');
             return d.toLocaleString('en-US', { timeZone: 'America/Chicago', dateStyle: 'short', timeStyle: 'medium' });

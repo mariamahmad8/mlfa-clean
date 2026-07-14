@@ -70,7 +70,8 @@ def decide(
             continue
         matching_rules.append(rule)
 
-    # No matching rules — leave the message alone
+    # Unknown or invalid model output must always stop for human review,
+    # including when the inbox normally runs in full-automation mode.
     if not matching_rules:
         return MessageActionPlan(
             move_to_folder=None,
@@ -79,7 +80,7 @@ def decide(
             reply_text=None,
             mark_read=False,
             tag=None,
-            requires_human_review=not inbox.automation_mode,
+            requires_human_review=True,
             delete=False,
         )
 

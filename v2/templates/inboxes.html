@@ -6,6 +6,7 @@
     <title>MLFA — Inboxes</title>
     <link rel="icon" type="image/png" href="/mlfa-favicon.png?v=2">
     <meta name="csrf-token" content="{{ csrf_token }}">
+    <script>window.CURRENT_ROLE = "{{ session.get('role', '') }}";</script>
     <script src="/static/security.js?v=2"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Nunito+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="/static/shared.css?v=12">
     <style>
@@ -156,7 +157,7 @@
 
         <div class="toolbar">
             <div></div>
-            <button class="btn primary" onclick="openAddModal()">+ Add inbox</button>
+            {% if session.get('role') == 'admin' %}<button class="btn primary" onclick="openAddModal()">+ Add inbox</button>{% endif %}
         </div>
 
         <table class="data-table">
@@ -305,7 +306,7 @@
                     <td class="actions-cell">
                         <button class="btn small" onclick="openStats(${ib.id})">Stats</button>
                         <button class="btn small" onclick="openEditModal(${ib.id})">Edit</button>
-                        <button class="btn small danger" onclick="deleteInbox(${ib.id})">Delete</button>
+                        ${window.CURRENT_ROLE === 'admin' ? `<button class="btn small danger" onclick="deleteInbox(${ib.id})">Delete</button>` : ''}
                     </td>
                 </tr>
             `).join('');
