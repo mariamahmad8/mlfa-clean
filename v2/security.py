@@ -132,6 +132,7 @@ def configure_security(app) -> dict:
             "reviewer.favicon",
             "reviewer.mlfa_logo",
             "reviewer.mlfa_biglogo",
+            "reviewer.info_icon",
             "static",
         }:
             return None
@@ -195,7 +196,7 @@ def configure_security(app) -> dict:
                 "max-age=31536000; includeSubDomains"
             )
 
-        if not request.path.startswith(("/static/", "/mlfa-logo", "/mlfa-favicon", "/mlfa-biglogo")):
+        if not request.path.startswith(("/static/", "/mlfa-logo", "/mlfa-favicon", "/mlfa-biglogo", "/info-icon")):
             response.headers["Cache-Control"] = "no-store, max-age=0"
             response.headers["Pragma"] = "no-cache"
 

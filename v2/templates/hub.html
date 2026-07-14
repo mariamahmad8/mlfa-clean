@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" href="/mlfa-favicon.png?v=2">
     <meta name="csrf-token" content="{{ csrf_token }}">
     <script src="/static/security.js?v=2"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Nunito+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="/static/shared.css?v=11">
+    <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Nunito+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="/static/shared.css?v=12">
     <style>
         .hub-body {
             display: grid;
@@ -124,24 +124,31 @@
         .automation-toggle {
             display: flex;
             align-items: center;
-            gap: 8px;
-            padding: 6px 12px;
-            background: var(--panel-2);
-            border-radius: var(--radius-sm);
+            gap: 10px;
+            padding: 5px 12px;
+            background: transparent;
+            border: 1px solid rgba(245, 241, 234, 0.35);
+            border-radius: 6px;
+            font-family: var(--font-display);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
             font-size: 12px;
             font-weight: 500;
+            color: #F5F1EA;
+            transition: border-color 0.15s;
         }
+        .automation-toggle:hover { border-color: rgba(245, 241, 234, 0.7); }
 
         .switch {
             position: relative;
             width: 32px;
             height: 18px;
-            background: var(--line);
+            background: rgba(245, 241, 234, 0.25);
             border-radius: 10px;
             cursor: pointer;
             transition: background 0.2s ease;
         }
-        .switch.on { background: var(--accent); }
+        .switch.on { background: var(--mlfa-orange); }
         .switch::after {
             content: '';
             position: absolute;
@@ -149,7 +156,7 @@
             left: 2px;
             width: 14px;
             height: 14px;
-            background: white;
+            background: #F5F1EA;
             border-radius: 50%;
             transition: transform 0.2s ease;
         }
