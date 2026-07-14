@@ -196,7 +196,11 @@ def configure_security(app) -> dict:
                 "max-age=31536000; includeSubDomains"
             )
 
-        if not request.path.startswith(("/static/", "/mlfa-logo", "/mlfa-favicon", "/mlfa-biglogo", "/info-icon")):
+        # Only allow browsers to cache immutable image assets. CSS/JS + all HTML
+        # get no-store so template edits show up immediately after a deploy,
+        # without needing cache-buster query strings in every template.
+        cacheable_prefixes = ("/mlfa-logo", "/mlfa-favicon", "/mlfa-biglogo", "/info-icon")
+        if not request.path.startswith(cacheable_prefixes):
             response.headers["Cache-Control"] = "no-store, max-age=0"
             response.headers["Pragma"] = "no-cache"
 
