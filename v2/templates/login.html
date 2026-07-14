@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MLFA — Sign in</title>
     <link rel="icon" type="image/png" href="/mlfa-favicon.png?v=2">
-    <link rel="stylesheet" href="/static/shared.css">
+    <link rel="stylesheet" href="/static/shared.css?v=3">
     <style>
         :root {
             --login-green: #0d4b3f;
@@ -16,26 +16,16 @@
 
         body {
             min-height: 100vh;
-            display: grid;
-            place-items: center;
-            padding: 40px;
-            background-color: var(--login-cream);
-            background-image:
-                linear-gradient(rgba(13, 75, 63, 0.035) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(13, 75, 63, 0.035) 1px, transparent 1px);
-            background-size: 32px 32px;
+            background: var(--panel);
         }
 
         .login-shell {
-            width: min(920px, 100%);
-            min-height: 520px;
+            width: 100%;
+            min-height: 100vh;
             display: grid;
-            grid-template-columns: 0.9fr 1.1fr;
+            grid-template-columns: minmax(390px, 0.85fr) 1.15fr;
             overflow: hidden;
             background: var(--panel);
-            border: 1px solid rgba(13, 75, 63, 0.16);
-            border-radius: 22px;
-            box-shadow: 0 24px 70px rgba(30, 42, 34, 0.14);
         }
 
         .brand-panel {
@@ -115,11 +105,14 @@
         }
 
         .form-panel {
-            padding: 68px 66px;
+            padding: 68px clamp(48px, 9vw, 150px);
             display: flex;
             flex-direction: column;
             justify-content: center;
+            align-items: center;
         }
+
+        .form-panel > * { width: min(520px, 100%); }
 
         .eyebrow {
             margin: 0 0 12px;
@@ -183,7 +176,6 @@
         .msg.info { background: var(--accent-soft); color: var(--accent); }
 
         @media (max-width: 760px) {
-            body { padding: 20px; place-items: start center; }
             .login-shell { grid-template-columns: 1fr; min-height: 0; }
             .brand-panel { min-height: 250px; padding: 30px; }
             .brand-copy { margin: 38px 0 22px; }
@@ -194,8 +186,6 @@
         }
 
         @media (max-width: 420px) {
-            body { padding: 0; background: var(--panel); }
-            .login-shell { border: 0; border-radius: 0; box-shadow: none; }
             .brand-panel { min-height: 220px; }
         }
     </style>
