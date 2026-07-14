@@ -104,10 +104,13 @@ a:hover { color: var(--accent-hover); }
 }
 
 .app-header .brand img {
-  height: 42px;
-  width: auto;
+  height: 36px;
+  width: 36px;
   display: block;
-  object-fit: contain;
+  object-fit: cover;
+  border-radius: 8px;
+  background: #F5F1EA;
+  padding: 2px;
 }
 
 .app-header .brand span {
@@ -454,6 +457,15 @@ a:hover { color: var(--accent-hover); }
 .form-textarea { min-height: 120px; resize: vertical; font-family: inherit; }
 .form-hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
 
+/* Locked/read-only inputs (e.g. category key after creation) */
+.form-input.is-locked, .form-input[readonly], .form-input:disabled {
+  background: var(--panel-2);
+  color: var(--text-muted);
+  cursor: not-allowed;
+  border-color: var(--line-soft);
+}
+.form-input.is-locked:focus { outline: none; box-shadow: none; border-color: var(--line-soft); }
+
 .form-check {
   display: flex;
   align-items: center;
@@ -461,37 +473,52 @@ a:hover { color: var(--accent-hover); }
   cursor: pointer;
 }
 
-/* Info tooltip — modern "i" icon that shows help on hover */
+/* On-brand checkboxes + radios — teal instead of default browser blue */
+input[type="checkbox"], input[type="radio"] {
+  accent-color: var(--mlfa-teal);
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+/* Info tooltip — thin outlined "i" icon that shows help on hover */
 .info-tip {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 16px;
+  width: 15px;
+  height: 15px;
   border-radius: 50%;
-  background: var(--panel-2);
-  color: var(--text-muted);
-  border: 1px solid var(--line);
-  font-size: 0;  /* hides raw text children; ::before restores its own size */
+  background: transparent;
+  color: var(--mlfa-teal);
+  border: 1.25px solid var(--mlfa-teal);
+  font-size: 0;
   cursor: help;
   margin-left: 6px;
   vertical-align: middle;
-  transition: all 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
   flex-shrink: 0;
   overflow: hidden;
+  opacity: 0.65;
 }
 .info-tip::before {
   content: 'i';
-  font-family: Georgia, 'Times New Roman', serif;
-  font-style: italic;
-  font-weight: 600;
-  font-size: 11px;
+  font-family: var(--font);
+  font-style: normal;
+  font-weight: 700;
+  font-size: 9.5px;
   line-height: 1;
   letter-spacing: normal;
   text-transform: none;
 }
-.info-tip .info-content { display: none; }  /* raw payload stays in DOM but hidden; JS reads from it */
-.info-tip:hover { background: var(--accent); color: white; border-color: var(--accent); }
+.info-tip .info-content { display: none; }
+.info-tip:hover {
+  background: var(--mlfa-teal);
+  color: #FFFFFF;
+  border-color: var(--mlfa-teal);
+  opacity: 1;
+  transform: scale(1.08);
+}
 
 /* The floating tooltip that appears on hover.
    Uses position: fixed via JS so it escapes any overflow: hidden parent. */

@@ -7,52 +7,74 @@
     <link rel="icon" type="image/png" href="/mlfa-favicon.png?v=2">
     <meta name="csrf-token" content="{{ csrf_token }}">
     <script src="/static/security.js?v=2"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Nunito+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="/static/shared.css?v=9">
+    <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Nunito+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="/static/shared.css?v=11">
     <style>
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 12px;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 14px;
         }
         .stat-card {
-            background: var(--panel-2);
+            background: var(--panel);
             border: 1px solid var(--line);
             border-radius: var(--radius);
-            padding: 16px;
+            padding: 18px 20px;
+            transition: transform 0.15s, box-shadow 0.15s;
         }
+        .stat-card:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
         .stat-label {
-            font-size: 11px;
-            font-weight: 600;
+            font-size: 10px;
+            font-weight: 700;
             color: var(--text-muted);
             text-transform: uppercase;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.09em;
             margin-bottom: 8px;
         }
         .stat-value {
-            font-size: 24px;
-            font-weight: 700;
+            font-family: var(--font-display);
+            font-size: 30px;
+            font-weight: 600;
             color: var(--text);
-            line-height: 1.1;
+            line-height: 1;
+            letter-spacing: 0.01em;
         }
-        .stat-value.accent { color: var(--accent); }
+        .stat-value.accent { color: var(--mlfa-teal); }
         .stat-value.success { color: var(--success); }
         .stats-section-title {
             font-family: var(--font-display);
-            font-size: 15px;
+            font-size: 13px;
             font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 0.08em;
+            letter-spacing: 0.12em;
             color: var(--mlfa-teal);
-            margin: 4px 0 10px;
-            padding-bottom: 6px;
-            border-bottom: 1px solid var(--line);
+            margin: 0 0 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
+        .stats-section-title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--line);
+        }
+        .stat-callout {
+            grid-column: 1 / -1;
+            border-radius: var(--radius);
+            padding: 18px 20px;
+        }
+        .stat-callout.teal { background: var(--accent-soft); border: 1px solid var(--mlfa-teal); }
+        .stat-callout.teal .stat-label, .stat-callout.teal .stat-value { color: var(--mlfa-teal); }
+        .stat-callout.rust { background: var(--mlfa-orange-soft); border: 1px solid var(--mlfa-orange); }
+        .stat-callout.rust .stat-label, .stat-callout.rust .stat-value { color: var(--mlfa-orange); }
+        #statsTitle { font-size: 22px; }
+        #statsBody { padding-top: 6px; }
     </style>
 </head>
 <body>
     <header class="app-header">
         <a href="/" class="brand" aria-label="MLFA Email Hub">
-            <img src="/mlfa-biglogo.png?v=1" alt="MLFA">
+            <img src="/mlfa-logo.jpeg?v=2" alt="MLFA">
             <span>Email Hub</span>
         </a>
         <div class="header-right">
@@ -252,20 +274,20 @@
                         <div class="stat-label">Average per email</div>
                         <div class="stat-value">${formatDuration(d.avg_duration_ms)}</div>
                     </div>
-                    <div class="stat-card" style="grid-column: 1 / -1; background: var(--mlfa-orange-soft); border-color: var(--mlfa-orange);">
-                        <div class="stat-label" style="color: var(--mlfa-orange);">Estimated time saved</div>
-                        <div class="stat-value" style="color: var(--mlfa-orange);">${formatDuration(savedMs)}</div>
-                        <div class="text-small text-muted" style="margin-top: 4px;">
-                            Assuming a person would need ~${HUMAN_MIN_PER_EMAIL} min per email to triage manually.
+                    <div class="stat-callout rust">
+                        <div class="stat-label">Estimated time saved</div>
+                        <div class="stat-value">${formatDuration(savedMs)}</div>
+                        <div class="text-small text-muted" style="margin-top: 6px;">
+                            Assuming ~${HUMAN_MIN_PER_EMAIL} min per email to triage manually.
                         </div>
                     </div>
                 </div>
             `;
 
             document.getElementById('statsBody').innerHTML = `
-                <div class="stat-card" style="margin-bottom: 16px; background: var(--accent-soft); border-color: var(--accent);">
-                    <div class="stat-label" style="color: var(--accent);">In review queue right now</div>
-                    <div class="stat-value" style="color: var(--accent);">${s.in_review_now || 0}</div>
+                <div class="stat-callout teal" style="margin-bottom: 22px;">
+                    <div class="stat-label">In review queue right now</div>
+                    <div class="stat-value">${s.in_review_now || 0}</div>
                 </div>
                 ${sectionHtml('Today (since midnight Central Time)', s.today, savedTodayMs)}
                 <div style="height: 24px;"></div>
