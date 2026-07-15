@@ -23,3 +23,5 @@ class CategoryRule:
     reply_template_personal: str = ""
     reply_template_id: Optional[int] = None
     reply_template_personal_id: Optional[int] = None
+    recipient_ids: List[int] = field(default_factory=list)
+    recipient_links_migrated: bool = False

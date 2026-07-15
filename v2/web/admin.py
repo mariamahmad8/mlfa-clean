@@ -368,19 +368,35 @@ def clone_inbox(source_id):
         tpl.inbox_id = created.id
         template_id_map[source_template_id] = templates_storage.save_template(tpl)
 
-    # Copy rules and remap their reusable template references.
+    # Clone recipients before rules so forwarding references can be remapped.
+    recipient_id_map = {}
+    source_recipient_emails = {}
+    for recip in recipients_storage.get_recipients_for_inbox(source_id):
+        source_recipient_id = recip.id
+        source_recipient_emails[source_recipient_id] = recip.email
+        recip.id = None
+        recip.inbox_id = created.id
+        recipient_id_map[source_recipient_id] = recipients_storage.save_recipient(recip)
+
+    # Copy rules and remap their reusable template/recipient references.
     for rule in rules_storage.get_rules_for_inbox(source_id):
         rule.id = None
         rule.inbox_id = created.id
         rule.reply_template_id = template_id_map.get(rule.reply_template_id)
         rule.reply_template_personal_id = template_id_map.get(rule.reply_template_personal_id)
+        if rule.recipient_links_migrated:
+            source_recipient_ids = list(rule.recipient_ids)
+            rule.recipient_ids = [
+                recipient_id_map[recipient_id]
+                for recipient_id in source_recipient_ids
+                if recipient_id in recipient_id_map
+            ]
+            rule.emails_to_forward = [
+                source_recipient_emails[recipient_id]
+                for recipient_id in source_recipient_ids
+                if recipient_id in source_recipient_emails
+            ]
         rules_storage.save_rule(rule)
-
-    # Copy recipients
-    for recip in recipients_storage.get_recipients_for_inbox(source_id):
-        recip.id = None
-        recip.inbox_id = created.id
-        recipients_storage.save_recipient(recip)
 
     _audit("inbox_cloned", f"inbox:{new_email}", f"Cloned from inbox_id {source_id}", inbox_id=created.id)
     return jsonify({"status": "cloned", "new_inbox_id": created.id}), 201
@@ -440,6 +456,9 @@ def create_rule(inbox_id):
         return jsonify({"error": f"A rule with key '{new_key}' already exists on this inbox"}), 400
 
     try:
+        recipient_ids, recipient_emails = _resolve_recipient_selection(
+            inbox_id, data.get("recipient_ids")
+        ) if "recipient_ids" in data else ([], data.get("emails_to_forward", []))
         default_template_id, default_template_body = _resolve_template_selection(
             inbox_id, data.get("reply_template_id"), data.get("reply_template", "")
         )
@@ -461,7 +480,7 @@ def create_rule(inbox_id):
         skip=bool(data.get("skip", False)),
         auto_reply_safeguard=bool(data.get("auto_reply_safeguard", False)),
         auto_reply_enabled=bool(data.get("auto_reply_enabled", False)),
-        emails_to_forward=data.get("emails_to_forward", []),
+        emails_to_forward=recipient_emails,
         folder_path=data.get("folder_path", ""),
         reply_template=default_template_body,
         amount_threshold=data.get("amount_threshold"),
@@ -472,6 +491,8 @@ def create_rule(inbox_id):
         reply_template_personal=personal_template_body,
         reply_template_id=default_template_id,
         reply_template_personal_id=personal_template_id,
+        recipient_ids=recipient_ids,
+        recipient_links_migrated="recipient_ids" in data,
     )
     rules_storage.save_rule(new)
     _audit("rule_created", f"rule:{new.key}", f"Label: {new.label}", inbox_id=inbox_id)
@@ -503,6 +524,14 @@ def update_rule(rule_id):
             setattr(rule, field, data[field])
 
     try:
+        if "recipient_ids" in data:
+            rule.recipient_ids, rule.emails_to_forward = _resolve_recipient_selection(
+                rule.inbox_id, data.get("recipient_ids")
+            )
+            rule.recipient_links_migrated = True
+        elif "emails_to_forward" in data:
+            rule.recipient_ids = []
+            rule.recipient_links_migrated = False
         if "reply_template_id" in data:
             rule.reply_template_id, rule.reply_template = _resolve_template_selection(
                 rule.inbox_id,
@@ -599,6 +628,15 @@ def update_recipient(recipient_id):
 def delete_recipient(recipient_id):
     denied = _guard_resource_access("recipients", recipient_id)
     if denied: return denied
+    references = recipients_storage.count_recipient_references(recipient_id)
+    if references:
+        return jsonify({
+            "error": (
+                f"This recipient is used by {references} category rule(s). "
+                "Remove them from those categories before deleting them."
+            )
+        }), 409
+
     # Find the recipient before deleting so we can log a readable name
     all_inboxes = inbox_storage.get_active_inboxes()
     target_recip = None
@@ -921,6 +959,30 @@ def _resolve_template_selection(inbox_id, raw_template_id, legacy_body=""):
         raise ValueError("Reply template does not belong to this inbox")
     return template.id, template.body_html
 
+
+def _resolve_recipient_selection(inbox_id, raw_recipient_ids):
+    """Validate forwarding recipients and return stable ids plus email fallback."""
+    if raw_recipient_ids is None:
+        return [], []
+    if not isinstance(raw_recipient_ids, list):
+        raise ValueError("Recipient selections must be a list")
+
+    recipient_ids = []
+    recipient_emails = []
+    for raw_recipient_id in raw_recipient_ids:
+        try:
+            recipient_id = int(raw_recipient_id)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("Invalid forwarding recipient selection") from exc
+        if recipient_id in recipient_ids:
+            continue
+        recipient = recipients_storage.get_recipient(recipient_id)
+        if recipient is None or recipient.inbox_id != int(inbox_id):
+            raise ValueError("Forwarding recipient does not belong to this inbox")
+        recipient_ids.append(recipient.id)
+        recipient_emails.append(recipient.email)
+    return recipient_ids, recipient_emails
+
 def _inbox_to_dict(inbox):
     return {
         "id": inbox.id,
@@ -952,6 +1014,8 @@ def _rule_to_dict(rule):
         "auto_reply_safeguard": rule.auto_reply_safeguard,
         "auto_reply_enabled": rule.auto_reply_enabled,
         "emails_to_forward": rule.emails_to_forward,
+        "recipient_ids": rule.recipient_ids,
+        "recipient_links_migrated": rule.recipient_links_migrated,
         "folder_path": rule.folder_path,
         "reply_template": rule.reply_template,
         "amount_threshold": rule.amount_threshold,

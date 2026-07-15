@@ -17,6 +17,18 @@ _RULE_SELECT = """
     LEFT JOIN reply_templates personal_template
       ON personal_template.id = cr.reply_template_personal_id
      AND personal_template.inbox_id = cr.inbox_id
+    LEFT JOIN LATERAL (
+        SELECT
+            COALESCE(jsonb_agg(r.id ORDER BY r.id), '[]'::jsonb) AS recipient_ids,
+            COALESCE(
+                jsonb_agg(r.email ORDER BY r.id) FILTER (WHERE r.active),
+                '[]'::jsonb
+            ) AS active_recipient_emails
+        FROM category_rule_recipients links
+        JOIN recipients r ON r.id = links.recipient_id
+        WHERE links.category_rule_id = cr.id
+          AND r.inbox_id = cr.inbox_id
+    ) linked_recipients ON true
 """
 
 
@@ -33,7 +45,11 @@ def _row_to_rule(row) -> CategoryRule:
         skip=row["skip_email"],
         auto_reply_safeguard=row["auto_reply_safeguard"],
         auto_reply_enabled=row["auto_reply_enabled"],
-        emails_to_forward=row["emails_to_forward"],
+        emails_to_forward=(
+            row.get("active_recipient_emails") or []
+            if row.get("recipient_links_migrated", False)
+            else row["emails_to_forward"]
+        ),
         folder_path=row["folder_path"],
         reply_template=(
             row.get("current_reply_template")
@@ -52,6 +68,8 @@ def _row_to_rule(row) -> CategoryRule:
         ) or "",
         reply_template_id=default_id,
         reply_template_personal_id=personal_id,
+        recipient_ids=row.get("recipient_ids") or [],
+        recipient_links_migrated=row.get("recipient_links_migrated", False),
     )
 
 
@@ -69,11 +87,35 @@ def get_rules_for_inbox(inbox_id: int) -> List[CategoryRule]:
     finally:
         session.close()
 
-def save_rule(rule: CategoryRule) -> None:
+def _sync_rule_recipients(
+    session, rule_id: int, inbox_id: int, recipient_ids: List[int], migrated: bool
+) -> None:
+    session.execute(
+        text("DELETE FROM category_rule_recipients WHERE category_rule_id = :rule_id"),
+        {"rule_id": rule_id},
+    )
+    if not migrated:
+        return
+    for recipient_id in dict.fromkeys(recipient_ids or []):
+        session.execute(
+            text("""
+                INSERT INTO category_rule_recipients
+                    (category_rule_id, recipient_id, inbox_id)
+                VALUES (:rule_id, :recipient_id, :inbox_id)
+            """),
+            {
+                "rule_id": rule_id,
+                "recipient_id": recipient_id,
+                "inbox_id": inbox_id,
+            },
+        )
+
+
+def save_rule(rule: CategoryRule) -> int:
     """Insert a new category rule into the database. The id is auto-generated."""
     session = get_db_session()
     try:
-        session.execute(
+        rule_id = session.execute(
             text(
                 """
                 INSERT INTO category_rules (
@@ -82,15 +124,18 @@ def save_rule(rule: CategoryRule) -> None:
                     emails_to_forward, folder_path, reply_template,
                     amount_threshold, priority, active,
                     skip_if_internal, delete_immediately, reply_template_personal,
-                    reply_template_id, reply_template_personal_id
+                    reply_template_id, reply_template_personal_id,
+                    recipient_links_migrated
                 ) VALUES (
                     :inbox_id, :key, :label, :rule_text,
                     :mark_read, :skip, :auto_reply_safeguard, :auto_reply_enabled,
                     :emails_to_forward, :folder_path, :reply_template,
                     :amount_threshold, :priority, :active,
                     :skip_if_internal, :delete_immediately, :reply_template_personal,
-                    :reply_template_id, :reply_template_personal_id
+                    :reply_template_id, :reply_template_personal_id,
+                    :recipient_links_migrated
                 )
+                RETURNING id
                 """
             ),
             {
@@ -113,9 +158,15 @@ def save_rule(rule: CategoryRule) -> None:
                 "reply_template_personal": rule.reply_template_personal,
                 "reply_template_id": rule.reply_template_id,
                 "reply_template_personal_id": rule.reply_template_personal_id,
+                "recipient_links_migrated": rule.recipient_links_migrated,
             },
+        ).scalar_one()
+        _sync_rule_recipients(
+            session, rule_id, rule.inbox_id,
+            rule.recipient_ids, rule.recipient_links_migrated
         )
         session.commit()
+        return rule_id
     finally:
         session.close()
 
@@ -143,7 +194,8 @@ def update_rule(rule: CategoryRule) -> None:
                     delete_immediately = :delete_immediately,
                     reply_template_personal = :reply_template_personal,
                     reply_template_id = :reply_template_id,
-                    reply_template_personal_id = :reply_template_personal_id
+                    reply_template_personal_id = :reply_template_personal_id,
+                    recipient_links_migrated = :recipient_links_migrated
                 WHERE id = :id
             """),
             {
@@ -166,7 +218,12 @@ def update_rule(rule: CategoryRule) -> None:
                 "reply_template_personal": rule.reply_template_personal,
                 "reply_template_id": rule.reply_template_id,
                 "reply_template_personal_id": rule.reply_template_personal_id,
+                "recipient_links_migrated": rule.recipient_links_migrated,
             },
+        )
+        _sync_rule_recipients(
+            session, rule.id, rule.inbox_id,
+            rule.recipient_ids, rule.recipient_links_migrated
         )
         session.commit()
     finally:

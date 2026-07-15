@@ -26,6 +26,9 @@ def _rule_row(**overrides):
         "reply_template_personal_id": None,
         "current_reply_template": None,
         "current_reply_template_personal": None,
+        "recipient_ids": [],
+        "active_recipient_emails": [],
+        "recipient_links_migrated": False,
         "amount_threshold": None,
         "priority": 1,
         "active": True,
@@ -69,6 +72,27 @@ class TemplateReferenceTests(unittest.TestCase):
         ))
 
         self.assertEqual(rule.reply_template, "old default snapshot")
+
+    def test_linked_recipients_use_current_directory_addresses(self):
+        rule = _row_to_rule(_rule_row(
+            emails_to_forward=["old@example.org"],
+            recipient_ids=[21],
+            active_recipient_emails=["new@example.org"],
+            recipient_links_migrated=True,
+        ))
+
+        self.assertEqual(rule.recipient_ids, [21])
+        self.assertEqual(rule.emails_to_forward, ["new@example.org"])
+
+    def test_unlinked_recipients_keep_legacy_addresses(self):
+        rule = _row_to_rule(_rule_row(
+            emails_to_forward=["custom@example.org"],
+            recipient_ids=[],
+            active_recipient_emails=[],
+            recipient_links_migrated=False,
+        ))
+
+        self.assertEqual(rule.emails_to_forward, ["custom@example.org"])
 
 
 if __name__ == "__main__":

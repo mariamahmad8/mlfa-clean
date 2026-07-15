@@ -162,6 +162,10 @@
             if (!confirm('Delete this recipient?')) return;
             const res = await fetch(`/api/recipients/${id}`, { method: 'DELETE' });
             if (res.ok) { notify('Deleted'); await loadRecipients(); }
+            else {
+                const data = await res.json().catch(() => ({}));
+                notify(data.error || 'Delete failed', 'error');
+            }
         }
 
         function notify(msg, type = 'success') {

@@ -35,14 +35,38 @@ def get_recipients_for_inbox(inbox_id: int) -> List[Recipient]:
         session.close()
 
 
-def save_recipient(recipient: Recipient) -> None:
+def get_recipient(recipient_id: int) -> Optional[Recipient]:
+    """Return one directory recipient by id."""
+    session = get_db_session()
+    try:
+        row = session.execute(
+            text("SELECT * FROM recipients WHERE id = :id"),
+            {"id": recipient_id},
+        ).mappings().first()
+        if row is None:
+            return None
+        return Recipient(
+            id=row["id"],
+            inbox_id=row["inbox_id"],
+            label_recipient=row["label_recipient"],
+            email=row["email"],
+            notes=row["notes"],
+            active=row["active"],
+            created_at=row["created_at"],
+        )
+    finally:
+        session.close()
+
+
+def save_recipient(recipient: Recipient) -> int:
     """Insert a new recipient. id and created_at are auto-generated."""
     session = get_db_session()
     try:
-        session.execute(
+        new_id = session.execute(
             text("""
                 INSERT INTO recipients (inbox_id, label_recipient, email, notes, active)
                 VALUES (:inbox_id, :label_recipient, :email, :notes, :active)
+                RETURNING id
             """),
             {
                 "inbox_id": recipient.inbox_id,
@@ -51,8 +75,9 @@ def save_recipient(recipient: Recipient) -> None:
                 "notes": recipient.notes,
                 "active": recipient.active,
             },
-        )
+        ).scalar_one()
         session.commit()
+        return new_id
     finally:
         session.close()
 
@@ -157,5 +182,21 @@ def delete_recipient(recipient_id: int) -> None:
             )
 
         session.commit()
+    finally:
+        session.close()
+
+
+def count_recipient_references(recipient_id: int) -> int:
+    """Return the number of category rules linked to this recipient."""
+    session = get_db_session()
+    try:
+        return session.execute(
+            text("""
+                SELECT COUNT(*)
+                FROM category_rule_recipients
+                WHERE recipient_id = :id
+            """),
+            {"id": recipient_id},
+        ).scalar_one()
     finally:
         session.close()
