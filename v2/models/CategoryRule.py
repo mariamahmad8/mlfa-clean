@@ -21,3 +21,5 @@ class CategoryRule:
     skip_if_internal: bool = False
     delete_immediately: bool = False
     reply_template_personal: str = ""
+    reply_template_id: Optional[int] = None
+    reply_template_personal_id: Optional[int] = None

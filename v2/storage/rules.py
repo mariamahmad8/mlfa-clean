@@ -6,39 +6,66 @@ from adapters.db import get_db_session
 from models.CategoryRule import CategoryRule
 
 
+_RULE_SELECT = """
+    SELECT cr.*,
+           default_template.body_html AS current_reply_template,
+           personal_template.body_html AS current_reply_template_personal
+    FROM category_rules cr
+    LEFT JOIN reply_templates default_template
+      ON default_template.id = cr.reply_template_id
+     AND default_template.inbox_id = cr.inbox_id
+    LEFT JOIN reply_templates personal_template
+      ON personal_template.id = cr.reply_template_personal_id
+     AND personal_template.inbox_id = cr.inbox_id
+"""
+
+
+def _row_to_rule(row) -> CategoryRule:
+    default_id = row.get("reply_template_id")
+    personal_id = row.get("reply_template_personal_id")
+    return CategoryRule(
+        id=row["id"],
+        inbox_id=row["inbox_id"],
+        key=row["key_for_category"],
+        label=row["label"],
+        rule_text=row["rule_text"],
+        mark_read=row["mark_read"],
+        skip=row["skip_email"],
+        auto_reply_safeguard=row["auto_reply_safeguard"],
+        auto_reply_enabled=row["auto_reply_enabled"],
+        emails_to_forward=row["emails_to_forward"],
+        folder_path=row["folder_path"],
+        reply_template=(
+            row.get("current_reply_template")
+            if default_id is not None and row.get("current_reply_template") is not None
+            else row["reply_template"]
+        ) or "",
+        amount_threshold=float(row["amount_threshold"]) if row["amount_threshold"] is not None else None,
+        priority=row["priority"],
+        active=row["active"],
+        skip_if_internal=row.get("skip_if_internal", False),
+        delete_immediately=row.get("delete_immediately", False),
+        reply_template_personal=(
+            row.get("current_reply_template_personal")
+            if personal_id is not None and row.get("current_reply_template_personal") is not None
+            else row.get("reply_template_personal")
+        ) or "",
+        reply_template_id=default_id,
+        reply_template_personal_id=personal_id,
+    )
+
+
 def get_rules_for_inbox(inbox_id: int) -> List[CategoryRule]:
     """Return all category rules belonging to one inbox, ordered by priority."""
     session = get_db_session()
     try:
         result = session.execute(
-            text("SELECT * FROM category_rules WHERE inbox_id = :inbox_id ORDER BY priority"),
+            text(_RULE_SELECT + " WHERE cr.inbox_id = :inbox_id ORDER BY cr.priority"),
             {"inbox_id": inbox_id},
         )
         rows = result.mappings().all()
 
-        return [
-            CategoryRule(
-                id=row["id"],
-                inbox_id=row["inbox_id"],
-                key=row["key_for_category"],
-                label=row["label"],
-                rule_text=row["rule_text"],
-                mark_read=row["mark_read"],
-                skip=row["skip_email"],
-                auto_reply_safeguard=row["auto_reply_safeguard"],
-                auto_reply_enabled=row["auto_reply_enabled"],
-                emails_to_forward=row["emails_to_forward"],
-                folder_path=row["folder_path"],
-                reply_template=row["reply_template"],
-                amount_threshold=float(row["amount_threshold"]) if row["amount_threshold"] is not None else None,
-                priority=row["priority"],
-                active=row["active"],
-                skip_if_internal=row.get("skip_if_internal", False),
-                delete_immediately=row.get("delete_immediately", False),
-                reply_template_personal=row.get("reply_template_personal") or "",
-            )
-            for row in rows
-        ]
+        return [_row_to_rule(row) for row in rows]
     finally:
         session.close()
 
@@ -54,13 +81,15 @@ def save_rule(rule: CategoryRule) -> None:
                     mark_read, skip_email, auto_reply_safeguard, auto_reply_enabled,
                     emails_to_forward, folder_path, reply_template,
                     amount_threshold, priority, active,
-                    skip_if_internal, delete_immediately, reply_template_personal
+                    skip_if_internal, delete_immediately, reply_template_personal,
+                    reply_template_id, reply_template_personal_id
                 ) VALUES (
                     :inbox_id, :key, :label, :rule_text,
                     :mark_read, :skip, :auto_reply_safeguard, :auto_reply_enabled,
                     :emails_to_forward, :folder_path, :reply_template,
                     :amount_threshold, :priority, :active,
-                    :skip_if_internal, :delete_immediately, :reply_template_personal
+                    :skip_if_internal, :delete_immediately, :reply_template_personal,
+                    :reply_template_id, :reply_template_personal_id
                 )
                 """
             ),
@@ -82,6 +111,8 @@ def save_rule(rule: CategoryRule) -> None:
                 "skip_if_internal": rule.skip_if_internal,
                 "delete_immediately": rule.delete_immediately,
                 "reply_template_personal": rule.reply_template_personal,
+                "reply_template_id": rule.reply_template_id,
+                "reply_template_personal_id": rule.reply_template_personal_id,
             },
         )
         session.commit()
@@ -110,7 +141,9 @@ def update_rule(rule: CategoryRule) -> None:
                     active = :active,
                     skip_if_internal = :skip_if_internal,
                     delete_immediately = :delete_immediately,
-                    reply_template_personal = :reply_template_personal
+                    reply_template_personal = :reply_template_personal,
+                    reply_template_id = :reply_template_id,
+                    reply_template_personal_id = :reply_template_personal_id
                 WHERE id = :id
             """),
             {
@@ -131,6 +164,8 @@ def update_rule(rule: CategoryRule) -> None:
                 "skip_if_internal": rule.skip_if_internal,
                 "delete_immediately": rule.delete_immediately,
                 "reply_template_personal": rule.reply_template_personal,
+                "reply_template_id": rule.reply_template_id,
+                "reply_template_personal_id": rule.reply_template_personal_id,
             },
         )
         session.commit()
@@ -156,31 +191,12 @@ def get_rule(rule_id: int) -> Optional[CategoryRule]:
     session = get_db_session()
     try:
         result = session.execute(
-            text("SELECT * FROM category_rules WHERE id = :id"),
+            text(_RULE_SELECT + " WHERE cr.id = :id"),
             {"id": rule_id},
         )
         row = result.mappings().first()
         if row is None:
             return None
-        return CategoryRule(
-            id=row["id"],
-            inbox_id=row["inbox_id"],
-            key=row["key_for_category"],
-            label=row["label"],
-            rule_text=row["rule_text"],
-            mark_read=row["mark_read"],
-            skip=row["skip_email"],
-            auto_reply_safeguard=row["auto_reply_safeguard"],
-            auto_reply_enabled=row["auto_reply_enabled"],
-            emails_to_forward=row["emails_to_forward"],
-            folder_path=row["folder_path"],
-            reply_template=row["reply_template"],
-            amount_threshold=float(row["amount_threshold"]) if row["amount_threshold"] is not None else None,
-            priority=row["priority"],
-            active=row["active"],
-            skip_if_internal=row.get("skip_if_internal", False),
-            delete_immediately=row.get("delete_immediately", False),
-            reply_template_personal=row.get("reply_template_personal") or "",
-        )
+        return _row_to_rule(row)
     finally:
         session.close()

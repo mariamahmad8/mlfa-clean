@@ -174,22 +174,35 @@
             `).join('');
         }
 
-        function renderTemplateSelect(selectedBody, selectId, blankLabel) {
+        function renderTemplateSelect(selectedId, selectedBody, selectId, blankLabel) {
             const sel = document.getElementById(selectId);
+            const selectedIdText = selectedId == null ? '' : String(selectedId);
             sel.innerHTML = `<option value="">${blankLabel}</option>` +
-                templates.filter(t => t.active).map(t =>
-                    `<option value="${escapeHtml(t.body_html)}">${escapeHtml(t.name_template)}</option>`
+                templates.filter(t => t.active || String(t.id) === selectedIdText).map(t =>
+                    `<option value="${t.id}">${escapeHtml(t.name_template)}${t.active ? '' : ' (inactive)'}</option>`
                 ).join('');
-            if (selectedBody) {
-                for (const opt of sel.options) {
-                    if (opt.value === selectedBody) { sel.value = selectedBody; return; }
-                }
-                const custom = document.createElement('option');
-                custom.value = selectedBody;
-                custom.textContent = '(custom text — edit templates to change)';
-                sel.appendChild(custom);
-                sel.value = selectedBody;
+            if (selectedIdText && Array.from(sel.options).some(opt => opt.value === selectedIdText)) {
+                sel.value = selectedIdText;
+                return;
             }
+            if (selectedBody) {
+                const custom = document.createElement('option');
+                custom.value = '__legacy__';
+                custom.dataset.legacyBody = selectedBody;
+                custom.textContent = '(custom legacy text — select a template to link it)';
+                sel.appendChild(custom);
+                sel.value = '__legacy__';
+            }
+        }
+
+        function readTemplateSelection(selectId) {
+            const sel = document.getElementById(selectId);
+            if (!sel.value) return { id: null, body: '' };
+            if (sel.value === '__legacy__') {
+                return { id: null, body: sel.selectedOptions[0].dataset.legacyBody || '' };
+            }
+            const template = templates.find(t => String(t.id) === sel.value);
+            return { id: parseInt(sel.value, 10), body: template ? template.body_html : '' };
         }
 
         function renderRules() {
@@ -282,8 +295,8 @@
             document.getElementById('fAmount').value = '';
             document.getElementById('fFolder').value = '';
             renderRecipientCheckboxes([]);
-            renderTemplateSelect('', 'fReplySelect', '— No auto-reply —');
-            renderTemplateSelect('', 'fReplyPersonalSelect', '— Same as default —');
+            renderTemplateSelect(null, '', 'fReplySelect', '— No auto-reply —');
+            renderTemplateSelect(null, '', 'fReplyPersonalSelect', '— Same as default —');
             document.getElementById('fActive').checked = true;
             document.getElementById('fMarkRead').checked = true;
             document.getElementById('fSkip').checked = false;
@@ -310,8 +323,8 @@
             document.getElementById('fAmount').value = r.amount_threshold ?? '';
             document.getElementById('fFolder').value = r.folder_path || '';
             renderRecipientCheckboxes(r.emails_to_forward || []);
-            renderTemplateSelect(r.reply_template || '', 'fReplySelect', '— No auto-reply —');
-            renderTemplateSelect(r.reply_template_personal || '', 'fReplyPersonalSelect', '— Same as default —');
+            renderTemplateSelect(r.reply_template_id, r.reply_template || '', 'fReplySelect', '— No auto-reply —');
+            renderTemplateSelect(r.reply_template_personal_id, r.reply_template_personal || '', 'fReplyPersonalSelect', '— Same as default —');
             document.getElementById('fActive').checked = !!r.active;
             document.getElementById('fMarkRead').checked = !!r.mark_read;
             document.getElementById('fSkip').checked = !!r.skip;
@@ -327,6 +340,8 @@
         async function saveRule() {
             const id = document.getElementById('fRuleId').value;
             const amtRaw = document.getElementById('fAmount').value.trim();
+            const defaultTemplate = readTemplateSelection('fReplySelect');
+            const personalTemplate = readTemplateSelection('fReplyPersonalSelect');
             const payload = {
                 key: document.getElementById('fKey').value.trim(),
                 label: document.getElementById('fLabel').value.trim(),
@@ -335,8 +350,10 @@
                 amount_threshold: amtRaw ? parseFloat(amtRaw) : null,
                 folder_path: document.getElementById('fFolder').value.trim(),
                 emails_to_forward: Array.from(document.querySelectorAll('.fRecipCheck:checked')).map(el => el.value),
-                reply_template: document.getElementById('fReplySelect').value,
-                reply_template_personal: document.getElementById('fReplyPersonalSelect').value,
+                reply_template_id: defaultTemplate.id,
+                reply_template: defaultTemplate.body,
+                reply_template_personal_id: personalTemplate.id,
+                reply_template_personal: personalTemplate.body,
                 active: document.getElementById('fActive').checked,
                 mark_read: document.getElementById('fMarkRead').checked,
                 skip: document.getElementById('fSkip').checked,

@@ -175,6 +175,10 @@
             if (!confirm('Delete this template?')) return;
             const res = await fetch(`/api/templates/${id}`, { method: 'DELETE' });
             if (res.ok) { notify('Deleted'); await loadTemplates(); }
+            else {
+                const data = await res.json().catch(() => ({}));
+                notify(data.error || 'Delete failed', 'error');
+            }
         }
 
         // Insert {{greeting}} at the current cursor position in the body textarea.

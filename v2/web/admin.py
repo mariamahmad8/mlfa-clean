@@ -360,10 +360,20 @@ def clone_inbox(source_id):
     if not created:
         return jsonify({"error": "Inbox saved but couldn't reload"}), 500
 
-    # Copy rules
+    # Clone templates first so category rules can point at the cloned ids.
+    template_id_map = {}
+    for tpl in templates_storage.get_templates_for_inbox(source_id):
+        source_template_id = tpl.id
+        tpl.id = None
+        tpl.inbox_id = created.id
+        template_id_map[source_template_id] = templates_storage.save_template(tpl)
+
+    # Copy rules and remap their reusable template references.
     for rule in rules_storage.get_rules_for_inbox(source_id):
         rule.id = None
         rule.inbox_id = created.id
+        rule.reply_template_id = template_id_map.get(rule.reply_template_id)
+        rule.reply_template_personal_id = template_id_map.get(rule.reply_template_personal_id)
         rules_storage.save_rule(rule)
 
     # Copy recipients
@@ -371,12 +381,6 @@ def clone_inbox(source_id):
         recip.id = None
         recip.inbox_id = created.id
         recipients_storage.save_recipient(recip)
-
-    # Copy reply templates
-    for tpl in templates_storage.get_templates_for_inbox(source_id):
-        tpl.id = None
-        tpl.inbox_id = created.id
-        templates_storage.save_template(tpl)
 
     _audit("inbox_cloned", f"inbox:{new_email}", f"Cloned from inbox_id {source_id}", inbox_id=created.id)
     return jsonify({"status": "cloned", "new_inbox_id": created.id}), 201
@@ -435,6 +439,18 @@ def create_rule(inbox_id):
     if any(r.key == new_key for r in existing):
         return jsonify({"error": f"A rule with key '{new_key}' already exists on this inbox"}), 400
 
+    try:
+        default_template_id, default_template_body = _resolve_template_selection(
+            inbox_id, data.get("reply_template_id"), data.get("reply_template", "")
+        )
+        personal_template_id, personal_template_body = _resolve_template_selection(
+            inbox_id,
+            data.get("reply_template_personal_id"),
+            data.get("reply_template_personal", ""),
+        )
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
     new = CategoryRule(
         id=None,
         inbox_id=inbox_id,
@@ -447,13 +463,15 @@ def create_rule(inbox_id):
         auto_reply_enabled=bool(data.get("auto_reply_enabled", False)),
         emails_to_forward=data.get("emails_to_forward", []),
         folder_path=data.get("folder_path", ""),
-        reply_template=data.get("reply_template", ""),
+        reply_template=default_template_body,
         amount_threshold=data.get("amount_threshold"),
         priority=int(data.get("priority", 999)),
         active=bool(data.get("active", True)),
         skip_if_internal=bool(data.get("skip_if_internal", False)),
         delete_immediately=bool(data.get("delete_immediately", False)),
-        reply_template_personal=data.get("reply_template_personal", ""),
+        reply_template_personal=personal_template_body,
+        reply_template_id=default_template_id,
+        reply_template_personal_id=personal_template_id,
     )
     rules_storage.save_rule(new)
     _audit("rule_created", f"rule:{new.key}", f"Label: {new.label}", inbox_id=inbox_id)
@@ -483,6 +501,28 @@ def update_rule(rule_id):
                   "skip_if_internal", "delete_immediately", "reply_template_personal"]:
         if field in data:
             setattr(rule, field, data[field])
+
+    try:
+        if "reply_template_id" in data:
+            rule.reply_template_id, rule.reply_template = _resolve_template_selection(
+                rule.inbox_id,
+                data.get("reply_template_id"),
+                data.get("reply_template", ""),
+            )
+        elif "reply_template" in data:
+            # Backward-compatible behavior for older clients that submit only
+            # custom body text: preserve the text but deliberately unlink it.
+            rule.reply_template_id = None
+        if "reply_template_personal_id" in data:
+            rule.reply_template_personal_id, rule.reply_template_personal = _resolve_template_selection(
+                rule.inbox_id,
+                data.get("reply_template_personal_id"),
+                data.get("reply_template_personal", ""),
+            )
+        elif "reply_template_personal" in data:
+            rule.reply_template_personal_id = None
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
     rules_storage.update_rule(rule)
     _audit("rule_updated", f"rule:{rule.key}", f"Label: {rule.label}", inbox_id=rule.inbox_id)
     return jsonify({"status": "updated"})
@@ -634,6 +674,15 @@ def update_template(template_id):
 def delete_template(template_id):
     denied = _guard_resource_access("reply_templates", template_id)
     if denied: return denied
+    references = templates_storage.count_template_references(template_id)
+    if references:
+        return jsonify({
+            "error": (
+                f"This template is used by {references} category setting(s). "
+                "Choose another template on those categories before deleting it."
+            )
+        }), 409
+
     all_inboxes = inbox_storage.get_active_inboxes()
     target_tpl = None
     for ib in all_inboxes:
@@ -858,6 +907,20 @@ def test_classification(inbox_id):
 # Helpers — convert model dataclasses to plain dicts for JSON responses
 # ---------------------------------------------------------------------------
 
+def _resolve_template_selection(inbox_id, raw_template_id, legacy_body=""):
+    """Validate a template belongs to the rule's inbox and return its live body."""
+    if raw_template_id in (None, ""):
+        return None, legacy_body or ""
+    try:
+        template_id = int(raw_template_id)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Invalid reply template selection") from exc
+
+    template = templates_storage.get_template(template_id)
+    if template is None or template.inbox_id != int(inbox_id):
+        raise ValueError("Reply template does not belong to this inbox")
+    return template.id, template.body_html
+
 def _inbox_to_dict(inbox):
     return {
         "id": inbox.id,
@@ -897,6 +960,8 @@ def _rule_to_dict(rule):
         "skip_if_internal": rule.skip_if_internal,
         "delete_immediately": rule.delete_immediately,
         "reply_template_personal": rule.reply_template_personal,
+        "reply_template_id": rule.reply_template_id,
+        "reply_template_personal_id": rule.reply_template_personal_id,
     }
 
 
