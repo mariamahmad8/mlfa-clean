@@ -137,9 +137,28 @@ def update_inbox(inbox: InboxConfig) -> None:
 
 
 def delete_inbox(inbox_id: int) -> None:
-    """delete an inbox row by id. Note: category_rules with this inbox_id must be deleted first."""
+    """
+    Delete an inbox row by id. Also strip this inbox_id from every user's
+    assigned_inbox_ids array so users don't hold stale references.
+    Note: category_rules with this inbox_id must be deleted first because
+    of the foreign-key constraint.
+    """
     session = get_db_session()
     try:
+        # Strip stale inbox_id references from every user assignment list
+        session.execute(
+            text("""
+                UPDATE users
+                SET assigned_inbox_ids = COALESCE(
+                    (SELECT jsonb_agg(value)
+                     FROM jsonb_array_elements(assigned_inbox_ids) AS value
+                     WHERE value <> to_jsonb(:inbox_id::int)),
+                    '[]'::jsonb
+                )
+                WHERE assigned_inbox_ids @> to_jsonb(ARRAY[:inbox_id::int])
+            """),
+            {"inbox_id": inbox_id},
+        )
         session.execute(
             text("DELETE FROM inboxes WHERE id = :inbox_id"),
             {"inbox_id": inbox_id},
