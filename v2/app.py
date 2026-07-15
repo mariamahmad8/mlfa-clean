@@ -22,6 +22,7 @@ from worker import loop as worker_loop
 from web.reviewer import reviewer_bp
 from web.admin import admin_bp
 from security import configure_security
+from auth.microsoft import load_config as load_microsoft_auth_config
 
 
 def create_app() -> Flask:
@@ -29,6 +30,10 @@ def create_app() -> Flask:
     app = Flask(__name__, template_folder='templates')
     security_settings = configure_security(app)
     app.config['PUBLIC_BASE_URL'] = security_settings['public_base_url']
+    app.config['MICROSOFT_AUTH'] = load_microsoft_auth_config(
+        security_settings['public_base_url'],
+        security_settings['production'],
+    )
 
     allowed_origins = os.getenv('ALLOWED_ORIGINS', '').strip()
     if allowed_origins:

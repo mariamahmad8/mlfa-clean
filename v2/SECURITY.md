@@ -17,8 +17,10 @@ critical production security configuration is missing.
 4. Set `TRUSTED_HOSTS` to the hostname only. Add comma-separated hostnames if
    both a Railway domain and custom domain must work.
 5. Leave `ALLOWED_ORIGINS` unset while the UI and API share the same domain.
-6. Apply `migrations/022_create_login_rate_limits.sql` to Railway Postgres.
-7. When v2 is ready to replace v1, set Railway's Start Command to
+6. Configure the dedicated Microsoft sign-in application as described in
+   `MICROSOFT_SECURITY.md`, then set `AUTH_MODE=microsoft` after testing.
+7. Apply `migrations/023_create_login_rate_limits.sql` to Railway Postgres.
+8. When v2 is ready to replace v1, set Railway's Start Command to
    `./v2/start.sh`. Do not change the current command before migration and
    login testing are complete.
 
@@ -40,7 +42,7 @@ critical production security configuration is missing.
 
 ## Remaining high-priority work
 
-- Replace magic-link-only authentication with Microsoft Entra ID and enforced MFA
+- Finish Entra enterprise-app assignment and Conditional Access MFA configuration
 - Move inline scripts/styles into static assets and remove `unsafe-inline` from CSP
 - Separate the web and email-worker processes into different Railway services
 - Review and minimize Microsoft Graph/O365 application permissions

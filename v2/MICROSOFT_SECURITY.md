@@ -42,3 +42,30 @@ The sign-in application should be:
 
 Keep the existing magic-link login available only during migration, then
 remove it after Entra sign-in and MFA have been tested.
+
+### Application settings
+
+Add this exact Web redirect URI under **App registrations > MLFA Email Hub -
+User Sign-In > Authentication**:
+
+`https://<hub-domain>/auth/microsoft/callback`
+
+Railway variables:
+
+- `AUTH_MODE=hybrid` while testing; change to `microsoft` after validation
+- `ENTRA_TENANT_ID=<MLFA Directory tenant ID>`
+- `ENTRA_CLIENT_ID=<sign-in app Application client ID>`
+- `ENTRA_REDIRECT_URI=https://<hub-domain>/auth/microsoft/callback`
+- `ENTRA_CLIENT_SECRET=<secret value, never the secret ID>`
+
+Under **Enterprise applications > MLFA Email Hub - User Sign-In**:
+
+1. Set **Assignment required** to **Yes**.
+2. Assign only approved MLFA users/groups and explicitly approved B2B guests.
+3. Apply a Conditional Access policy requiring MFA for this cloud app.
+4. Exclude only MLFA's documented emergency access account from the policy.
+
+The hub additionally requires a matching active record in its `users` table.
+On first successful login, that record is permanently bound to the immutable
+Microsoft tenant object ID (`oid`); later email/display-name changes do not
+change the identity used for authorization.

@@ -240,12 +240,17 @@
         <section class="form-panel">
             <p class="eyebrow">MLFA Operations Hub</p>
             <h1 class="brand-title">Welcome back</h1>
-            <p class="brand-sub">Enter your approved work email and we&rsquo;ll send you a secure sign-in link.</p>
+            <p class="brand-sub">Sign in with your approved Microsoft work account to securely access the hub.</p>
 
             {% if error %}<div class="msg error">{{ error }}</div>{% endif %}
             {% if info %}<div class="msg info">{{ info }}</div>{% endif %}
 
-            <form method="POST" action="/login">
+            {% if microsoft_enabled %}
+            <a class="btn primary login-submit" href="/auth/microsoft/start">Sign in with Microsoft</a>
+            {% endif %}
+
+            {% if magic_link_enabled %}
+            <form method="POST" action="/login"{% if microsoft_enabled %} style="margin-top: 18px;"{% endif %}>
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <div class="form-group">
                     <label class="form-label" for="email">Work email</label>
@@ -253,12 +258,13 @@
                 </div>
                 <button class="btn primary login-submit" type="submit">Send secure sign-in link</button>
             </form>
+            {% endif %}
 
             <p class="login-note">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                     <path d="M7 10V8a5 5 0 0 1 10 0v2M6 10h12v10H6V10Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                Access is limited to approved MLFA team members. No password required.
+                Access is limited to approved users and protected by Microsoft MFA.
             </p>
         </section>
     </main>

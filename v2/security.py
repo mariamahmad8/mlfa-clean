@@ -138,6 +138,17 @@ def configure_security(app) -> dict:
             return None
 
         now = int(time.time())
+        auth_config = app.config.get("MICROSOFT_AUTH")
+        if (
+            auth_config
+            and auth_config.auth_mode == "microsoft"
+            and session.get("auth_method") != "microsoft"
+        ):
+            session.clear()
+            if request.path.startswith("/api/"):
+                return jsonify({"error": "Microsoft sign-in is required"}), 401
+            return redirect(url_for("reviewer.login"))
+
         authenticated_at = int(session.get("authenticated_at", 0) or 0)
         last_activity_at = int(session.get("last_activity_at", 0) or 0)
         session_expired = (

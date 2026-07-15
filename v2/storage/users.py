@@ -23,11 +23,53 @@ def _row_to_user(row) -> User:
 def get_user_by_email(email) -> Optional[User]:
     session = get_db_session()
     try:
-        result = session.execute(text("SELECT * FROM users WHERE email = :email"), {"email": email})
+        result = session.execute(
+            text("SELECT * FROM users WHERE LOWER(email) = LOWER(:email)"),
+            {"email": (email or "").strip()},
+        )
         row = result.mappings().first()
         if row is None:
             return None
         return _row_to_user(row)
+    finally:
+        session.close()
+
+
+def get_user_by_microsoft_oid(microsoft_oid: str) -> Optional[User]:
+    session = get_db_session()
+    try:
+        result = session.execute(
+            text("SELECT * FROM users WHERE microsoft_oid = :oid"),
+            {"oid": microsoft_oid},
+        )
+        row = result.mappings().first()
+        return _row_to_user(row) if row else None
+    finally:
+        session.close()
+
+
+def bind_microsoft_identity(user_id: int, microsoft_oid: str, display_name: str) -> bool:
+    """Bind an approved user to one immutable Entra object ID exactly once."""
+    session = get_db_session()
+    try:
+        result = session.execute(
+            text(
+                """
+                UPDATE users
+                SET microsoft_oid = :oid,
+                    display_name = :display_name,
+                    last_login_at = NOW()
+                WHERE id = :user_id
+                  AND (microsoft_oid IS NULL OR microsoft_oid = '' OR microsoft_oid = :oid)
+                """
+            ),
+            {"user_id": user_id, "oid": microsoft_oid, "display_name": display_name},
+        )
+        session.commit()
+        return result.rowcount == 1
+    except Exception:
+        session.rollback()
+        return False
     finally:
         session.close()
 
@@ -40,7 +82,7 @@ def save_user(user):
             text("""INSERT INTO users (email, role_user, active, assigned_inbox_ids)
                     VALUES (:email, :role_user, :active, :assigned_inbox_ids)"""),
             {
-                "email": user.email,
+                "email": user.email.strip().lower(),
                 "role_user": user.role_user,
                 "active": user.active,
                 "assigned_inbox_ids": json.dumps(user.assigned_inbox_ids or []),
@@ -55,7 +97,11 @@ def update_last_login(user_id, oid, display_name):
     session = get_db_session()
     try:
         session.execute(
-            text("""UPDATE users SET microsoft_oid = :oid, display_name = :display_name, last_login_at = NOW() WHERE id = :user_id"""),
+            text("""UPDATE users
+                    SET microsoft_oid = COALESCE(NULLIF(:oid, ''), microsoft_oid),
+                        display_name = :display_name,
+                        last_login_at = NOW()
+                    WHERE id = :user_id"""),
             {"user_id": user_id, "display_name": display_name, "oid": oid},
         )
         session.commit()

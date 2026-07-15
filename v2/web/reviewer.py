@@ -34,6 +34,7 @@ from storage import login_tokens as tokens_storage
 from storage import login_rate_limits as rate_limits_storage
 from adapters import o365
 from engine import router, pipeline
+from auth import microsoft as microsoft_auth
 
 
 reviewer_bp = Blueprint('reviewer', __name__)
@@ -89,13 +90,42 @@ def _rate_limit_key(scope: str, value: str) -> str:
     return hmac.new(secret_key, payload, hashlib.sha256).hexdigest()
 
 
+def _auth_config():
+    return current_app.config['MICROSOFT_AUTH']
+
+
+def _render_login(**context):
+    config = _auth_config()
+    return render_template(
+        'login.html',
+        microsoft_enabled=config.microsoft_enabled,
+        magic_link_enabled=config.magic_link_enabled,
+        **context,
+    )
+
+
+def _start_user_session(user, auth_method: str) -> None:
+    now = int(time.time())
+    session.clear()
+    session['logged_in'] = True
+    session['role'] = user.role_user
+    session['user_email'] = user.email
+    session['user_id'] = user.id
+    session['auth_method'] = auth_method
+    session['authenticated_at'] = now
+    session['last_activity_at'] = now
+    session.permanent = True
+
+
 @reviewer_bp.route('/login', methods=['GET', 'POST'])
 def login():
     """Magic-link login: enter email, get a login link sent to your inbox."""
     if request.method == 'POST':
+        if not _auth_config().magic_link_enabled:
+            return _render_login(error='Email-link sign-in is disabled.'), 404
         email = (request.form.get('email') or '').strip().lower()
         if not email:
-            return render_template('login.html', error='Please enter your work email.')
+            return _render_login(error='Please enter your work email.')
 
         generic_message = 'If that email is authorized, a login link is on its way.'
         remote_ip = request.remote_addr or 'unknown'
@@ -110,18 +140,17 @@ def login():
             )
         except Exception as e:
             print(f"Login rate-limit error: {e}")
-            return render_template(
-                'login.html',
+            return _render_login(
                 error='Sign-in is temporarily unavailable. Please try again shortly.',
             ), 503
 
         if ip_attempts > 20 or email_attempts > 5:
-            return render_template('login.html', info=generic_message), 429, {'Retry-After': '900'}
+            return _render_login(info=generic_message), 429, {'Retry-After': '900'}
 
         user = users_storage.get_user_by_email(email)
         if not user or not user.active:
             # Deliberately generic message so we don't leak which emails exist
-            return render_template('login.html', info=generic_message)
+            return _render_login(info=generic_message)
 
         # Generate a token, hash it, save the hash, send the plaintext in the email
         plaintext_token = secrets.token_urlsafe(32)
@@ -151,9 +180,85 @@ def login():
             except Exception as e:
                 print(f"Login email send error: {e}")
 
-        return render_template('login.html', info=generic_message)
+        return _render_login(info=generic_message)
 
-    return render_template('login.html')
+    return _render_login()
+
+
+@reviewer_bp.route('/auth/microsoft/start', methods=['GET'])
+def microsoft_login_start():
+    """Redirect the browser to MLFA's tenant-specific Microsoft sign-in."""
+    config = _auth_config()
+    if not config.microsoft_enabled:
+        return _render_login(error='Microsoft sign-in is not configured.'), 404
+
+    remote_ip = request.remote_addr or 'unknown'
+    try:
+        attempts = rate_limits_storage.record_attempt(
+            _rate_limit_key('microsoft-login-ip', remote_ip),
+            window_seconds=3600,
+        )
+    except Exception as exc:
+        print(f"Microsoft login rate-limit error: {exc}")
+        return _render_login(error='Sign-in is temporarily unavailable.'), 503
+    if attempts > 30:
+        return _render_login(error='Too many sign-in attempts. Please try again later.'), 429
+
+    try:
+        flow = microsoft_auth.start_flow(config)
+    except Exception as exc:
+        print(f"Microsoft login initialization error: {type(exc).__name__}")
+        return _render_login(error='Microsoft sign-in is temporarily unavailable.'), 503
+
+    session['microsoft_auth_flow'] = flow
+    return redirect(flow['auth_uri'])
+
+
+@reviewer_bp.route('/auth/microsoft/callback', methods=['GET', 'POST'])
+def microsoft_login_callback():
+    """Validate Microsoft's callback and authorize the user against the hub DB."""
+    config = _auth_config()
+    if not config.microsoft_enabled:
+        return _render_login(error='Microsoft sign-in is not configured.'), 404
+
+    flow = session.pop('microsoft_auth_flow', None)
+    if not isinstance(flow, dict):
+        return _render_login(error='The sign-in attempt expired. Please try again.'), 400
+
+    auth_response = request.form.to_dict() if request.method == 'POST' else request.args.to_dict()
+    try:
+        claims = microsoft_auth.complete_flow(config, flow, auth_response)
+    except Exception as exc:
+        print(f"Microsoft callback validation error: {type(exc).__name__}")
+        return _render_login(error='Microsoft could not verify this sign-in.'), 401
+
+    oid = str(claims['oid']).lower()
+    user = users_storage.get_user_by_microsoft_oid(oid)
+    if not user:
+        for email in microsoft_auth.claim_email_candidates(claims):
+            candidate = users_storage.get_user_by_email(email)
+            if candidate and candidate.active:
+                display_name = str(claims.get('name') or candidate.display_name or email.split('@')[0])
+                if users_storage.bind_microsoft_identity(candidate.id, oid, display_name):
+                    user = users_storage.get_user_by_microsoft_oid(oid)
+                break
+
+    if not user or not user.active:
+        return _render_login(
+            error='Your Microsoft account is not approved for this hub. Contact an MLFA administrator.'
+        ), 403
+
+    try:
+        users_storage.update_last_login(
+            user.id,
+            oid=oid,
+            display_name=str(claims.get('name') or user.display_name or user.email.split('@')[0]),
+        )
+    except Exception as exc:
+        print(f"Microsoft login record update error: {type(exc).__name__}")
+
+    _start_user_session(user, 'microsoft')
+    return redirect(url_for('reviewer.index'))
 
 
 @reviewer_bp.route('/login/verify', methods=['GET'])
@@ -161,16 +266,16 @@ def login_verify():
     """Click-through from a magic-link email — verify the token and set session."""
     plaintext = (request.args.get('token') or '').strip()
     if not plaintext:
-        return render_template('login.html', error='Invalid or missing link.')
+        return _render_login(error='Invalid or missing link.')
 
     token_hash = _hash_token(plaintext)
     row = tokens_storage.consume_valid_token(token_hash)
     if not row:
-        return render_template('login.html', error='Link is invalid or expired.')
+        return _render_login(error='Link is invalid or expired.')
 
     user = users_storage.get_user_by_email(row['email'])
     if not user or not user.active:
-        return render_template('login.html', error='Account is no longer active.')
+        return _render_login(error='Account is no longer active.')
 
     # Record login time (and fill in oid/display_name if not set yet)
     try:
@@ -182,14 +287,7 @@ def login_verify():
     except Exception as e:
         print(f"update_last_login error: {e}")
 
-    session.clear()
-    session['logged_in'] = True
-    session['role'] = user.role_user
-    session['user_email'] = user.email
-    session['user_id'] = user.id
-    session['authenticated_at'] = int(time.time())
-    session['last_activity_at'] = int(time.time())
-    session.permanent = True
+    _start_user_session(user, 'magic_link')
     return redirect(url_for('reviewer.index'))
 
 
