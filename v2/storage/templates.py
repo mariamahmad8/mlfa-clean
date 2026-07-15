@@ -56,9 +56,21 @@ def save_template(template: ReplyTemplate) -> None:
 
 
 def update_template(template: ReplyTemplate) -> None:
-    """Update an existing template's fields."""
+    """
+    Update an existing template. When the body changes, cascade the new body
+    to any category rules that stored a snapshot of the old body. Without
+    this cascade, editing a template would not propagate to rules using it,
+    because rules store the body text directly (not a foreign-key reference).
+    """
     session = get_db_session()
     try:
+        # Grab the pre-update body so we know what snapshot to look for on rules
+        prior = session.execute(
+            text("SELECT body_html FROM reply_templates WHERE id = :id"),
+            {"id": template.id},
+        ).mappings().first()
+        prior_body = prior["body_html"] if prior else None
+
         session.execute(
             text("""
                 UPDATE reply_templates
@@ -74,6 +86,35 @@ def update_template(template: ReplyTemplate) -> None:
                 "active": template.active,
             },
         )
+
+        # Cascade the new body to rules whose stored body matches the old snapshot,
+        # scoped to the same inbox to avoid cross-inbox collisions.
+        if prior_body is not None and prior_body != template.body_html:
+            session.execute(
+                text("""
+                    UPDATE category_rules
+                    SET reply_template = :new_body
+                    WHERE inbox_id = :inbox_id AND reply_template = :old_body
+                """),
+                {
+                    "new_body": template.body_html,
+                    "inbox_id": template.inbox_id,
+                    "old_body": prior_body,
+                },
+            )
+            session.execute(
+                text("""
+                    UPDATE category_rules
+                    SET reply_template_personal = :new_body
+                    WHERE inbox_id = :inbox_id AND reply_template_personal = :old_body
+                """),
+                {
+                    "new_body": template.body_html,
+                    "inbox_id": template.inbox_id,
+                    "old_body": prior_body,
+                },
+            )
+
         session.commit()
     finally:
         session.close()
