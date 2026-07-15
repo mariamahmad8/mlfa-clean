@@ -10,129 +10,96 @@
     <script src="/static/security.js?v=2"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Nunito+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="/static/shared.css?v=12">
     <style>
-        /* Stats dashboard */
-        #statsModal .modal { max-width: 820px; }
+        /* Stats — restrained tabular dashboard, no icon-box hero cards */
+        #statsModal .modal { max-width: 780px; }
         #statsTitle {
             font-family: var(--font-display);
-            font-size: 20px;
+            font-size: 18px;
+            font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: var(--mlfa-teal);
-            margin: 0 0 6px;
+            letter-spacing: 0.14em;
+            color: var(--text);
+            margin: 0 0 4px;
         }
         .stats-subtitle {
             font-size: 12px;
             color: var(--text-muted);
-            margin-bottom: 20px;
+            margin: 0 0 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--line-soft);
         }
-
-        /* KPI hero row */
-        .kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 24px; }
-        .kpi {
-            background: var(--panel);
-            border: 1px solid var(--line);
-            border-radius: 10px;
-            padding: 16px 18px;
-            display: flex;
-            gap: 14px;
-            align-items: flex-start;
-            transition: transform 0.15s, box-shadow 0.15s;
-        }
-        .kpi:hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(1, 68, 56, 0.06); }
-        .kpi-icon {
-            width: 40px; height: 40px;
-            border-radius: 10px;
-            display: flex; align-items: center; justify-content: center;
-            flex-shrink: 0;
-        }
-        .kpi-icon svg { width: 22px; height: 22px; }
-        .kpi-icon.teal { background: var(--accent-soft); color: var(--mlfa-teal); }
-        .kpi-icon.rust { background: var(--mlfa-orange-soft); color: var(--mlfa-orange); }
-        .kpi-icon.sage { background: rgba(107, 124, 90, 0.14); color: var(--sage); }
-        .kpi-label {
-            font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
-            text-transform: uppercase; color: var(--text-muted);
-            margin-bottom: 4px;
-        }
-        .kpi-value {
-            font-family: var(--font-display);
-            font-size: 26px; line-height: 1.05; font-weight: 600;
-            color: var(--text); letter-spacing: 0.01em;
-        }
-        .kpi.hero .kpi-value { color: var(--mlfa-orange); font-size: 30px; }
-        .kpi-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
-
-        /* Activity breakdown bar */
-        .breakdown {
-            background: var(--panel);
-            border: 1px solid var(--line);
-            border-radius: 10px;
-            padding: 16px 18px;
-            margin-bottom: 24px;
-        }
-        .breakdown-title {
-            font-family: var(--font-display);
-            font-size: 12px; letter-spacing: 0.1em;
-            text-transform: uppercase; color: var(--mlfa-teal);
-            margin-bottom: 12px;
-        }
-        .bar-track {
-            display: flex;
-            height: 12px;
-            border-radius: 999px;
-            overflow: hidden;
-            background: var(--panel-2);
-        }
-        .bar-seg { height: 100%; transition: flex 0.4s ease; }
-        .bar-seg.processed { background: var(--mlfa-teal); }
-        .bar-seg.rejected { background: var(--mlfa-orange); }
-        .bar-seg.queue { background: var(--sage); }
-        .bar-legend {
-            display: flex; flex-wrap: wrap; gap: 16px;
-            margin-top: 12px; font-size: 12px;
-        }
-        .bar-legend .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
-        .bar-legend .count { font-family: var(--font-display); font-weight: 600; margin-left: 4px; color: var(--text); }
-
-        /* Two-column comparison */
-        .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-        .compare-col {
-            background: var(--panel);
-            border: 1px solid var(--line);
-            border-radius: 10px;
-            overflow: hidden;
-        }
-        .compare-header {
-            background: var(--panel-2);
-            padding: 10px 16px;
-            font-family: var(--font-display);
-            font-size: 12px; letter-spacing: 0.1em;
-            text-transform: uppercase; color: var(--mlfa-teal);
-            border-bottom: 1px solid var(--line);
-        }
-        .compare-row {
+        .stats-queue {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            padding: 10px 16px;
-            border-bottom: 1px solid var(--line-soft);
+            align-items: baseline;
+            padding: 14px 18px;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            margin-bottom: 24px;
+        }
+        .stats-queue .q-label {
+            font-family: var(--font-display);
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+        .stats-queue .q-value {
+            font-family: var(--font-display);
+            font-size: 32px;
+            font-weight: 600;
+            color: var(--text);
+            line-height: 1;
+        }
+        .stats-table {
+            width: 100%;
+            border-collapse: collapse;
             font-size: 13px;
         }
-        .compare-row:last-child { border-bottom: none; }
-        .compare-row .r-label { color: var(--text-muted); }
-        .compare-row .r-value {
+        .stats-table thead th {
             font-family: var(--font-display);
-            font-weight: 600; color: var(--text);
-            font-size: 15px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--line);
+            text-align: right;
         }
-        .compare-row.highlight .r-value { color: var(--mlfa-orange); font-size: 17px; }
-        .compare-row.highlight { background: var(--mlfa-orange-soft); }
-
+        .stats-table thead th:first-child {
+            text-align: left;
+            color: transparent;
+        }
+        .stats-table tbody td {
+            padding: 11px 12px;
+            border-bottom: 1px solid var(--line-soft);
+        }
+        .stats-table tbody td:first-child {
+            color: var(--text-muted);
+        }
+        .stats-table tbody td:not(:first-child) {
+            font-family: var(--font-display);
+            font-variant-numeric: tabular-nums;
+            font-weight: 600;
+            font-size: 15px;
+            color: var(--text);
+            text-align: right;
+        }
+        .stats-table tbody tr:last-child td { border-bottom: none; }
+        .stats-table tr.emphasis td:first-child {
+            color: var(--text);
+            font-weight: 600;
+        }
+        .stats-table tr.emphasis td:not(:first-child) {
+            color: var(--mlfa-teal);
+        }
         .stats-footnote {
             font-size: 11px;
             color: var(--text-soft);
-            margin-top: 14px;
-            text-align: center;
+            margin-top: 18px;
+            font-style: italic;
         }
     </style>
 </head>
@@ -320,84 +287,36 @@
             const savedTodayMs = (s.today.processed || 0) * HUMAN_MIN_PER_EMAIL * 60 * 1000;
             const savedAllMs = (s.all_time.processed || 0) * HUMAN_MIN_PER_EMAIL * 60 * 1000;
 
-            // Today's action distribution
-            const processed = s.today.processed || 0;
-            const rejected = (s.today.rejected || 0) + (s.today.dismissed || 0);
-            const queue = s.in_review_now || 0;
-            const totalActivity = processed + rejected + queue;
-            const pct = (n) => totalActivity > 0 ? (n / totalActivity) * 100 : 0;
-
-            // SVG icons — inline so they inherit currentColor
-            const icInbox = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>`;
-            const icClock = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
-            const icBolt = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`;
-
-            const kpiRow = `
-                <div class="kpi-row">
-                    <div class="kpi">
-                        <div class="kpi-icon teal">${icInbox}</div>
-                        <div>
-                            <div class="kpi-label">Processed today</div>
-                            <div class="kpi-value">${processed}</div>
-                            <div class="kpi-sub">avg ${formatDuration(s.today.avg_duration_ms)} per email</div>
-                        </div>
-                    </div>
-                    <div class="kpi">
-                        <div class="kpi-icon sage">${icClock}</div>
-                        <div>
-                            <div class="kpi-label">In queue now</div>
-                            <div class="kpi-value">${queue}</div>
-                            <div class="kpi-sub">awaiting reviewer action</div>
-                        </div>
-                    </div>
-                    <div class="kpi hero">
-                        <div class="kpi-icon rust">${icBolt}</div>
-                        <div>
-                            <div class="kpi-label">Time saved today</div>
-                            <div class="kpi-value">${formatDuration(savedTodayMs)}</div>
-                            <div class="kpi-sub">vs manual triage</div>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            const breakdown = `
-                <div class="breakdown">
-                    <div class="breakdown-title">Today's activity</div>
-                    <div class="bar-track">
-                        ${processed ? `<div class="bar-seg processed" style="flex:${pct(processed)}"></div>` : ''}
-                        ${rejected ? `<div class="bar-seg rejected" style="flex:${pct(rejected)}"></div>` : ''}
-                        ${queue ? `<div class="bar-seg queue" style="flex:${pct(queue)}"></div>` : ''}
-                        ${totalActivity === 0 ? `<div class="bar-seg" style="flex:1; background:var(--panel-2)"></div>` : ''}
-                    </div>
-                    <div class="bar-legend">
-                        <span><span class="dot" style="background:var(--mlfa-teal)"></span>Processed<span class="count">${processed}</span></span>
-                        <span><span class="dot" style="background:var(--mlfa-orange)"></span>Rejected / dismissed<span class="count">${rejected}</span></span>
-                        <span><span class="dot" style="background:var(--sage)"></span>In queue<span class="count">${queue}</span></span>
-                    </div>
-                </div>
-            `;
-
-            const compareCol = (label, d, savedMs) => `
-                <div class="compare-col">
-                    <div class="compare-header">${label}</div>
-                    <div class="compare-row"><span class="r-label">Processed</span><span class="r-value">${d.processed || 0}</span></div>
-                    <div class="compare-row"><span class="r-label">Rejected / dismissed</span><span class="r-value">${(d.rejected || 0) + (d.dismissed || 0)}</span></div>
-                    <div class="compare-row"><span class="r-label">Total processing time</span><span class="r-value">${formatDuration(d.duration_ms)}</span></div>
-                    <div class="compare-row"><span class="r-label">Average per email</span><span class="r-value">${formatDuration(d.avg_duration_ms)}</span></div>
-                    <div class="compare-row highlight"><span class="r-label">Estimated time saved</span><span class="r-value">${formatDuration(savedMs)}</span></div>
-                </div>
+            const row = (label, todayVal, allVal, emphasis = false) => `
+                <tr${emphasis ? ' class="emphasis"' : ''}>
+                    <td>${label}</td>
+                    <td>${todayVal}</td>
+                    <td>${allVal}</td>
+                </tr>
             `;
 
             document.getElementById('statsBody').innerHTML = `
-                <div class="stats-subtitle">${escapeHtml(s.email_to_watch)} · Central Time midnight boundary for today's metrics.</div>
-                ${kpiRow}
-                ${breakdown}
-                <div class="compare-grid">
-                    ${compareCol('Today', s.today, savedTodayMs)}
-                    ${compareCol('All time', s.all_time, savedAllMs)}
+                <div class="stats-subtitle">${escapeHtml(s.email_to_watch)} &nbsp;&middot;&nbsp; Today reflects activity since midnight Central Time.</div>
+
+                <div class="stats-queue">
+                    <span class="q-label">In review queue</span>
+                    <span class="q-value">${s.in_review_now || 0}</span>
                 </div>
-                <div class="stats-footnote">Time saved assumes ~${HUMAN_MIN_PER_EMAIL} min per email for manual triage.</div>
+
+                <table class="stats-table">
+                    <thead>
+                        <tr><th>Metric</th><th>Today</th><th>All time</th></tr>
+                    </thead>
+                    <tbody>
+                        ${row('Processed', s.today.processed || 0, s.all_time.processed || 0)}
+                        ${row('Rejected / dismissed', (s.today.rejected || 0) + (s.today.dismissed || 0), (s.all_time.rejected || 0) + (s.all_time.dismissed || 0))}
+                        ${row('Total processing time', formatDuration(s.today.duration_ms), formatDuration(s.all_time.duration_ms))}
+                        ${row('Average per email', formatDuration(s.today.avg_duration_ms), formatDuration(s.all_time.avg_duration_ms))}
+                        ${row('Estimated time saved', formatDuration(savedTodayMs), formatDuration(savedAllMs), true)}
+                    </tbody>
+                </table>
+
+                <div class="stats-footnote">Estimated time saved assumes ~${HUMAN_MIN_PER_EMAIL} minutes per email for manual triage.</div>
             `;
             document.getElementById('statsTitle').textContent = `${s.display_name} · Stats`;
             document.getElementById('statsModal').style.display = 'flex';
