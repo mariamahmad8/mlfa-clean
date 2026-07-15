@@ -8,87 +8,6 @@
     <meta name="csrf-token" content="{{ csrf_token }}">
     <script src="/static/security.js?v=2"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Nunito+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="/static/shared.css?v=12">
-    <style>
-        .roles-key {
-            background: var(--panel);
-            border: 1px solid var(--line);
-            border-radius: 10px;
-            padding: 18px 20px;
-            margin: 0 0 24px;
-        }
-        .roles-key-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 14px;
-        }
-        .roles-key-title {
-            font-family: var(--font-display);
-            font-size: 12px;
-            font-weight: 600;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-            color: var(--mlfa-teal);
-            margin: 0;
-        }
-        .roles-key-toggle {
-            background: transparent;
-            border: none;
-            color: var(--text-muted);
-            font-size: 11px;
-            cursor: pointer;
-            padding: 4px 8px;
-            border-radius: 4px;
-        }
-        .roles-key-toggle:hover { background: var(--panel-2); color: var(--text); }
-        .roles-key-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 14px;
-        }
-        .role-card {
-            border: 1px solid var(--line-soft);
-            border-radius: 8px;
-            padding: 14px;
-            background: var(--bg);
-        }
-        .role-card-head {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 8px;
-        }
-        .role-icon {
-            width: 32px; height: 32px;
-            border-radius: 8px;
-            display: flex; align-items: center; justify-content: center;
-            flex-shrink: 0;
-        }
-        .role-icon svg { width: 16px; height: 16px; }
-        .role-icon.admin  { background: var(--mlfa-orange-soft); color: var(--mlfa-orange); }
-        .role-icon.owner  { background: var(--accent-soft);      color: var(--mlfa-teal); }
-        .role-icon.reviewer { background: rgba(107, 124, 90, 0.14); color: var(--sage); }
-        .role-card-title {
-            font-family: var(--font-display);
-            font-size: 15px;
-            font-weight: 600;
-            letter-spacing: 0.06em;
-            text-transform: uppercase;
-        }
-        .role-card ul {
-            margin: 6px 0 0;
-            padding-left: 18px;
-            font-size: 12.5px;
-            line-height: 1.55;
-            color: var(--text-muted);
-        }
-        .role-card ul li { margin-bottom: 2px; }
-        .role-card ul li b { color: var(--text); font-weight: 600; }
-
-        @media (max-width: 900px) {
-            .roles-key-grid { grid-template-columns: 1fr; }
-        }
-    </style>
 </head>
 <body>
     <header class="app-header">
@@ -106,58 +25,8 @@
     <div class="settings-layout">
         {% include '_settings_nav.html' %}
         <main class="settings-content">
-        <h1 class="page-title">Users</h1>
-        <p class="page-subtitle">People who can sign in. Assign roles and inbox access below.</p>
-
-        <div class="roles-key" id="rolesKey">
-            <div class="roles-key-header">
-                <h2 class="roles-key-title">Role permissions</h2>
-                <button type="button" class="roles-key-toggle" onclick="toggleRolesKey()" id="rolesKeyToggle">Hide</button>
-            </div>
-            <div class="roles-key-grid" id="rolesKeyGrid">
-                <div class="role-card">
-                    <div class="role-card-head">
-                        <div class="role-icon admin">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                        </div>
-                        <div class="role-card-title">Admin</div>
-                    </div>
-                    <ul>
-                        <li><b>Full access</b> to all inboxes, settings, and audit logs</li>
-                        <li>Can create, edit, and delete <b>inboxes</b></li>
-                        <li>Can manage <b>users</b> and assign roles</li>
-                        <li>Can toggle <b>automation</b> for any inbox</li>
-                    </ul>
-                </div>
-                <div class="role-card">
-                    <div class="role-card-head">
-                        <div class="role-icon owner">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2h-4v-7H9v7H5a2 2 0 0 1-2-2z"/></svg>
-                        </div>
-                        <div class="role-card-title">Owner</div>
-                    </div>
-                    <ul>
-                        <li>Access to the <b>hub and settings</b> for their assigned inboxes only</li>
-                        <li>Can edit <b>categories, recipients, templates</b> for their inboxes</li>
-                        <li>Can review and approve emails in the queue</li>
-                        <li>Cannot manage users or add/delete inboxes</li>
-                    </ul>
-                </div>
-                <div class="role-card">
-                    <div class="role-card-head">
-                        <div class="role-icon reviewer">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                        </div>
-                        <div class="role-card-title">Reviewer</div>
-                    </div>
-                    <ul>
-                        <li>Can only <b>approve or reject</b> emails in the queue</li>
-                        <li>Sees the hub for their <b>assigned inboxes only</b></li>
-                        <li>No settings access</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
+        <h1 class="page-title">Users<span class="info-tip" style="margin-left: 10px; width: 20px; height: 20px;">i<span class="info-content"><b>Admin:</b> full access to all inboxes, settings, users, and audit logs. Can create and delete inboxes.<br><br><b>Owner:</b> hub and settings access for their assigned inboxes only. Can edit categories, recipients, and templates. Cannot manage users or add/delete inboxes.<br><br><b>Reviewer:</b> can only approve or reject emails in the queue for their assigned inboxes. No settings access.</span></span></h1>
+        <p class="page-subtitle">People who can sign in. Hover the info icon above for a quick role reference.</p>
 
         <div class="toolbar">
             <div></div>
@@ -314,13 +183,6 @@
             if (r === 'admin')  return '<span class="badge warning">Admin</span>';
             if (r === 'owner')  return '<span class="badge success">Owner</span>';
             return '<span class="badge">Reviewer</span>';
-        }
-        function toggleRolesKey() {
-            const grid = document.getElementById('rolesKeyGrid');
-            const btn = document.getElementById('rolesKeyToggle');
-            const hidden = grid.style.display === 'none';
-            grid.style.display = hidden ? 'grid' : 'none';
-            btn.textContent = hidden ? 'Hide' : 'Show';
         }
         function formatCentral(iso) {
             const d = new Date(iso.endsWith('Z') ? iso : iso + 'Z');
