@@ -79,7 +79,7 @@ def process_message(
         queue.add_to_queue(normalized_msg, inbox.id, classification_dict)
         # Tag the message with PAIRActioned/queued so delta sync doesn't re-process it
         try:
-            o365.tag_email(raw_msg, ["queued"], reply_tag=False)
+            o365.tag_email(raw_msg, ["queued"])
         except Exception as e:
             print(f"Could not tag queued message: {e}")
         audit.log_event(
@@ -138,13 +138,12 @@ def execute_plan(plan: MessageActionPlan, inbox: InboxConfig, raw_msg) -> None:
         except Exception as e:
             print(f"⚠️ Could not forward message: {e}")
 
-    # 4. Apply tags so the message won't be reprocessed next poll
+    # 4. Apply tags so the message won't be reprocessed next poll.
+    # Matches automate-email.py behavior: always PAIRActioned + PAIRActioned/<key>,
+    # no separate /replied/<key> tier even when an auto-reply was sent.
     if plan.tag:
         tag_categories = plan.tag.split(",")
-        o365.tag_email(raw_msg, tag_categories, reply_tag=False)
-        # Also tag the reply if we sent one
-        if plan.send_reply:
-            o365.tag_email(raw_msg, tag_categories, reply_tag=True)
+        o365.tag_email(raw_msg, tag_categories)
 
     # 5. Mark as read (if appropriate for these categories)
     if plan.mark_read:

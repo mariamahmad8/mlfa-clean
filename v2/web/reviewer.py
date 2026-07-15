@@ -521,7 +521,7 @@ def reject_email(email_id):
     if raw_msg is not None:
         o365.remove_email_tags(raw_msg, ['PAIRActioned/queued'])
         o365.move_to_trash(inbox, raw_msg)
-        o365.tag_email(raw_msg, ['dismissed'], reply_tag=False)
+        o365.tag_email(raw_msg, ['dismissed'])
 
     queue_storage.remove_from_queue(email_id)
     audit_storage.log_event(
@@ -546,7 +546,7 @@ def dismiss_email(email_id):
     if raw_msg is not None:
         o365.remove_email_tags(raw_msg, ['PAIRActioned/queued'])
         o365.mark_as_read(raw_msg)
-        o365.tag_email(raw_msg, ['dismissed'], reply_tag=False)
+        o365.tag_email(raw_msg, ['dismissed'])
 
     queue_storage.remove_from_queue(email_id)
     audit_storage.log_event(

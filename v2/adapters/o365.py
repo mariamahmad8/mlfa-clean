@@ -259,17 +259,15 @@ def ensure_folder_path(inbox: InboxConfig, path_parts: List[str]):
 # after deciding what should happen with an email.
 # ---------------------------------------------------------------------------
 
-def tag_email(msg, categories: List[str], reply_tag: bool = False) -> None:
+def tag_email(msg, categories: List[str]) -> None:
     """
     Apply Outlook tags (categories) to a message so we know we've already
     handled it. Combined with existing tags so we don't lose anything.
 
-    The umbrella 'PAIRActioned' tag is always added — that's what
-    fetch_messages_delta uses to skip already-processed messages.
-
-    reply_tag=True formats tags as PAIRActioned/replied/<category>
-    (used when we sent an auto-reply, to prevent duplicate replies in the
-    same thread).
+    Matches automate-email.py behavior: writes the umbrella 'PAIRActioned'
+    tag plus one 'PAIRActioned/<category>' tag per category. There is no
+    separate '/replied/<category>' tier — reply-vs-processed granularity
+    lives in the audit log, not in Outlook categories.
     """
     existing = set(msg.categories or [])
     new_tags: Set[str] = set()
@@ -278,12 +276,7 @@ def tag_email(msg, categories: List[str], reply_tag: bool = False) -> None:
         c = (c or "").strip()
         if not c:
             continue
-        if reply_tag:
-            new_tags.add(f"PAIRActioned/replied/{c}")
-        #elif c in ("cold_outreach", "newsletter"):
-        #    new_tags.add(f"PAIRActioned/irrelevant/{c}")
-        else:
-            new_tags.add(f"PAIRActioned/{c}")
+        new_tags.add(f"PAIRActioned/{c}")
 
     new_tags.add("PAIRActioned")
 
@@ -760,7 +753,7 @@ def handle_internal_reply(inbox: InboxConfig, msg) -> bool:
 
     # [INTERNAL] means keep it internal, just tag+file, don't relay
     if mode == "internal":
-        tag_email(msg, ["internal_note"], reply_tag=False)
+        tag_email(msg, ["internal_note"])
         mark_as_read(msg)
         return True
 
@@ -768,7 +761,7 @@ def handle_internal_reply(inbox: InboxConfig, msg) -> bool:
     external_prefix = (inbox.internal_reply_external_prefix or "[EXTERNAL]").strip()
     outbound = clean[len(external_prefix):].strip() if external_prefix else clean
     if not outbound:
-        tag_email(msg, ["internal_note"], reply_tag=False)
+        tag_email(msg, ["internal_note"])
         mark_as_read(msg)
         return True
 
@@ -783,7 +776,7 @@ def handle_internal_reply(inbox: InboxConfig, msg) -> bool:
         reply.body_type = "HTML"
         reply.body = f"<div>{safe_html}</div>"
         reply.send()
-        tag_email(msg, ["internal_reply_sent"], reply_tag=False)
+        tag_email(msg, ["internal_reply_sent"])
         mark_as_read(msg)
         return True
     except Exception as e:

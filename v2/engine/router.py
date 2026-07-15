@@ -143,10 +143,11 @@ def decide(
         if not rule.reply_template:
             continue
 
-        # Safeguard: if we already replied to this thread for this category,
-        # don't reply again. Checked via the PAIRActioned/replied/<key> tag.
+        # Safeguard: if this thread was already processed under this category,
+        # skip sending another auto-reply. Checks PAIRActioned/<key> across
+        # the whole thread (matches automate-email.py's behavior).
         if rule.auto_reply_safeguard:
-            if _has_preexisting_reply_tag(msg, rule.key):
+            if _has_preexisting_category_tag(msg, rule.key):
                 continue
 
         # Pick personal-variant template if GPT flagged this as needing a personal reply
@@ -198,15 +199,14 @@ def _get_priority(rule: CategoryRule) -> int:
     return rule.priority
 
 
-def _has_preexisting_reply_tag(msg: NormalizedMessage, category_key: str) -> bool:
+def _has_preexisting_category_tag(msg: NormalizedMessage, category_key: str) -> bool:
     """
-    Check if this message OR any other message in the same conversation
-    already has a PAIRActioned/replied/<key> tag.
-
-    Prevents the system from sending the same auto-reply twice — either
-    on the same message or elsewhere in the thread.
+    Check if this message OR any other message in the same conversation was
+    already processed under this category. Matches automate-email.py behavior:
+    the safeguard looks for PAIRActioned/<key> since we never wrote the
+    granular /replied/<key> variant.
     """
-    target = f"PAIRActioned/replied/{category_key}"
+    target = f"PAIRActioned/{category_key}"
     all_tags = list(msg.existing_tags or []) + list(getattr(msg, "thread_tags", []) or [])
     for tag in all_tags:
         if tag == target:
