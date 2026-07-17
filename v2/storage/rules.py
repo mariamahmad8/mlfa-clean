@@ -9,7 +9,9 @@ from models.CategoryRule import CategoryRule
 _RULE_SELECT = """
     SELECT cr.*,
            default_template.body_html AS current_reply_template,
-           personal_template.body_html AS current_reply_template_personal
+           personal_template.body_html AS current_reply_template_personal,
+           linked_recipients.recipient_ids AS recipient_ids,
+           linked_recipients.active_recipient_emails AS active_recipient_emails
     FROM category_rules cr
     LEFT JOIN reply_templates default_template
       ON default_template.id = cr.reply_template_id
