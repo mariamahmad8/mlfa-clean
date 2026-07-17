@@ -689,13 +689,22 @@ REPLY_ID_TAG = "Pair_Reply_Reference_ID"
 def forward_with_reply_bridge(msg, recipients: List[str], comment_html: Optional[str] = None) -> None:
     """
     Forward a message with a hidden reply-reference ID embedded so staff
-    replies via SEND: prefix can be relayed back to the original sender.
+    replies via [EXTERNAL] / [INTERNAL] prefix can be relayed back to the
+    original sender. Also prepends the human-visible instructions so staff
+    know how to use the bridge.
     """
     fwd = msg.forward()
     fwd.to.add(recipients)
     original_id = msg.internet_message_id or msg.object_id or ""
     hidden_tag = f'<span style="display:none">{REPLY_ID_TAG}{original_id}</span>'
-    prefix = (comment_html or "") + hidden_tag
+    instructions = (
+        "<p><strong>Forwarding process:</strong> use <strong>Reply All</strong> in this thread.</p>"
+        "<p>Start your message with <strong>[EXTERNAL]</strong> if the reply should be sent back to the original sender through MLFA.</p>"
+        "<p>Start your message with <strong>[INTERNAL]</strong> if the reply should stay internal only.</p>"
+        "<p>Without either prefix, the message stays a normal internal email and will not be sent back to the original sender.</p>"
+        "<hr>"
+    )
+    prefix = (comment_html or "") + instructions + hidden_tag
     fwd.body_type = "HTML"
     fwd.body = prefix + (fwd.body or "")
     fwd.send()
