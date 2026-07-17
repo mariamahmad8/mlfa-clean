@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [[ "${SERVICE_ROLE:-combined}" == "worker" ]]; then
+  exec python3 v2/worker_main.py
+fi
+
+# The existing deployment remains combined by default. A separate web service
+# sets SERVICE_ROLE=web and RUN_EMAIL_WORKER=false; the worker service sets
+# SERVICE_ROLE=worker and does not expose a public domain.
 exec gunicorn \
   --chdir v2 \
   --bind "0.0.0.0:${PORT:-5050}" \

@@ -3,6 +3,7 @@ import json
 from openai import OpenAI
 
 from models.ClassificationResult import ClassificationResult
+from security_logging import log_event
 
 
 def _get_client() -> OpenAI:
@@ -38,7 +39,7 @@ def classify_email(system_prompt: str, email_prompt: str) -> ClassificationResul
         return _validated_result(parsed)
 
     except Exception as e:
-        print(f"Classification error: {e}")
+        log_event("classifier.request_failed", level="ERROR", error=e)
         return ClassificationResult(
             categories=[],
             recipients=[],

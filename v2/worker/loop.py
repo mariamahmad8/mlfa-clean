@@ -24,6 +24,7 @@ from storage import rules as rules_storage
 from storage import queue as queue_storage
 from adapters import o365
 from engine import pipeline
+from security_logging import log_event
 
 
 # How long to sleep between polls (seconds)
@@ -40,12 +41,12 @@ def run() -> None:
     Sleeps POLL_INTERVAL seconds between ticks. Wraps each tick in
     a try/except so one bad inbox doesn't crash the whole worker.
     """
-    print(f"Worker starting. Polling every {POLL_INTERVAL}s.")
+    log_event("worker.started", poll_interval_seconds=POLL_INTERVAL)
     while True:
         try:
             tick()
         except Exception as e:
-            print(f"⚠️ Worker tick error: {e}")
+            log_event("worker.tick_failed", level="ERROR", error=e)
         time.sleep(POLL_INTERVAL)
 
 
@@ -57,13 +58,18 @@ def tick() -> None:
     Errors on one inbox don't affect the others.
     """
     inboxes = inbox_storage.get_active_inboxes()
-    print(f"Polling {len(inboxes)} inbox(es)...")
+    log_event("worker.poll_started", inbox_count=len(inboxes))
 
     for inbox in inboxes:
         try:
             poll_inbox(inbox)
         except Exception as e:
-            print(f"⚠️ Error polling {inbox.email_to_watch}: {e}")
+            log_event(
+                "worker.inbox_poll_failed",
+                level="ERROR",
+                error=e,
+                inbox_db_id=inbox.id,
+            )
 
 
 def poll_inbox(inbox: InboxConfig) -> None:
@@ -109,14 +115,24 @@ def poll_folder(
         days_back = getattr(inbox, "backfill_days", None) or BACKFILL_DAYS
         since_dt = datetime.now(timezone.utc) - timedelta(days=days_back)
         backfilled = o365.fetch_unread_since(inbox, folder_name, since_dt)
-        print(f"[{folder_name}] Backfill found {len(backfilled)} message(s)")
+        log_event(
+            "worker.backfill_completed",
+            inbox_db_id=inbox.id,
+            folder=folder_name,
+            result_count=len(backfilled),
+        )
         for normalized_msg in backfilled:
             _process_one(inbox, rules, normalized_msg)
 
     # Delta sync — gets changes since last token (or initial state if no token)
     messages, new_token = o365.fetch_messages_delta(inbox, folder_name, current_token)
     if messages:
-        print(f"[{folder_name}] Delta sync found {len(messages)} message(s)")
+        log_event(
+            "worker.delta_completed",
+            inbox_db_id=inbox.id,
+            folder=folder_name,
+            result_count=len(messages),
+        )
     for normalized_msg in messages:
         _process_one(inbox, rules, normalized_msg)
 
@@ -132,7 +148,12 @@ def _cleanup_stale_queue(inbox: InboxConfig) -> None:
     try:
         pending = queue_storage.get_pending(inbox.id)
     except Exception as e:
-        print(f"Queue cleanup: could not list pending: {e}")
+        log_event(
+            "worker.queue_cleanup_list_failed",
+            level="ERROR",
+            error=e,
+            inbox_db_id=inbox.id,
+        )
         return
 
     for row in pending:
@@ -154,7 +175,12 @@ def _cleanup_stale_queue(inbox: InboxConfig) -> None:
             if handled:
                 queue_storage.remove_from_queue(message_id)
         except Exception as e:
-            print(f"Queue cleanup error for {message_id}: {e}")
+            log_event(
+                "worker.queue_cleanup_item_failed",
+                level="ERROR",
+                error=e,
+                inbox_db_id=inbox.id,
+            )
 
 
 def _process_one(
@@ -171,7 +197,11 @@ def _process_one(
     # Re-fetch the raw O365 message — we need it for actions (reply, move, etc.)
     raw_msg = o365.fetch_message_safely(inbox, normalized_msg.message_id)
     if raw_msg is None:
-        print(f"⚠️ Could not fetch raw message {normalized_msg.message_id}")
+        log_event(
+            "worker.message_fetch_failed",
+            level="WARNING",
+            inbox_db_id=inbox.id,
+        )
         return
 
     # Silent skip for blocked senders or blocked sender/recipient pairs
@@ -184,10 +214,20 @@ def _process_one(
             if o365.handle_internal_reply(inbox, raw_msg):
                 return
         except Exception as e:
-            print(f"Internal reply bridge error: {e}")
+            log_event(
+                "worker.internal_reply_bridge_failed",
+                level="ERROR",
+                error=e,
+                inbox_db_id=inbox.id,
+            )
 
-    print(f"📨 Processing: {normalized_msg.subject[:60]}")
+    log_event("worker.message_processing_started", inbox_db_id=inbox.id)
     try:
         pipeline.process_message(normalized_msg, raw_msg, inbox, rules)
     except Exception as e:
-        print(f"⚠️ Error processing message: {e}")
+        log_event(
+            "worker.message_processing_failed",
+            level="ERROR",
+            error=e,
+            inbox_db_id=inbox.id,
+        )

@@ -14,6 +14,7 @@ import re
 from datetime import datetime, timezone
 from typing import List, Optional, Tuple, Set
 from O365 import Account
+from security_logging import log_event
 from bs4 import BeautifulSoup
 
 from models.InboxConfig import InboxConfig
@@ -170,7 +171,12 @@ def fetch_messages_delta(
         if any(tok in err for tok in ("401", "Unauthorized", "invalid_token", "expired", "invalid_client")):
             ensure_account_fresh(force=True)
         if any(tok in err for tok in ("SyncState", "delta", "410")):
-            print(f"⚠️  Delta token invalid for {folder_name}, will resync on next run.")
+            log_event(
+                "o365.delta_token_invalid",
+                level="WARNING",
+                inbox_db_id=inbox.id,
+                folder=folder_name,
+            )
             return [], None
         raise
 
@@ -243,14 +249,24 @@ def ensure_folder_path(inbox: InboxConfig, path_parts: List[str]):
             if not found:
                 try:
                     found = current.create_child_folder(name)
-                    print(f"Created folder: {name}")
+                    log_event("o365.folder_created", inbox_db_id=inbox.id)
                 except Exception as e:
-                    print(f"Could not create folder '{name}': {e}")
+                    log_event(
+                        "o365.folder_create_failed",
+                        level="ERROR",
+                        error=e,
+                        inbox_db_id=inbox.id,
+                    )
                     return None
             current = found
         return current
     except Exception as e:
-        print(f"ensure_folder_path error for {path_parts}: {e}")
+        log_event(
+            "o365.folder_path_failed",
+            level="ERROR",
+            error=e,
+            inbox_db_id=inbox.id,
+        )
         return None
 
 
@@ -304,7 +320,7 @@ def mark_as_read(msg) -> None:
     try:
         msg.mark_as_read()
     except Exception as e:
-        print(f"Could not mark as read: {e}")
+        log_event("o365.mark_read_failed", level="ERROR", error=e)
 
 
 def move_to_folder(inbox: InboxConfig, msg, path_parts: List[str]) -> bool:
@@ -321,7 +337,12 @@ def move_to_folder(inbox: InboxConfig, msg, path_parts: List[str]) -> bool:
         msg.move(dest)
         return True
     except Exception as e:
-        print(f"Could not move message to {'/'.join(path_parts)}: {e}")
+        log_event(
+            "o365.folder_move_failed",
+            level="ERROR",
+            error=e,
+            inbox_db_id=inbox.id,
+        )
         return False
 
 
@@ -337,7 +358,12 @@ def move_to_trash(inbox: InboxConfig, msg) -> bool:
         msg.move(deleted)
         return True
     except Exception as e:
-        print(f"Could not move message to Deleted Items: {e}")
+        log_event(
+            "o365.trash_move_failed",
+            level="ERROR",
+            error=e,
+            inbox_db_id=inbox.id,
+        )
         return False
 
 
@@ -657,7 +683,12 @@ def get_thread_messages(inbox: InboxConfig, conversation_id: str, current_msg_id
             formatted.append(f"From: {sender}\nAt: {received}\nSubject: {m.subject or ''}\n\n{body}")
         return formatted
     except Exception as e:
-        print(f"get_thread_messages error: {e}")
+        log_event(
+            "o365.thread_fetch_failed",
+            level="ERROR",
+            error=e,
+            inbox_db_id=inbox.id,
+        )
         return []
 
 
@@ -679,7 +710,12 @@ def get_thread_tags(inbox: InboxConfig, conversation_id: str) -> List[str]:
                     tags.add(t)
         return list(tags)
     except Exception as e:
-        print(f"get_thread_tags error: {e}")
+        log_event(
+            "o365.thread_tag_fetch_failed",
+            level="ERROR",
+            error=e,
+            inbox_db_id=inbox.id,
+        )
         return []
 
 
@@ -789,5 +825,10 @@ def handle_internal_reply(inbox: InboxConfig, msg) -> bool:
         mark_as_read(msg)
         return True
     except Exception as e:
-        print(f"handle_internal_reply send error: {e}")
+        log_event(
+            "o365.internal_reply_send_failed",
+            level="ERROR",
+            error=e,
+            inbox_db_id=inbox.id,
+        )
         return False

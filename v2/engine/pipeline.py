@@ -24,6 +24,7 @@ from models.ClassificationResult import ClassificationResult
 from engine import classifier, router
 from adapters import o365
 from storage import queue, audit
+from security_logging import log_event as log_security_event
 
 
 def process_message(
@@ -55,7 +56,12 @@ def process_message(
             )
             normalized_msg.thread_tags = o365.get_thread_tags(inbox, normalized_msg.conversation_id)
         except Exception as e:
-            print(f"Thread enrichment error: {e}")
+            log_security_event(
+                "pipeline.thread_enrichment_failed",
+                level="ERROR",
+                error=e,
+                inbox_db_id=inbox.id,
+            )
 
     # Step 1 — classify
     result = classifier.classify(normalized_msg, inbox, rules)
@@ -81,7 +87,12 @@ def process_message(
         try:
             o365.tag_email(raw_msg, ["queued"])
         except Exception as e:
-            print(f"Could not tag queued message: {e}")
+            log_security_event(
+                "pipeline.queue_tag_failed",
+                level="ERROR",
+                error=e,
+                inbox_db_id=inbox.id,
+            )
         audit.log_event(
             inbox_id=inbox.id,
             email_id=normalized_msg.message_id,
@@ -124,7 +135,12 @@ def execute_plan(plan: MessageActionPlan, inbox: InboxConfig, raw_msg) -> None:
         try:
             o365.send_reply(raw_msg, plan.reply_text)
         except Exception as e:
-            print(f"⚠️ Could not send reply: {e}")
+            log_security_event(
+                "pipeline.reply_failed",
+                level="ERROR",
+                error=e,
+                inbox_db_id=inbox.id,
+            )
 
     # 3. Forward to recipients (if any). If the internal reply bridge is
     # enabled for this inbox, embed a hidden reference so staff SEND:
@@ -136,7 +152,12 @@ def execute_plan(plan: MessageActionPlan, inbox: InboxConfig, raw_msg) -> None:
             else:
                 o365.forward_message(raw_msg, plan.forward_to)
         except Exception as e:
-            print(f"⚠️ Could not forward message: {e}")
+            log_security_event(
+                "pipeline.forward_failed",
+                level="ERROR",
+                error=e,
+                inbox_db_id=inbox.id,
+            )
 
     # 4. Apply tags so the message won't be reprocessed next poll.
     # Matches automate-email.py behavior: always PAIRActioned + PAIRActioned/<key>,

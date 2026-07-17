@@ -22,6 +22,7 @@ from storage import recipients as recipients_storage
 from storage import templates as templates_storage
 from storage import users as users_storage
 from storage import audit as audit_storage
+from security_logging import log_event as log_security_event
 from storage import queue as queue_storage
 
 from models.InboxConfig import InboxConfig
@@ -200,7 +201,7 @@ def _audit(action: str, target: str, comment: str = "", inbox_id=None):
             comment=comment,
         )
     except Exception as e:
-        print(f"Audit log error: {e}")
+        log_security_event("admin.audit_write_failed", level="ERROR", error=e)
 
 
 def admin_required(f):

@@ -35,6 +35,7 @@ from storage import login_rate_limits as rate_limits_storage
 from adapters import o365
 from engine import router, pipeline
 from auth import microsoft as microsoft_auth
+from security_logging import log_event
 
 
 reviewer_bp = Blueprint('reviewer', __name__)
@@ -139,7 +140,7 @@ def login():
                 window_seconds=900,
             )
         except Exception as e:
-            print(f"Login rate-limit error: {e}")
+            log_event("auth.magic_link_rate_limit_failed", level="ERROR", error=e)
             return _render_login(
                 error='Sign-in is temporarily unavailable. Please try again shortly.',
             ), 503
@@ -178,7 +179,7 @@ def login():
                     """,
                 )
             except Exception as e:
-                print(f"Login email send error: {e}")
+                log_event("auth.magic_link_delivery_failed", level="ERROR", error=e)
 
         return _render_login(info=generic_message)
 
@@ -199,7 +200,7 @@ def microsoft_login_start():
             window_seconds=3600,
         )
     except Exception as exc:
-        print(f"Microsoft login rate-limit error: {exc}")
+        log_event("auth.microsoft_rate_limit_failed", level="ERROR", error=exc)
         return _render_login(error='Sign-in is temporarily unavailable.'), 503
     if attempts > 30:
         return _render_login(error='Too many sign-in attempts. Please try again later.'), 429
@@ -207,7 +208,7 @@ def microsoft_login_start():
     try:
         flow = microsoft_auth.start_flow(config)
     except Exception as exc:
-        print(f"Microsoft login initialization error: {type(exc).__name__}")
+        log_event("auth.microsoft_initialization_failed", level="ERROR", error=exc)
         return _render_login(error='Microsoft sign-in is temporarily unavailable.'), 503
 
     session['microsoft_auth_flow'] = flow
@@ -229,7 +230,7 @@ def microsoft_login_callback():
     try:
         claims = microsoft_auth.complete_flow(config, flow, auth_response)
     except Exception as exc:
-        print(f"Microsoft callback validation error: {type(exc).__name__}")
+        log_event("auth.microsoft_callback_rejected", level="WARNING", error=exc)
         return _render_login(error='Microsoft could not verify this sign-in.'), 401
 
     oid = str(claims['oid']).lower()
@@ -255,7 +256,7 @@ def microsoft_login_callback():
             display_name=str(claims.get('name') or user.display_name or user.email.split('@')[0]),
         )
     except Exception as exc:
-        print(f"Microsoft login record update error: {type(exc).__name__}")
+        log_event("auth.microsoft_record_update_failed", level="ERROR", error=exc)
 
     _start_user_session(user, 'microsoft')
     return redirect(url_for('reviewer.index'))
@@ -285,7 +286,7 @@ def login_verify():
             display_name=user.display_name or user.email.split('@')[0],
         )
     except Exception as e:
-        print(f"update_last_login error: {e}")
+        log_event("auth.magic_link_record_update_failed", level="ERROR", error=e)
 
     _start_user_session(user, 'magic_link')
     return redirect(url_for('reviewer.index'))
@@ -492,7 +493,7 @@ def approve_email(email_id):
                     ),
                 )
             except Exception as e:
-                print(f"Review notify email error: {e}")
+                log_event("review.notification_failed", level="ERROR", error=e)
 
     queue_storage.remove_from_queue(email_id)
     audit_storage.log_event(
@@ -652,7 +653,12 @@ def update_automation_setting():
                 )
                 processed += 1
             except Exception as e:
-                print(f"process on toggle error for {email_id}: {e}")
+                log_event(
+                    "review.automation_toggle_processing_failed",
+                    level="ERROR",
+                    error=e,
+                    inbox_db_id=inbox.id,
+                )
 
     return jsonify({"status": "success", "automationEnabled": enabled, "processed": processed})
 
