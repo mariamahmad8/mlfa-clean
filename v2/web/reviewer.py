@@ -262,10 +262,36 @@ def microsoft_login_callback():
     return redirect(url_for('reviewer.index'))
 
 
-@reviewer_bp.route('/login/verify', methods=['GET'])
+@reviewer_bp.route('/login/verify', methods=['GET', 'POST'])
 def login_verify():
-    """Click-through from a magic-link email — verify the token and set session."""
-    plaintext = (request.args.get('token') or '').strip()
+    """Two-step magic-link verification.
+
+    GET: shows a confirmation page with the token in a hidden form field. The
+    token is NOT consumed here — this keeps Microsoft Safe Links (and any other
+    email URL scanner that pre-fetches GET links) from silently consuming the
+    single-use token before the user can click it.
+
+    POST: actually consumes the token, sets the session, redirects to the hub.
+    Scanners don't POST forms, so the token survives until the human clicks
+    the sign-in button on the confirmation page.
+    """
+    if request.method == 'GET':
+        plaintext = (request.args.get('token') or '').strip()
+        if not plaintext:
+            return _render_login(error='Invalid or missing link.')
+        # Peek at the token to show the target email in the confirm page,
+        # but do NOT mark it used — that only happens on POST.
+        preview = tokens_storage.get_valid_token(_hash_token(plaintext))
+        if not preview:
+            return _render_login(error='Link is invalid or expired.')
+        return render_template(
+            'login_confirm.html',
+            email=preview.get('email', ''),
+            token=plaintext,
+        )
+
+    # POST — real sign-in
+    plaintext = (request.form.get('token') or '').strip()
     if not plaintext:
         return _render_login(error='Invalid or missing link.')
 
