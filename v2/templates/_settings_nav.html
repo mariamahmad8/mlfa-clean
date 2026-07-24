@@ -51,6 +51,7 @@
             if (!content) return;
             const box = ensureFloating();
             box.innerHTML = content.innerHTML;
+            box.classList.toggle('wide', tip.classList.contains('wide'));
             box.classList.add('visible');
             box.style.left = '-9999px';
             box.style.top = '0';

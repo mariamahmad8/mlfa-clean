@@ -538,6 +538,13 @@ input[type="checkbox"], input[type="radio"] {
 }
 .info-floating b, .info-floating strong { color: white; font-weight: 600; }
 
+/* Wide variant for tooltips that show a legend / key with many terms. */
+.info-floating.wide { max-width: 640px; padding: 14px 16px; font-size: 12.5px; }
+.info-floating.wide .tip-title { font-family: var(--font-display); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(245, 241, 234, 0.6); margin-bottom: 8px; font-weight: 600; }
+.info-floating.wide .tip-legend { display: grid; grid-template-columns: 130px 1fr; column-gap: 16px; row-gap: 8px; align-items: baseline; }
+.info-floating.wide .tip-legend dt { font-weight: 700; color: #ffffff; }
+.info-floating.wide .tip-legend dd { margin: 0; color: rgba(245, 241, 234, 0.85); line-height: 1.45; }
+
 /* Modals */
 .modal-backdrop {
   position: fixed;
