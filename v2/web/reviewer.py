@@ -438,6 +438,19 @@ def get_emails():
         recipients = classification.get('recipients', [])
         amount = classification.get('amount_detected')
 
+        # Build display reason: prefer per-category justifications from GPT
+        # (matches automate-email.py), fall back to escalation_reason if none.
+        reason_map = classification.get('reason') or {}
+        if isinstance(reason_map, dict) and reason_map:
+            reason_display = '; '.join(
+                f"{k.replace('_', ' ')}: {v}" for k, v in reason_map.items() if v
+            )
+        else:
+            reason_display = ''
+        escalation = classification.get('escalation_reason') or ''
+        if not reason_display:
+            reason_display = escalation
+
         emails.append({
             "id": row['message_id'],
             "meta": f"FROM: {row.get('received_at', '')} | {row.get('sender', '')} | {row.get('subject_email', '')}",
@@ -446,8 +459,8 @@ def get_emails():
             "amountDetected": str(amount) if amount is not None else 'None',
             "recipients": ', '.join(recipients) if recipients else 'None',
             "needsReply": "Yes" if classification.get('needs_personal_reply') else "No",
-            "reason": classification.get('escalation_reason') or 'None',
-            "escalation": classification.get('escalation_reason') or 'None',
+            "reason": reason_display or 'None',
+            "escalation": escalation or 'None',
             "originalContent": row.get('body_email', ''),
             "status": "pending",
         })

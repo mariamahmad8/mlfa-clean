@@ -47,6 +47,7 @@ def classify_email(system_prompt: str, email_prompt: str) -> ClassificationResul
             escalation_reason="",
             name_sender=None,
             amount_money_detected=None,
+            reason={},
         )
 
 #to be safe incase GPT returns a message like "Sure!"
@@ -102,6 +103,14 @@ def _validated_result(parsed: dict) -> ClassificationResult:
     if not isinstance(escalation, str):
         escalation = ""
 
+    # Per-category justification dict from GPT: {"donor": "mentions $500 donation", ...}
+    raw_reason = parsed.get("reason", {})
+    reason = {}
+    if isinstance(raw_reason, dict):
+        for key, value in list(raw_reason.items())[:20]:
+            if isinstance(key, str) and isinstance(value, str) and value.strip():
+                reason[key.strip()] = value.strip()[:500]
+
     return ClassificationResult(
         categories=categories,
         recipients=recipients,
@@ -109,4 +118,5 @@ def _validated_result(parsed: dict) -> ClassificationResult:
         escalation_reason=escalation[:2000],
         name_sender=sender_name,
         amount_money_detected=amount,
+        reason=reason,
     )

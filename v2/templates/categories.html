@@ -115,13 +115,12 @@
             </div>
 
             <div class="form-group" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
-                <label class="form-check"><input type="checkbox" id="fActive"> Active <span class="info-tip">i<span class="info-content">Turn off to temporarily disable this category without deleting it. Inactive categories are ignored by GPT and the router.</span></span></label>
-                <label class="form-check"><input type="checkbox" id="fMarkRead"> Mark as read <span class="info-tip">i<span class="info-content">Automatically mark the email as read after processing. Uncheck for categories where you want the email to stay bold in Outlook (like donor or active_communication).</span></span></label>
-                <label class="form-check"><input type="checkbox" id="fSkip"> Skip processing <span class="info-tip">i<span class="info-content">If checked, do nothing at all when an email matches this category. No folder move, no forward, no reply. Rare — use only for categories that should just be tagged and ignored.</span></span></label>
-                <label class="form-check"><input type="checkbox" id="fAutoReply"> Send auto-reply <span class="info-tip">i<span class="info-content">Master switch for whether this category ever sends an auto-reply. If off, no template is sent even if one is selected above.</span></span></label>
-                <label class="form-check"><input type="checkbox" id="fSafeguard"> Reply safeguard <span class="info-tip">i<span class="info-content">Prevents sending the same auto-reply twice in a conversation. Highly recommended for auto-reply categories like legal or volunteer, so senders don't get spammed if they follow up.</span></span></label>
-                <label class="form-check"><input type="checkbox" id="fSkipInternal"> Skip if sender is internal <span class="info-tip">i<span class="info-content">Don't apply this category if the email came from a staff member (matches internal domains set on the inbox). Useful for categories that shouldn't fire on internal forwards.</span></span></label>
-                <label class="form-check"><input type="checkbox" id="fDeleteImmediately"> Delete immediately <span class="info-tip">i<span class="info-content">Skip the folder move and send the email straight to Trash. Used for spam-like categories (auto_reply, delete_internal) that don't need archiving.</span></span></label>
+                <label class="form-check"><input type="checkbox" id="fActive"> Active <span class="info-tip">i<span class="info-content"><b>What it does:</b> Turns the category on. When off, GPT stops applying this label to any emails until you turn it back on.<br><br><b>Example:</b> If MLFA closes internships for the summer, uncheck "Active" on the internship category — GPT will stop matching internship emails without deleting the category.</span></span></label>
+                <label class="form-check"><input type="checkbox" id="fMarkRead"> Mark as read <span class="info-tip">i<span class="info-content"><b>What it does:</b> After the system handles the email, mark it as read in Outlook (so it's not bold anymore).<br><br><b>Example:</b> Check this for spam categories so processed spam doesn't clutter your unread count. Uncheck for donor emails so staff still see them bold in the inbox.</span></span></label>
+                <label class="form-check"><input type="checkbox" id="fAutoReply"> Send auto-reply <span class="info-tip">i<span class="info-content"><b>What it does:</b> Automatically send the template you picked above to the sender. Off = never reply, no matter what.<br><br><b>Example:</b> "Legal" has this on to send applicants a link to the application form. "Donor" has this off because we don't want to auto-reply to donations.</span></span></label>
+                <label class="form-check"><input type="checkbox" id="fSafeguard"> Reply safeguard <span class="info-tip">i<span class="info-content"><b>What it does:</b> Only send the auto-reply once per email thread. If the sender responds and we classify it as the same category again, we don't reply a second time.<br><br><b>Example:</b> An applicant emails legal → we send the application link. They email back with a follow-up question → safeguard prevents sending the same application link again.</span></span></label>
+                <label class="form-check"><input type="checkbox" id="fSkipInternal"> Skip if sender is internal <span class="info-tip">i<span class="info-content"><b>What it does:</b> Don't apply this category if the email is from someone at @mlfa.org. Prevents replying to your own staff.<br><br><b>Example:</b> Maria forwards a legal email from her @mlfa.org account. Without this check, our system might send Maria the applicant reply. With it checked, we skip her forward.</span></span></label>
+                <label class="form-check"><input type="checkbox" id="fDeleteImmediately"> Delete immediately <span class="info-tip">i<span class="info-content"><b>What it does:</b> Send the email straight to the Trash folder instead of moving to a category folder.<br><br><b>Example:</b> Outlook out-of-office auto-replies are worthless — check this on the "auto_reply" category so they go straight to Trash.</span></span></label>
             </div>
 
             <div class="modal-actions">
@@ -307,7 +306,7 @@
             renderTemplateSelect(null, '', 'fReplyPersonalSelect', '— Same as default —');
             document.getElementById('fActive').checked = true;
             document.getElementById('fMarkRead').checked = true;
-            document.getElementById('fSkip').checked = false;
+            // fSkip is no longer exposed in the UI — always send false
             document.getElementById('fAutoReply').checked = false;
             document.getElementById('fSafeguard').checked = false;
             document.getElementById('fSkipInternal').checked = false;
@@ -335,7 +334,7 @@
             renderTemplateSelect(r.reply_template_personal_id, r.reply_template_personal || '', 'fReplyPersonalSelect', '— Same as default —');
             document.getElementById('fActive').checked = !!r.active;
             document.getElementById('fMarkRead').checked = !!r.mark_read;
-            document.getElementById('fSkip').checked = !!r.skip;
+            // fSkip is no longer exposed in the UI — preserved server-side only
             document.getElementById('fAutoReply').checked = !!r.auto_reply_enabled;
             document.getElementById('fSafeguard').checked = !!r.auto_reply_safeguard;
             document.getElementById('fSkipInternal').checked = !!r.skip_if_internal;
@@ -371,7 +370,7 @@
                 reply_template_personal: personalTemplate.body,
                 active: document.getElementById('fActive').checked,
                 mark_read: document.getElementById('fMarkRead').checked,
-                skip: document.getElementById('fSkip').checked,
+                skip: false,
                 auto_reply_enabled: document.getElementById('fAutoReply').checked,
                 auto_reply_safeguard: document.getElementById('fSafeguard').checked,
                 skip_if_internal: document.getElementById('fSkipInternal').checked,

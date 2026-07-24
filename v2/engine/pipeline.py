@@ -81,6 +81,7 @@ def process_message(
             "escalation_reason": result.escalation_reason,
             "name_sender": result.name_sender,
             "amount_detected": result.amount_money_detected,
+            "reason": result.reason,
         }
         queue.add_to_queue(normalized_msg, inbox.id, classification_dict)
         # Tag the message with PAIRActioned/queued so delta sync doesn't re-process it
