@@ -101,6 +101,50 @@
             margin-top: 18px;
             font-style: italic;
         }
+        .stats-hero {
+            background: var(--accent-soft);
+            border: 1px solid var(--mlfa-teal);
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .stats-hero .h-icon {
+            width: 40px; height: 40px;
+            border-radius: 10px;
+            background: var(--mlfa-teal);
+            color: #F5F1EA;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .stats-hero .h-icon svg { width: 22px; height: 22px; }
+        .stats-hero .h-text { font-size: 13px; color: var(--text); line-height: 1.45; }
+        .stats-hero .h-text strong { color: var(--mlfa-teal); font-weight: 700; }
+        .stats-graph {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 14px 16px;
+            margin-bottom: 18px;
+        }
+        .stats-graph-title {
+            font-family: var(--font-display);
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+        .stats-bar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; font-size: 12px; }
+        .stats-bar-row:last-child { margin-bottom: 0; }
+        .stats-bar-label { flex: 0 0 60px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; font-size: 10px; }
+        .stats-bar-track { flex: 1; height: 14px; background: var(--panel-2); border-radius: 999px; overflow: hidden; }
+        .stats-bar-fill { height: 100%; background: var(--mlfa-teal); border-radius: 999px; transition: width 0.4s ease; }
+        .stats-bar-fill.today { background: var(--mlfa-orange); }
+        .stats-bar-value { flex: 0 0 60px; text-align: right; font-family: var(--font-display); font-weight: 600; color: var(--text); font-size: 14px; }
     </style>
 </head>
 <body>
@@ -295,12 +339,39 @@
                 </tr>
             `;
 
+            const processedToday = s.today.processed || 0;
+            const processedTotal = s.all_time.processed || 0;
+            const barPct = processedTotal > 0 ? Math.max(3, Math.round((processedToday / processedTotal) * 100)) : 0;
+
             document.getElementById('statsBody').innerHTML = `
-                <div class="stats-subtitle">${escapeHtml(s.email_to_watch)} &nbsp;&middot;&nbsp; Today reflects activity since midnight Central Time. Totals since Jul 17, 2026.</div>
+                <div class="stats-subtitle">Live activity from ${escapeHtml(s.email_to_watch)}. "Today" counts everything since midnight Central. "Total" counts everything since we turned this on (Jul 17, 2026).</div>
+
+                <div class="stats-hero">
+                    <div class="h-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                    </div>
+                    <div class="h-text">
+                        Since Jul 17, this hub has handled <strong>${processedTotal} emails</strong> for you — saving your team about <strong>${formatDuration(savedAllMs)}</strong> of manual work.
+                    </div>
+                </div>
 
                 <div class="stats-queue">
-                    <span class="q-label">In review queue</span>
+                    <span class="q-label">Waiting for you to review</span>
                     <span class="q-value">${s.in_review_now || 0}</span>
+                </div>
+
+                <div class="stats-graph">
+                    <div class="stats-graph-title">Emails handled — today vs total</div>
+                    <div class="stats-bar-row">
+                        <span class="stats-bar-label">Today</span>
+                        <div class="stats-bar-track"><div class="stats-bar-fill today" style="width: ${processedTotal > 0 ? barPct : 0}%"></div></div>
+                        <span class="stats-bar-value">${processedToday}</span>
+                    </div>
+                    <div class="stats-bar-row">
+                        <span class="stats-bar-label">Total</span>
+                        <div class="stats-bar-track"><div class="stats-bar-fill" style="width: 100%"></div></div>
+                        <span class="stats-bar-value">${processedTotal}</span>
+                    </div>
                 </div>
 
                 <table class="stats-table">
@@ -308,15 +379,15 @@
                         <tr><th>Metric</th><th>Today</th><th>Total</th></tr>
                     </thead>
                     <tbody>
-                        ${row('Processed', s.today.processed || 0, s.all_time.processed || 0)}
-                        ${row('Rejected / dismissed', (s.today.rejected || 0) + (s.today.dismissed || 0), 0)}
-                        ${row('Total processing time', formatDuration(s.today.duration_ms), formatDuration(s.all_time.duration_ms))}
-                        ${row('Average per email', formatDuration(s.today.avg_duration_ms), formatDuration(s.all_time.avg_duration_ms))}
-                        ${row('Estimated time saved', formatDuration(savedTodayMs), formatDuration(savedAllMs), true)}
+                        ${row('Emails handled by AI', processedToday, processedTotal)}
+                        ${row('Rejected or dismissed by staff', (s.today.rejected || 0) + (s.today.dismissed || 0), 0)}
+                        ${row('Time the AI spent processing', formatDuration(s.today.duration_ms), formatDuration(s.all_time.duration_ms))}
+                        ${row('Average time per email', formatDuration(s.today.avg_duration_ms), formatDuration(s.all_time.avg_duration_ms))}
+                        ${row('Time saved vs manual work', formatDuration(savedTodayMs), formatDuration(savedAllMs), true)}
                     </tbody>
                 </table>
 
-                <div class="stats-footnote">Estimated time saved assumes ~${HUMAN_MIN_PER_EMAIL} minutes per email for manual triage.</div>
+                <div class="stats-footnote">Time saved is estimated: we assume a staff member would take about ${HUMAN_MIN_PER_EMAIL} minutes to read, classify, and act on each email by hand.</div>
             `;
             document.getElementById('statsTitle').textContent = `${s.display_name} · Stats`;
             document.getElementById('statsModal').style.display = 'flex';
