@@ -9,6 +9,30 @@
     <script src="/static/security.js?v=2"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Nunito+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="/static/shared.css?v=12">
     <style>
+        /* Compact multi-select recipient picker */
+        .recipient-picker { display: flex; flex-direction: column; gap: 6px; }
+        .recipient-search { height: 34px !important; font-size: 13px; }
+        .recipient-list {
+            max-height: 160px;
+            overflow-y: auto;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            padding: 6px;
+            background: var(--panel);
+            display: flex;
+            flex-direction: column;
+        }
+        .recipient-list .rp-item {
+            display: flex; align-items: center; gap: 8px;
+            padding: 6px 8px;
+            border-radius: 4px;
+            font-size: 12.5px;
+            cursor: pointer;
+        }
+        .recipient-list .rp-item:hover { background: var(--panel-2); }
+        .recipient-list .rp-item.hidden { display: none; }
+        .recipient-list .rp-item .rp-email { color: var(--text-muted); font-size: 11.5px; margin-left: 4px; }
+
         .rule-row { display: grid; grid-template-columns: 24px 40px minmax(0, 1.2fr) minmax(0, 220px) 80px 100px 160px; gap: 12px; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line-soft); background: var(--panel); cursor: default; }
         .rule-row:last-child { border-bottom: none; }
         .rule-row:hover { background: var(--panel-hover); }
@@ -55,77 +79,145 @@
     </div>
 
     <div class="modal-backdrop" id="modal" style="display:none;">
-        <div class="modal">
-            <h3 class="modal-title" id="modalTitle">Add category</h3>
-            <input type="hidden" id="fRuleId">
+        <div class="modal settings-modal wide">
+            <div class="modal-topbar">
+                <div>
+                    <h3 class="modal-title" id="modalTitle">Edit category</h3>
+                    <div class="meta-line" id="keyMetaLine" style="display:none;">
+                        <span>Key</span>
+                        <code id="keyMetaValue">donor</code>
+                        <span class="lock" title="Locked after creation to protect existing classifications">🔒 locked</span>
+                    </div>
+                </div>
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <label class="modal-topbar-status" id="activeStatus" for="fActive">
+                        <span class="dot"></span>
+                        <span id="activeStatusText">Inactive</span>
+                    </label>
+                    <button class="modal-close" onclick="closeModal()" aria-label="Close">×</button>
+                </div>
+            </div>
+            <input type="checkbox" id="fActive" style="display:none;">
+            <div class="modal-body">
+                <input type="hidden" id="fRuleId">
+                <input type="hidden" id="fPriority">
 
-            <div class="form-group">
-                <label class="form-label">Key<span class="info-tip">i<span class="info-content">A permanent internal name for this category (e.g. <b>donor</b>, <b>legal</b>). GPT uses this exact word when classifying. Locked after creation to protect existing classifications.</span></span></label>
-                <input class="form-input" id="fKey" placeholder="donor">
-                <div class="form-hint" id="keyLockedHint" style="display:none;">Locked — the key can't be changed after a category is created.</div>
+                <div class="modal-section">
+                    <h4 class="modal-section-heading">Basics</h4>
+                    <div class="form-grid-2">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label">Display name</label>
+                            <input class="form-input" id="fLabel" placeholder="Donor inquiry">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label">Move to folder</label>
+                            <input class="form-input" id="fFolder" placeholder="Donor_Related/Grant">
+                        </div>
+                    </div>
+                    <div id="newKeyRow" class="form-group" style="margin-top: 14px; display:none;">
+                        <label class="form-label">Internal key</label>
+                        <input class="form-input" id="fKey" placeholder="donor" style="max-width: 260px;">
+                        <div class="form-hint">Permanent tag GPT uses. Lowercase and underscores only. <b>Locked after creation.</b></div>
+                    </div>
+                </div>
+
+                <div class="modal-section">
+                    <h4 class="modal-section-heading">When does this category apply?</h4>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <textarea class="form-textarea" id="fRuleText" style="min-height: 110px;" placeholder="Describe the emails that should match this category, in plain language.&#10;&#10;Example: Emails about donations, tax receipts, matching-gift programs, or planned giving."></textarea>
+                        <div class="form-hint">GPT reads this to decide when an email belongs here. Include example situations.</div>
+                    </div>
+                </div>
+
+                <div class="modal-section">
+                    <div class="form-grid-2">
+                        <div>
+                            <h4 class="modal-section-heading">Forwarding & reply</h4>
+                            <div class="form-group">
+                                <label class="form-label">Forward to</label>
+                                <div class="recipient-picker">
+                                    <input class="form-input recipient-search" id="fRecipSearch" placeholder="Search recipients…" oninput="filterRecipients()">
+                                    <div class="recipient-list" id="fForwardList"></div>
+                                </div>
+                                <div class="form-hint">Pick from the Recipients directory. Empty = don't forward.</div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Reply template</label>
+                                <select class="form-select" id="fReplySelect">
+                                    <option value="">Don't send an auto-reply</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 class="modal-section-heading">Rules</h4>
+                            <div class="form-group">
+                                <label class="form-label">Amount threshold <span class="text-soft">($)</span></label>
+                                <input class="form-input" type="number" id="fAmount" placeholder="Leave blank if none">
+                                <div class="form-hint">Only forward when GPT detects an amount at or above this.</div>
+                            </div>
+                            <div class="form-group">
+                                <div class="toggle-grid">
+                                    <label class="toggle-row">
+                                        <input type="checkbox" id="fMarkRead">
+                                        <span>
+                                            <span class="toggle-label">Mark as read</span>
+                                            <span class="toggle-desc">After handling, mark read in Outlook.</span>
+                                        </span>
+                                    </label>
+                                    <label class="toggle-row">
+                                        <input type="checkbox" id="fAutoReply">
+                                        <span>
+                                            <span class="toggle-label">Send auto-reply</span>
+                                            <span class="toggle-desc">Master switch for replies.</span>
+                                        </span>
+                                    </label>
+                                    <label class="toggle-row">
+                                        <input type="checkbox" id="fSafeguard">
+                                        <span>
+                                            <span class="toggle-label">Reply safeguard</span>
+                                            <span class="toggle-desc">Only reply once per thread.</span>
+                                        </span>
+                                    </label>
+                                    <label class="toggle-row">
+                                        <input type="checkbox" id="fSkipInternal">
+                                        <span>
+                                            <span class="toggle-label">Skip if sender is internal</span>
+                                            <span class="toggle-desc">Ignore emails from @mlfa.org.</span>
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-section" style="padding-top: 16px; border-top: 1px solid var(--line-soft);">
+                    <label class="toggle-row" style="border-bottom: none; padding: 4px 0;">
+                        <input type="checkbox" id="fDeleteImmediately">
+                        <span>
+                            <span class="toggle-label" style="color: var(--mlfa-orange);">⚠️ Delete immediately</span>
+                            <span class="toggle-desc">Every matching email is sent straight to Trash instead of moving to the destination folder. Use for spam-like categories only.</span>
+                        </span>
+                    </label>
+                </div>
+
+                <details class="disclosure">
+                    <summary>Advanced: personal reply template</summary>
+                    <div class="disclosure-body">
+                        <div class="form-hint" style="margin-top: 0; margin-bottom: 10px;">Used when GPT detects the email has personal details. Falls back to the default reply if empty.</div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <select class="form-select" id="fReplyPersonalSelect">
+                                <option value="">Same as default</option>
+                            </select>
+                        </div>
+                    </div>
+                </details>
             </div>
 
-            <div class="form-group">
-                <label class="form-label">Display label<span class="info-tip">i<span class="info-content">Human-readable name shown in the UI (e.g. "Donor Inquiry"). Different from the key. Can be edited anytime.</span></span></label>
-                <input class="form-input" id="fLabel" placeholder="Donor">
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Rule text<span class="info-tip">i<span class="info-content">The description GPT reads to decide if an email belongs to this category. Be specific and use plain language. Include examples like "emails about donations, tax receipts, or gift matching".</span></span></label>
-                <textarea class="form-textarea" id="fRuleText"></textarea>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Amount threshold ($)<span class="info-tip">i<span class="info-content">Only forward emails where GPT detected a dollar amount at or above this. Use for donor and invoice categories. Leave blank if amount doesn't matter.</span></span></label>
-                <input class="form-input" type="number" id="fAmount" placeholder="leave blank if none">
-                <div class="form-hint">Only forward when detected amount meets or exceeds this. Used for donor and invoice rules.</div>
-            </div>
-            <input type="hidden" id="fPriority">
-
-            <div class="form-group">
-                <label class="form-label">Destination folder<span class="info-tip">i<span class="info-content">Which Outlook folder to move the email to after processing. Use forward slashes for nested folders (e.g. <b>Donor_Related/Grant</b>). Folder is created if it doesn't exist.</span></span></label>
-                <input class="form-input" id="fFolder" placeholder="Donor_Related/Grant">
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Forward to<span class="info-tip">i<span class="info-content">Which staff addresses to forward matching emails to. Pick from the Recipients directory. If none checked, no forward happens.</span></span></label>
-                <div id="fForwardList" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 8px;"></div>
-                <div class="form-hint">Manage the directory on the Recipients page.</div>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Reply template (default)<span class="info-tip">i<span class="info-content">The auto-reply sent when a matching email arrives. Pick from the Templates library. Choose "No auto-reply" if this category shouldn't send anything.</span></span></label>
-                <select class="form-select" id="fReplySelect">
-                    <option value="">— No auto-reply —</option>
-                </select>
-                <div class="form-hint">Sent when GPT does not flag the email as needing a personal reply.</div>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Reply template (personal)<span class="info-tip">i<span class="info-content">Used when GPT detects the email has personal details (a real case, referral, or specific facts). Falls back to the default template if left empty.</span></span></label>
-                <select class="form-select" id="fReplyPersonalSelect">
-                    <option value="">— Same as default —</option>
-                </select>
-                <div class="form-hint">Used for emails with case-specific details or referrals. Leave empty to use the default template.</div>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" style="font-family: var(--font-display); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mlfa-teal); margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--line-soft);">Actions</label>
-                <div class="form-hint">Behaviors that apply when an email matches this category.</div>
-            </div>
-
-            <div class="form-group" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
-                <label class="form-check"><input type="checkbox" id="fActive"> Active <span class="info-tip">i<span class="info-content"><b>What it does:</b> Turns the category on. When off, GPT stops applying this label to any emails until you turn it back on.<br><br><b>Example:</b> If MLFA closes internships for the summer, uncheck "Active" on the internship category — GPT will stop matching internship emails without deleting the category.</span></span></label>
-                <label class="form-check"><input type="checkbox" id="fMarkRead"> Mark as read <span class="info-tip">i<span class="info-content"><b>What it does:</b> After the system handles the email, mark it as read in Outlook (so it's not bold anymore).<br><br><b>Example:</b> Check this for spam categories so processed spam doesn't clutter your unread count. Uncheck for donor emails so staff still see them bold in the inbox.</span></span></label>
-                <label class="form-check"><input type="checkbox" id="fAutoReply"> Send auto-reply <span class="info-tip">i<span class="info-content"><b>What it does:</b> Automatically send the template you picked above to the sender. Off = never reply, no matter what.<br><br><b>Example:</b> "Legal" has this on to send applicants a link to the application form. "Donor" has this off because we don't want to auto-reply to donations.</span></span></label>
-                <label class="form-check"><input type="checkbox" id="fSafeguard"> Reply safeguard <span class="info-tip">i<span class="info-content"><b>What it does:</b> Only send the auto-reply once per email thread. If the sender responds and we classify it as the same category again, we don't reply a second time.<br><br><b>Example:</b> An applicant emails legal → we send the application link. They email back with a follow-up question → safeguard prevents sending the same application link again.</span></span></label>
-                <label class="form-check"><input type="checkbox" id="fSkipInternal"> Skip if sender is internal <span class="info-tip">i<span class="info-content"><b>What it does:</b> Don't apply this category if the email is from someone at @mlfa.org. Prevents replying to your own staff.<br><br><b>Example:</b> Maria forwards a legal email from her @mlfa.org account. Without this check, our system might send Maria the applicant reply. With it checked, we skip her forward.</span></span></label>
-                <label class="form-check"><input type="checkbox" id="fDeleteImmediately"> Delete immediately <span class="info-tip">i<span class="info-content"><b>What it does:</b> Send the email straight to the Trash folder instead of moving to a category folder.<br><br><b>Example:</b> Outlook out-of-office auto-replies are worthless — check this on the "auto_reply" category so they go straight to Trash.</span></span></label>
-            </div>
-
-            <div class="modal-actions">
+            <div class="modal-footer">
+                <span class="footer-status" id="footerStatus"></span>
                 <button class="btn" onclick="closeModal()">Cancel</button>
-                <button class="btn primary" onclick="saveRule()">Save</button>
+                <button class="btn primary" id="saveBtn" onclick="saveRule()" disabled>Save changes</button>
             </div>
         </div>
     </div>
@@ -166,17 +258,69 @@
         function renderRecipientCheckboxes(selectedIds, selectedEmails) {
             const container = document.getElementById('fForwardList');
             if (recipients.length === 0) {
-                container.innerHTML = '<div class="text-muted text-small">No recipients yet. Add some on the Recipients page.</div>';
+                container.innerHTML = '<div class="text-muted text-small" style="padding: 8px;">No recipients yet. Add some on the Recipients page.</div>';
                 return;
             }
             const selectedIdSet = new Set((selectedIds || []).map(String));
             const selectedEmailSet = new Set((selectedEmails || []).map(e => (e || '').toLowerCase()));
-            container.innerHTML = recipients.filter(r => r.active || selectedIdSet.has(String(r.id))).map(r => `
-                <label class="form-check" style="padding: 4px 0;">
+            const active = recipients.filter(r => r.active || selectedIdSet.has(String(r.id)));
+            container.innerHTML = active.map(r => `
+                <label class="rp-item" data-label="${escapeHtml(r.label_recipient.toLowerCase())} ${escapeHtml(r.email.toLowerCase())}">
                     <input type="checkbox" class="fRecipCheck" value="${r.id}" ${(selectedIdSet.has(String(r.id)) || (!selectedIdSet.size && selectedEmailSet.has(r.email.toLowerCase()))) ? 'checked' : ''}>
-                    <span><strong>${escapeHtml(r.label_recipient)}</strong> <span class="text-muted text-small">${escapeHtml(r.email)}${r.active ? '' : ' (inactive)'}</span></span>
+                    <span><strong>${escapeHtml(r.label_recipient)}</strong><span class="rp-email">${escapeHtml(r.email)}${r.active ? '' : ' · inactive'}</span></span>
                 </label>
             `).join('');
+        }
+
+        function filterRecipients() {
+            const q = (document.getElementById('fRecipSearch').value || '').trim().toLowerCase();
+            document.querySelectorAll('#fForwardList .rp-item').forEach(el => {
+                const hay = el.dataset.label || '';
+                el.classList.toggle('hidden', q && !hay.includes(q));
+            });
+        }
+
+        // Active status pill mirrors the hidden #fActive checkbox in the topbar
+        function syncActiveStatus() {
+            const box = document.getElementById('fActive');
+            const chip = document.getElementById('activeStatus');
+            const text = document.getElementById('activeStatusText');
+            const on = box && box.checked;
+            if (chip) chip.classList.toggle('on', on);
+            if (text) text.textContent = on ? 'Active' : 'Inactive';
+        }
+        document.addEventListener('click', (e) => {
+            const chip = e.target.closest('#activeStatus');
+            if (!chip) return;
+            const box = document.getElementById('fActive');
+            if (!box) return;
+            box.checked = !box.checked;
+            syncActiveStatus();
+            markDirty();
+        });
+
+        // Dirty-state Save button
+        function markPristine() {
+            const btn = document.getElementById('saveBtn');
+            if (btn) btn.disabled = true;
+            const status = document.getElementById('footerStatus');
+            if (status) { status.textContent = ''; status.classList.remove('saved'); }
+        }
+        function markDirty() {
+            const btn = document.getElementById('saveBtn');
+            if (btn && btn.disabled) btn.disabled = false;
+            const status = document.getElementById('footerStatus');
+            if (status && status.classList.contains('saved')) {
+                status.textContent = '';
+                status.classList.remove('saved');
+            }
+        }
+        function attachDirtyListeners() {
+            const modal = document.getElementById('modal');
+            if (modal.dataset.dirtyBound) return;
+            modal.dataset.dirtyBound = '1';
+            modal.addEventListener('input', markDirty);
+            modal.addEventListener('change', markDirty);
         }
 
         function renderTemplateSelect(selectedId, selectedBody, selectId, blankLabel) {
@@ -291,9 +435,6 @@
             document.getElementById('modalTitle').textContent = 'Add category';
             document.getElementById('fRuleId').value = '';
             document.getElementById('fKey').value = '';
-            document.getElementById('fKey').readOnly = false;
-            document.getElementById('fKey').classList.remove('is-locked');
-            document.getElementById('keyLockedHint').style.display = 'none';
             document.getElementById('fLabel').value = '';
             document.getElementById('fRuleText').value = '';
             // Default new-category priority = one more than the current max so it lands at the bottom of the list
@@ -301,17 +442,23 @@
             document.getElementById('fPriority').value = String(nextPriority);
             document.getElementById('fAmount').value = '';
             document.getElementById('fFolder').value = '';
+            document.getElementById('fRecipSearch').value = '';
             renderRecipientCheckboxes([], []);
-            renderTemplateSelect(null, '', 'fReplySelect', '— No auto-reply —');
-            renderTemplateSelect(null, '', 'fReplyPersonalSelect', '— Same as default —');
+            renderTemplateSelect(null, '', 'fReplySelect', 'Don\'t send an auto-reply');
+            renderTemplateSelect(null, '', 'fReplyPersonalSelect', 'Same as default');
             document.getElementById('fActive').checked = true;
             document.getElementById('fMarkRead').checked = true;
-            // fSkip is no longer exposed in the UI — always send false
             document.getElementById('fAutoReply').checked = false;
             document.getElementById('fSafeguard').checked = false;
             document.getElementById('fSkipInternal').checked = false;
             document.getElementById('fDeleteImmediately').checked = false;
+            // New categories show the key input; hide the metadata line
+            document.getElementById('newKeyRow').style.display = 'block';
+            document.getElementById('keyMetaLine').style.display = 'none';
+            syncActiveStatus();
             document.getElementById('modal').style.display = 'flex';
+            attachDirtyListeners();
+            markDirty(); // creating always counts as a change
         }
 
         async function openEditModal(ruleId) {
@@ -321,25 +468,29 @@
             document.getElementById('modalTitle').textContent = 'Edit category';
             document.getElementById('fRuleId').value = r.id;
             document.getElementById('fKey').value = r.key || '';
-            document.getElementById('fKey').readOnly = true;
-            document.getElementById('fKey').classList.add('is-locked');
-            document.getElementById('keyLockedHint').style.display = 'block';
             document.getElementById('fLabel').value = r.label || '';
             document.getElementById('fRuleText').value = r.rule_text || '';
             document.getElementById('fPriority').value = r.priority ?? 999;
             document.getElementById('fAmount').value = r.amount_threshold ?? '';
             document.getElementById('fFolder').value = r.folder_path || '';
+            document.getElementById('fRecipSearch').value = '';
             renderRecipientCheckboxes(r.recipient_ids || [], r.emails_to_forward || []);
-            renderTemplateSelect(r.reply_template_id, r.reply_template || '', 'fReplySelect', '— No auto-reply —');
-            renderTemplateSelect(r.reply_template_personal_id, r.reply_template_personal || '', 'fReplyPersonalSelect', '— Same as default —');
+            renderTemplateSelect(r.reply_template_id, r.reply_template || '', 'fReplySelect', 'Don\'t send an auto-reply');
+            renderTemplateSelect(r.reply_template_personal_id, r.reply_template_personal || '', 'fReplyPersonalSelect', 'Same as default');
             document.getElementById('fActive').checked = !!r.active;
             document.getElementById('fMarkRead').checked = !!r.mark_read;
-            // fSkip is no longer exposed in the UI — preserved server-side only
             document.getElementById('fAutoReply').checked = !!r.auto_reply_enabled;
             document.getElementById('fSafeguard').checked = !!r.auto_reply_safeguard;
             document.getElementById('fSkipInternal').checked = !!r.skip_if_internal;
             document.getElementById('fDeleteImmediately').checked = !!r.delete_immediately;
+            // Existing category: hide editable key input, show read-only metadata line
+            document.getElementById('newKeyRow').style.display = 'none';
+            document.getElementById('keyMetaLine').style.display = 'flex';
+            document.getElementById('keyMetaValue').textContent = r.key || '—';
+            syncActiveStatus();
             document.getElementById('modal').style.display = 'flex';
+            attachDirtyListeners();
+            markPristine();
         }
 
         function closeModal() { document.getElementById('modal').style.display = 'none'; }
@@ -390,8 +541,24 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
             });
-            if (res.ok) { closeModal(); notify('Saved'); await loadRules(); }
-            else notify('Save failed', 'error');
+            const status = document.getElementById('footerStatus');
+            if (res.ok) {
+                if (id) {
+                    // Edit: stay open, flash "Saved"
+                    if (status) { status.textContent = '✓ Saved'; status.classList.add('saved'); }
+                    setTimeout(() => {
+                        if (status && status.classList.contains('saved')) { status.textContent = ''; status.classList.remove('saved'); }
+                    }, 2500);
+                    markPristine();
+                    await loadRules();
+                } else {
+                    closeModal();
+                    notify('Category created');
+                    await loadRules();
+                }
+            } else {
+                notify('Save failed', 'error');
+            }
         }
 
         async function deleteRule(ruleId) {

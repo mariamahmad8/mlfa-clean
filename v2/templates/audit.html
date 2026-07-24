@@ -9,58 +9,98 @@
     <script src="/static/security.js?v=2"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Nunito+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="/static/shared.css?v=12">
     <style>
+        /* Compact title-and-toolbar header row */
+        .audit-topbar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 0 0 12px;
+            flex-wrap: wrap;
+        }
+        .audit-topbar .page-title { margin: 0; }
+        .audit-topbar .toolbar-left {
+            display: flex; align-items: center; gap: 8px; margin-left: 16px;
+        }
+        .audit-topbar .toolbar-right {
+            margin-left: auto; display: flex; gap: 8px;
+        }
+        .audit-topbar .form-select { max-width: 240px; height: 34px; }
+        /* Slim filter toolbar with proportional widths */
         .audit-filter-bar {
             display: grid;
-            grid-template-columns: minmax(200px, 1.6fr) minmax(140px, 1fr) minmax(130px, 0.8fr) minmax(130px, 0.8fr) auto;
-            gap: 10px;
-            align-items: end;
-            padding: 14px 16px;
+            grid-template-columns: 40fr 20fr 15fr 15fr auto;
+            gap: 8px;
+            align-items: center;
+            padding: 10px 12px;
             background: var(--panel);
-            border: 1px solid var(--line);
-            border-radius: 8px;
-            margin-bottom: 12px;
+            border: 1px solid var(--line-soft);
+            border-radius: 6px;
+            margin-bottom: 8px;
         }
-        .afb-group { display: flex; flex-direction: column; gap: 4px; }
-        .afb-label {
-            font-family: var(--font-display);
+        .audit-filter-bar .form-input,
+        .audit-filter-bar .form-select { height: 32px; font-size: 12.5px; }
+        .audit-filter-bar .afb-inline {
+            display: flex; align-items: center; gap: 6px;
+            font-size: 11px; color: var(--text-muted);
+        }
+        .audit-filter-bar .afb-inline label {
             font-size: 10px;
             font-weight: 600;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            color: var(--text-muted);
-        }
-        .audit-action-chips {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            margin-bottom: 12px;
-        }
-        .afb-chip {
-            font-family: var(--font-display);
-            font-size: 11px;
-            font-weight: 500;
             letter-spacing: 0.06em;
             text-transform: uppercase;
-            padding: 6px 12px;
+        }
+        /* Two chip groups on one row, tightly spaced */
+        .audit-chip-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 6px;
+            flex-wrap: wrap;
+        }
+        .audit-chip-group {
+            display: flex; gap: 4px;
+            padding: 3px 4px;
+            border: 1px solid var(--line-soft);
             border-radius: 999px;
-            border: 1px solid var(--line);
+        }
+        .audit-chip-group + .audit-chip-group { margin-left: 8px; }
+        .afb-chip {
+            font-family: var(--font);
+            font-size: 11.5px;
+            font-weight: 500;
+            letter-spacing: 0;
+            text-transform: none;
+            padding: 4px 10px;
+            border-radius: 999px;
+            border: 1px solid transparent;
             background: transparent;
             color: var(--text-muted);
             cursor: pointer;
-            transition: background 0.15s, color 0.15s, border-color 0.15s;
         }
-        .afb-chip:hover { border-color: var(--mlfa-teal); color: var(--mlfa-teal); }
+        .afb-chip:hover { color: var(--text); background: var(--panel-2); }
         .afb-chip.active {
             background: var(--mlfa-teal);
             color: #F5F1EA;
-            border-color: var(--mlfa-teal);
         }
         .audit-count-line {
-            font-size: 12px;
+            font-size: 11.5px;
             color: var(--text-muted);
-            margin-bottom: 10px;
+            margin: 2px 0 6px;
             font-variant-numeric: tabular-nums;
         }
+        /* Tighter table rows and better column proportions */
+        table.data-table.audit-table th,
+        table.data-table.audit-table td {
+            padding: 8px 12px;
+            font-size: 12.5px;
+        }
+        table.data-table.audit-table th { font-size: 10.5px; }
+        table.data-table.audit-table .col-when { width: 130px; }
+        table.data-table.audit-table .col-action { width: 100px; }
+        table.data-table.audit-table .col-actor { width: 160px; }
+        table.data-table.audit-table .col-target { width: 180px; color: var(--text-muted); }
+        table.data-table.audit-table .col-target .target-primary { color: var(--text); font-weight: 500; }
+        table.data-table.audit-table .col-target .target-secondary { font-family: 'SF Mono', Menlo, monospace; font-size: 11px; color: var(--text-soft); }
     </style>
 </head>
 <body>
@@ -79,59 +119,52 @@
     <div class="settings-layout">
         {% include '_settings_nav.html' %}
         <main class="settings-content">
-        <h1 class="page-title">Audit log<span class="info-tip wide" style="margin-left: 10px; width: 20px; height: 20px;">i<span class="info-content"><div class="tip-title">Audit log — what each action means</div><dl class="tip-legend"><dt>Auto</dt><dd>The AI handled the email on its own (classified, forwarded, replied, tagged) without human review.</dd><dt>Queued</dt><dd>The AI wasn't sure, so it added the email to the review hub for a person to look at.</dd><dt>Approved</dt><dd>A reviewer looked at the queued email and clicked Approve. The system then carried out the action plan.</dd><dt>Rejected</dt><dd>A reviewer rejected the queued email. It got moved to Trash and a note went out.</dd><dt>Dismissed</dt><dd>A reviewer decided the email needed no action (spam or irrelevant). Marked read, no reply, no forward.</dd><dt>Created / Updated / Deleted</dt><dd>A staff member added, edited, or removed something like a rule, template, recipient, or user.</dd></dl></span></span></h1>
-        <p class="page-subtitle">Every action taken on every email in this inbox.</p>
-
-        <div class="toolbar">
-            <select class="form-select" id="inboxSelect" onchange="loadEvents()" style="max-width: 260px;"></select>
-            <button class="btn small" onclick="loadEvents()">Refresh</button>
-            <div style="flex:1"></div>
-            <button class="btn small" onclick="exportCsv()">Export CSV</button>
+        <div class="audit-topbar">
+            <h1 class="page-title">Audit log<span class="info-tip wide" style="margin-left: 10px; width: 18px; height: 18px;">i<span class="info-content"><div class="tip-title">Audit log — what each action means</div><dl class="tip-legend"><dt>Auto</dt><dd>The AI handled the email on its own (classified, forwarded, replied, tagged) without human review.</dd><dt>Queued</dt><dd>The AI wasn't sure, so it added the email to the review hub for a person to look at.</dd><dt>Approved</dt><dd>A reviewer looked at the queued email and clicked Approve. The system then carried out the action plan.</dd><dt>Rejected</dt><dd>A reviewer rejected the queued email. It got moved to Trash and a note went out.</dd><dt>Dismissed</dt><dd>A reviewer decided the email needed no action (spam or irrelevant). Marked read, no reply, no forward.</dd><dt>Created / Updated / Deleted</dt><dd>A staff member added, edited, or removed something like a rule, template, recipient, or user.</dd></dl></span></span></h1>
+            <div class="toolbar-left">
+                <select class="form-select" id="inboxSelect" onchange="loadEvents()"></select>
+                <button class="btn small" onclick="loadEvents()" title="Refresh">↻</button>
+            </div>
+            <div class="toolbar-right">
+                <button class="btn small" onclick="exportCsv()">Export CSV</button>
+            </div>
         </div>
 
         <div class="audit-filter-bar">
-            <div class="afb-group">
-                <label class="afb-label">Search</label>
-                <input class="form-input" id="fSearch" placeholder="text in the comment..." oninput="renderEvents()">
-            </div>
-            <div class="afb-group">
-                <label class="afb-label">Actor</label>
-                <select class="form-select" id="fActor" onchange="renderEvents()">
-                    <option value="">Anyone</option>
-                </select>
-            </div>
-            <div class="afb-group">
-                <label class="afb-label">From</label>
-                <input class="form-input" type="date" id="fFrom" onchange="renderEvents()">
-            </div>
-            <div class="afb-group">
-                <label class="afb-label">To</label>
-                <input class="form-input" type="date" id="fTo" onchange="renderEvents()">
-            </div>
+            <input class="form-input" id="fSearch" placeholder="Search comment, actor, or target…" oninput="renderEvents()">
+            <select class="form-select" id="fActor" onchange="renderEvents()">
+                <option value="">Any actor</option>
+            </select>
+            <input class="form-input" type="date" id="fFrom" title="From date" onchange="renderEvents()">
+            <input class="form-input" type="date" id="fTo" title="To date" onchange="renderEvents()">
             <button class="btn small" onclick="clearFilters()">Clear</button>
         </div>
 
-        <div class="audit-action-chips" id="fActionChips">
-            <button class="afb-chip active" data-group="all">All actions</button>
-            <button class="afb-chip" data-group="email">Email actions</button>
-            <button class="afb-chip" data-group="settings">Settings changes</button>
-            <button class="afb-chip" data-group="user">User changes</button>
-            <button class="afb-chip" data-action="auto_processed">Auto</button>
-            <button class="afb-chip" data-action="queued_for_review">Queued</button>
-            <button class="afb-chip" data-action="approved">Approved</button>
-            <button class="afb-chip" data-action="rejected">Rejected</button>
-            <button class="afb-chip" data-action="dismissed">Dismissed</button>
+        <div class="audit-chip-row" id="fActionChips">
+            <div class="audit-chip-group">
+                <button class="afb-chip active" data-group="all">All</button>
+                <button class="afb-chip" data-group="email">Emails</button>
+                <button class="afb-chip" data-group="settings">Settings</button>
+                <button class="afb-chip" data-group="user">Users</button>
+            </div>
+            <div class="audit-chip-group">
+                <button class="afb-chip" data-action="auto_processed">Auto</button>
+                <button class="afb-chip" data-action="queued_for_review">Queued</button>
+                <button class="afb-chip" data-action="approved">Approved</button>
+                <button class="afb-chip" data-action="rejected">Rejected</button>
+                <button class="afb-chip" data-action="dismissed">Dismissed</button>
+            </div>
         </div>
 
         <div class="audit-count-line" id="fCountLine"></div>
 
-        <table class="data-table">
+        <table class="data-table audit-table">
             <thead>
                 <tr>
-                    <th>When</th>
-                    <th>Action</th>
-                    <th>Actor</th>
-                    <th>Target</th>
+                    <th class="col-when">When</th>
+                    <th class="col-action">Action</th>
+                    <th class="col-actor">Actor</th>
+                    <th class="col-target">Target</th>
                     <th>Comment</th>
                 </tr>
             </thead>
@@ -216,15 +249,29 @@
                 `Showing ${filtered.length.toLocaleString()} of ${allEvents.length.toLocaleString()} events`;
             document.getElementById('empty').style.display = filtered.length ? 'none' : 'block';
             const tbody = document.getElementById('tbody');
-            tbody.innerHTML = filtered.map(e => `
+            tbody.innerHTML = filtered.map(e => {
+                const target = e.email_id || '';
+                let targetHtml = '<span class="target-primary">—</span>';
+                if (target) {
+                    if (target.includes(':')) {
+                        // Settings-style targets: rule:donor, template:legal_default → readable primary
+                        const [type, ...rest] = target.split(':');
+                        const name = rest.join(':');
+                        targetHtml = `<span class="target-primary">${escapeHtml(name || type)}</span><span class="target-secondary" title="${escapeHtml(target)}"> · ${escapeHtml(type)}</span>`;
+                    } else {
+                        // Outlook message ID → short mono form with full ID in tooltip
+                        targetHtml = `<span class="target-secondary" title="${escapeHtml(target)}">${escapeHtml(target.slice(0, 14))}…</span>`;
+                    }
+                }
+                return `
                 <tr>
                     <td class="text-small text-muted">${e.created_at ? formatCentral(e.created_at) : '—'}</td>
                     <td>${badgeForAction(e.action)}</td>
                     <td>${escapeHtml(e.actor || '—')}</td>
-                    <td class="text-small" style="font-family: monospace;" title="${escapeHtml(e.email_id || '')}">${formatTarget(e.email_id)}</td>
-                    <td class="text-muted text-small">${humanSummary(e)}</td>
+                    <td>${targetHtml}</td>
+                    <td class="text-muted">${humanSummary(e)}</td>
                 </tr>
-            `).join('');
+            `;}).join('');
         }
 
         function clearFilters() {
