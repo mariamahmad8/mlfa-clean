@@ -105,22 +105,29 @@
             background: var(--accent-soft);
             border: 1px solid var(--mlfa-teal);
             border-radius: 8px;
-            padding: 16px 18px;
+            padding: 14px 20px;
             margin-bottom: 18px;
             display: flex;
             align-items: center;
-            gap: 14px;
+            gap: 16px;
+            white-space: nowrap;
+            overflow-x: auto;
         }
         .stats-hero .h-icon {
-            width: 40px; height: 40px;
-            border-radius: 10px;
+            width: 32px; height: 32px;
+            border-radius: 8px;
             background: var(--mlfa-teal);
             color: #F5F1EA;
             display: flex; align-items: center; justify-content: center;
             flex-shrink: 0;
         }
-        .stats-hero .h-icon svg { width: 22px; height: 22px; }
-        .stats-hero .h-text { font-size: 13px; color: var(--text); line-height: 1.45; }
+        .stats-hero .h-icon svg { width: 18px; height: 18px; }
+        .stats-hero .h-text {
+            font-size: 13px;
+            color: var(--text);
+            line-height: 1.4;
+            white-space: normal;
+        }
         .stats-hero .h-text strong { color: var(--mlfa-teal); font-weight: 700; }
         .stats-chart {
             background: var(--panel);
@@ -431,19 +438,6 @@
                     </div>
                     ${chartSvg}
                 </div>
-
-                <table class="stats-table">
-                    <thead>
-                        <tr><th>Metric</th><th>Today</th><th>Total</th></tr>
-                    </thead>
-                    <tbody>
-                        ${row('Emails handled by AI', processedToday, processedTotal)}
-                        ${row('Rejected or dismissed by staff', (s.today.rejected || 0) + (s.today.dismissed || 0), 0)}
-                        ${row('Time the AI spent processing', formatDuration(s.today.duration_ms), formatDuration(s.all_time.duration_ms))}
-                        ${row('Average time per email', formatDuration(s.today.avg_duration_ms), formatDuration(s.all_time.avg_duration_ms))}
-                        ${row('Time saved vs manual work', formatDuration(savedTodayMs), formatDuration(savedAllMs), true)}
-                    </tbody>
-                </table>
 
                 <div class="stats-footnote">Time saved is estimated: we assume a staff member would take about ${HUMAN_MIN_PER_EMAIL} minutes to read, classify, and act on each email by hand.</div>
             `;

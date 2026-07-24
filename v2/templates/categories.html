@@ -346,6 +346,13 @@
 
         async function saveRule() {
             const id = document.getElementById('fRuleId').value;
+            const label = (document.getElementById('fLabel').value || document.getElementById('fKey').value || 'this category').trim();
+            // Confirm before writing — protects against accidental clicks that would
+            // change routing/replies for real MLFA emails.
+            const confirmMsg = id
+                ? `Are you sure you want to save your changes to "${label}"? This will change how future emails matching this category are handled.`
+                : `Are you sure you want to create the "${label}" category? It will start matching new emails right away.`;
+            if (!confirm(confirmMsg)) return;
             const amtRaw = document.getElementById('fAmount').value.trim();
             const defaultTemplate = readTemplateSelection('fReplySelect');
             const personalTemplate = readTemplateSelection('fReplyPersonalSelect');
@@ -388,7 +395,9 @@
         }
 
         async function deleteRule(ruleId) {
-            if (!confirm('Delete this category rule?')) return;
+            const rule = rules.find(r => r.id === ruleId);
+            const label = rule ? (rule.label || rule.key) : 'this category';
+            if (!confirm(`Are you sure you want to delete the "${label}" category? Future emails will no longer be sorted by this rule.`)) return;
             const res = await fetch(`/api/rules/${ruleId}`, { method: 'DELETE' });
             if (res.ok) { notify('Deleted'); await loadRules(); }
         }

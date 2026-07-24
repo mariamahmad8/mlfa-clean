@@ -371,8 +371,23 @@
             }
         }
 
+        // After any action (approve/reject/dismiss), clear the current email,
+        // reload the queue, and either auto-jump to the next pending email or
+        // show the empty "Select an email" state.
+        async function advanceAfterAction(justHandledId) {
+            currentEmail = null;
+            await loadPending();
+            const next = pendingEmails.find(e => e.id !== justHandledId);
+            if (next) {
+                currentEmail = next;
+            }
+            renderDetail();
+            renderQueue();
+        }
+
         async function confirmApprove() {
             if (!currentEmail) return;
+            const justId = currentEmail.id;
             const comment = (document.getElementById('acceptText').value || '').trim();
             const res = await apiCall(`/api/emails/${currentEmail.id}/approve`, {
                 method: 'POST',
@@ -381,12 +396,12 @@
             });
             if (!res) return;
             notify('Approved');
-            currentEmail = null;
-            await loadPending();
+            await advanceAfterAction(justId);
         }
 
         async function confirmReject() {
             if (!currentEmail) return;
+            const justId = currentEmail.id;
             const reason = (document.getElementById('rejectText').value || '').trim();
             if (!reason) { notify('Please provide a reason', 'error'); return; }
             const res = await apiCall(`/api/emails/${currentEmail.id}/reject`, {
@@ -396,17 +411,16 @@
             });
             if (!res) return;
             notify('Rejected');
-            currentEmail = null;
-            await loadPending();
+            await advanceAfterAction(justId);
         }
 
         async function dismissEmail() {
             if (!currentEmail) return;
+            const justId = currentEmail.id;
             const res = await apiCall(`/api/emails/${currentEmail.id}/dismiss`, { method: 'POST' });
             if (!res) return;
             notify('Dismissed');
-            currentEmail = null;
-            await loadPending();
+            await advanceAfterAction(justId);
         }
 
         async function approveAll() {

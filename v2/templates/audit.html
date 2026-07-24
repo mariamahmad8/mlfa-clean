@@ -36,11 +36,9 @@
         <table class="data-table">
             <thead>
                 <tr>
-                    <th>When</th>
-                    <th>Action</th>
-                    <th>Actor</th>
-                    <th>Target</th>
-                    <th>Comment</th>
+                    <th style="width: 180px;">When</th>
+                    <th style="width: 110px;">Action</th>
+                    <th>What happened</th>
                 </tr>
             </thead>
             <tbody id="tbody"></tbody>
@@ -73,11 +71,76 @@
                 <tr>
                     <td class="text-small text-muted">${e.created_at ? formatCentral(e.created_at) : '—'}</td>
                     <td>${badgeForAction(e.action)}</td>
-                    <td>${escapeHtml(e.actor || '—')}</td>
-                    <td class="text-small" style="font-family: monospace;" title="${escapeHtml(e.email_id || '')}">${formatTarget(e.email_id)}</td>
-                    <td class="text-muted text-small">${escapeHtml(e.comment || '')}</td>
+                    <td>${humanSummary(e)}</td>
                 </tr>
             `).join('');
+        }
+
+        function firstNameFromEmail(email) {
+            if (!email || email === 'system') return 'The system';
+            const local = String(email).split('@')[0] || email;
+            const first = local.split(/[._-]/)[0] || local;
+            return first.charAt(0).toUpperCase() + first.slice(1);
+        }
+
+        // Turn a raw action + comment into a plain-English sentence.
+        function humanSummary(e) {
+            const who = escapeHtml(firstNameFromEmail(e.actor));
+            const raw = String(e.action || '');
+            const comment = (e.comment || '').trim();
+            const target = e.email_id || '';
+
+            // Category rule actions
+            if (raw === 'rule_created') {
+                const label = extractAfter(comment, 'Label:') || comment || 'a category';
+                return `${who} added the "${escapeHtml(label)}" category`;
+            }
+            if (raw === 'rule_updated') {
+                const label = extractAfter(comment, 'Label:') || comment || 'a category';
+                return `${who} edited the "${escapeHtml(label)}" category`;
+            }
+            if (raw === 'rule_deleted') {
+                const label = extractAfter(comment, 'Label:') || comment || 'a category';
+                return `${who} deleted the "${escapeHtml(label)}" category`;
+            }
+
+            // Reply template actions
+            if (raw === 'template_created') return `${who} added a reply template (${escapeHtml(comment.replace(/^template:/, '')) || 'unnamed'})`;
+            if (raw === 'template_updated') return `${who} edited a reply template (${escapeHtml(comment.replace(/^template:/, '')) || 'unnamed'})`;
+            if (raw === 'template_deleted') return `${who} deleted a reply template`;
+
+            // Recipient actions
+            if (raw === 'recipient_created') return `${who} added ${escapeHtml(comment.replace(/^recipient:/, '')) || 'a recipient'} to the directory`;
+            if (raw === 'recipient_updated') return `${who} edited a recipient in the directory (${escapeHtml(comment.replace(/^recipient:/, '')) || 'unknown'})`;
+            if (raw === 'recipient_deleted') return `${who} removed a recipient from the directory`;
+
+            // Inbox actions
+            if (raw === 'inbox_created') return `${who} created a new inbox (${escapeHtml(comment) || 'unnamed'})`;
+            if (raw === 'inbox_updated') return `${who} updated the inbox settings`;
+            if (raw === 'inbox_deleted') return `${who} deleted an inbox`;
+            if (raw === 'inbox_cloned') return `${who} cloned an inbox`;
+
+            // User actions
+            if (raw === 'user_created') return `${who} added a new user (${escapeHtml(comment) || 'unknown'})`;
+            if (raw === 'user_updated') return `${who} updated a user's role or access`;
+            if (raw === 'user_deleted') return `${who} removed a user`;
+
+            // Email-processing actions — actor is usually 'system' or a reviewer email
+            const shortId = target ? escapeHtml(target.slice(0, 12)) + '…' : 'an email';
+            const cat = comment ? ` (${escapeHtml(comment)})` : '';
+            if (raw === 'auto_processed' || raw === 'auto_processed_on_toggle') return `The AI handled ${shortId}${cat} automatically`;
+            if (raw === 'queued_for_review') return `The AI put ${shortId}${cat} in the review queue`;
+            if (raw === 'approved' || raw === 'approved_bulk') return `${who} approved ${shortId}${cat}`;
+            if (raw === 'rejected') return `${who} rejected ${shortId}${comment ? ` — "${escapeHtml(comment)}"` : ''}`;
+            if (raw === 'dismissed') return `${who} dismissed ${shortId}${cat}`;
+
+            // Unknown fallback — still readable
+            return `${who} performed <em>${escapeHtml(raw)}</em>${comment ? ` — ${escapeHtml(comment)}` : ''}`;
+        }
+
+        function extractAfter(text, marker) {
+            if (!text || !text.includes(marker)) return '';
+            return text.split(marker)[1].trim();
         }
 
         function badgeForAction(a) {
