@@ -102,29 +102,31 @@
             font-style: italic;
         }
 
-        /* Inbox edit modal — sectioned, sticky footer, professional shape */
+        /* Inbox edit modal — cards, sentence-case labels, tighter density */
         .inbox-edit-modal {
-            max-width: 720px;
+            max-width: 740px;
             padding: 0;
             display: flex;
             flex-direction: column;
             max-height: 88vh;
+            background: var(--bg);
         }
         .inbox-edit-modal .modal-topbar {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 18px 24px;
-            border-bottom: 1px solid var(--line);
+            padding: 20px 28px;
+            background: var(--panel);
+            border-bottom: 1px solid var(--line-soft);
         }
         .inbox-edit-modal .modal-title {
             margin: 0;
-            font-family: var(--font-display);
-            font-size: 15px;
+            font-family: var(--font);
+            font-size: 20px;
             font-weight: 600;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-            color: var(--mlfa-teal);
+            letter-spacing: -0.01em;
+            text-transform: none;
+            color: var(--text);
         }
         .inbox-edit-modal .modal-close {
             background: transparent;
@@ -133,20 +135,25 @@
             line-height: 1;
             color: var(--text-muted);
             cursor: pointer;
-            padding: 4px 8px;
+            padding: 4px 10px;
             border-radius: 6px;
         }
         .inbox-edit-modal .modal-close:hover { background: var(--panel-2); color: var(--text); }
         .inbox-edit-modal .modal-body {
-            padding: 20px 24px;
+            padding: 20px 28px;
             overflow-y: auto;
             flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
         }
+        /* Each section becomes a subtle card, no divider lines */
         .inbox-edit-modal .modal-section {
-            padding: 16px 0;
-            border-top: 1px solid var(--line-soft);
+            background: var(--panel);
+            border: 1px solid var(--line-soft);
+            border-radius: 10px;
+            padding: 18px 20px;
         }
-        .inbox-edit-modal .modal-section:first-of-type { border-top: none; padding-top: 4px; }
         .inbox-edit-modal .modal-section-title {
             font-family: var(--font-display);
             font-size: 11px;
@@ -154,44 +161,90 @@
             letter-spacing: 0.14em;
             text-transform: uppercase;
             color: var(--text-muted);
-            margin-bottom: 12px;
+            margin-bottom: 14px;
             display: flex;
-            align-items: center;
+            align-items: baseline;
+            gap: 10px;
         }
         .inbox-edit-modal .modal-details > summary {
             cursor: pointer;
             list-style: none;
             outline: none;
+            margin: -18px -20px;
+            padding: 18px 20px;
+            border-radius: 10px;
         }
+        .inbox-edit-modal .modal-details[open] > summary { margin-bottom: 4px; }
         .inbox-edit-modal .modal-details > summary::-webkit-details-marker { display: none; }
-        .inbox-edit-modal .modal-details > summary::before {
+        .inbox-edit-modal .modal-details > summary::after {
             content: '›';
-            display: inline-block;
-            margin-right: 8px;
+            margin-left: auto;
             transition: transform 0.15s ease;
             font-size: 16px;
             color: var(--text-muted);
+            font-family: var(--font);
         }
-        .inbox-edit-modal .modal-details[open] > summary::before { transform: rotate(90deg); }
+        .inbox-edit-modal .modal-details[open] > summary::after { transform: rotate(90deg); }
         .inbox-edit-modal .form-grid-2 {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 14px;
+            gap: 16px;
         }
         .inbox-edit-modal .form-group { margin-bottom: 14px; }
         .inbox-edit-modal .form-group:last-child { margin-bottom: 0; }
+        /* Sentence-case labels; no more ALL CAPS shouting */
+        .inbox-edit-modal .form-label {
+            font-family: var(--font);
+            font-size: 13px;
+            font-weight: 500;
+            letter-spacing: 0;
+            text-transform: none;
+            color: var(--text);
+            margin-bottom: 6px;
+        }
+        .inbox-edit-modal .form-input,
+        .inbox-edit-modal .form-select {
+            height: 36px;
+            padding: 0 12px;
+            font-size: 13.5px;
+        }
+        .inbox-edit-modal .form-textarea {
+            min-height: 80px;
+            padding: 10px 12px;
+            font-size: 13.5px;
+        }
+        .inbox-edit-modal .form-hint {
+            font-size: 12px;
+            color: var(--text-soft);
+            margin-top: 6px;
+            line-height: 1.4;
+        }
         .inbox-edit-modal .text-soft { color: var(--text-soft); font-weight: 400; }
+        /* Checkbox stack lives INSIDE the section card so it feels grouped */
+        .inbox-edit-modal .check-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 12px 14px;
+            background: var(--bg);
+            border-radius: 8px;
+            border: 1px solid var(--line-soft);
+            margin-bottom: 14px;
+        }
+        .inbox-edit-modal .check-stack .form-check { margin: 0; font-size: 13px; }
         .inbox-edit-modal .modal-footer {
             display: flex;
             justify-content: flex-end;
-            gap: 10px;
-            padding: 14px 24px;
-            border-top: 1px solid var(--line);
+            gap: 12px;
+            padding: 16px 28px;
             background: var(--panel);
+            border-top: 1px solid var(--line-soft);
             border-radius: 0 0 var(--radius) var(--radius);
             position: sticky;
             bottom: 0;
         }
+        .inbox-edit-modal .modal-footer .btn { min-height: 36px; padding: 0 18px; }
+        .inbox-edit-modal .modal-footer .btn.primary { padding: 0 22px; font-weight: 600; }
         .stats-hero {
             background: var(--accent-soft);
             border: 1px solid var(--mlfa-teal);
@@ -314,12 +367,15 @@
             <div class="modal-body">
                 <input type="hidden" id="fInboxId">
 
-                <div class="form-group" id="cloneRow">
-                    <label class="form-label">Clone from existing inbox <span class="text-soft">(optional)</span></label>
-                    <select class="form-select" id="fCloneSource">
-                        <option value="">— Start blank —</option>
-                    </select>
-                    <div class="form-hint">Copies all category rules, recipients, and templates from the selected inbox.</div>
+                <div class="modal-section" id="cloneRow">
+                    <div class="modal-section-title">Start from</div>
+                    <div class="form-group">
+                        <label class="form-label">Clone from existing inbox <span class="text-soft">(optional)</span></label>
+                        <select class="form-select" id="fCloneSource">
+                            <option value="">Start blank</option>
+                        </select>
+                        <div class="form-hint">Copies all category rules, recipients, and templates from the selected inbox.</div>
+                    </div>
                 </div>
 
                 <div class="modal-section">
@@ -338,20 +394,20 @@
 
                 <div class="modal-section">
                     <div class="modal-section-title">Automation</div>
-                    <div class="form-group">
+                    <div class="check-stack">
                         <label class="form-check">
                             <input type="checkbox" id="fAutomation">
-                            <span>Enable full automation <span class="text-soft">(skip the human review step)</span></span>
+                            <span>Enable full automation <span class="text-soft">— skip the human review step</span></span>
+                        </label>
+                        <label class="form-check">
+                            <input type="checkbox" id="fUseThreadContext">
+                            <span>Use thread context when classifying <span class="text-soft">— recommended for follow-ups</span></span>
                         </label>
                     </div>
-                    <div class="form-grid-2">
-                        <div class="form-group">
-                            <label class="form-label">Backfill days<span class="info-tip">i<span class="info-content">On the very first run for this inbox, how many days back to scan for unread emails. Default 2. Only matters for initial setup — after that, delta sync handles new emails.</span></span></label>
-                            <input class="form-input" type="number" id="fBackfill" placeholder="2">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-check" style="margin-top: 24px;"><input type="checkbox" id="fUseThreadContext"> Use thread context in classification <span class="info-tip">i<span class="info-content">Include earlier messages in the same thread when GPT classifies. Helps distinguish "new legal help request" from "following up on my case". Recommended: on.</span></span></label>
-                        </div>
+                    <div class="form-group" style="max-width: 220px;">
+                        <label class="form-label">Backfill days</label>
+                        <input class="form-input" type="number" id="fBackfill" placeholder="2">
+                        <div class="form-hint">Days back to scan on the very first run.</div>
                     </div>
                 </div>
 
@@ -359,40 +415,47 @@
                     <div class="modal-section-title">Filters</div>
                     <div class="form-grid-2">
                         <div class="form-group">
-                            <label class="form-label">Blocked senders <span class="text-soft">(one per line)</span></label>
+                            <label class="form-label">Blocked senders</label>
                             <textarea class="form-textarea" id="fBlocked" placeholder="spam@example.com"></textarea>
-                            <div class="form-hint">Silently skipped on arrival.</div>
+                            <div class="form-hint">One address per line. Silently skipped on arrival.</div>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Internal domains <span class="text-soft">(one per line)</span><span class="info-tip">i<span class="info-content">Email domains treated as internal/staff (e.g. <b>mlfa.org</b>). Used to detect when staff themselves are the sender so the system doesn't send replies or forwards outbound.</span></span></label>
+                            <label class="form-label">Internal domains</label>
                             <textarea class="form-textarea" id="fInternalDomains" placeholder="mlfa.org"></textarea>
-                            <div class="form-hint">Anything from these domains is treated as staff.</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="modal-section">
-                    <div class="modal-section-title">Internal reply bridge</div>
-                    <div class="form-group">
-                        <label class="form-check"><input type="checkbox" id="fInternalBridge"> Enable internal reply bridge <span class="info-tip">i<span class="info-content">Advanced feature. Staff can reply to forwarded emails with a special prefix ([EXTERNAL] or [INTERNAL]) and the system relays their reply back to the original sender. Leave off unless MLFA staff use this workflow.</span></span></label>
-                        <div class="form-hint">When enabled, staff can reply to a forwarded email with an [EXTERNAL] prefix and the system relays it back to the original sender.</div>
-                    </div>
-                    <div class="form-grid-2">
-                        <div class="form-group">
-                            <label class="form-label">Internal prefix <span class="text-soft">(keeps it internal)</span></label>
-                            <input class="form-input" id="fInternalPrefix" placeholder="[INTERNAL]">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">External prefix <span class="text-soft">(send to original sender)</span></label>
-                            <input class="form-input" id="fExternalPrefix" placeholder="[EXTERNAL]">
+                            <div class="form-hint">One domain per line. Anything from these domains is treated as staff.</div>
                         </div>
                     </div>
                 </div>
 
                 <details class="modal-section modal-details">
                     <summary class="modal-section-title">
+                        Internal reply bridge
+                        <span class="text-soft" style="font-family: var(--font); font-weight: 400; font-size: 11px; text-transform: none; letter-spacing: 0;">Advanced routing</span>
+                    </summary>
+                    <div class="check-stack">
+                        <label class="form-check">
+                            <input type="checkbox" id="fInternalBridge">
+                            <span>Enable internal reply bridge <span class="text-soft">— staff can relay replies back to the original sender</span></span>
+                        </label>
+                    </div>
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label class="form-label">Internal prefix</label>
+                            <input class="form-input" id="fInternalPrefix" placeholder="[INTERNAL]">
+                            <div class="form-hint">Keeps the reply internal.</div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">External prefix</label>
+                            <input class="form-input" id="fExternalPrefix" placeholder="[EXTERNAL]">
+                            <div class="form-hint">Sends the reply to the original sender.</div>
+                        </div>
+                    </div>
+                </details>
+
+                <details class="modal-section modal-details">
+                    <summary class="modal-section-title">
                         AI instructions
-                        <span class="text-soft" style="font-family: var(--font); font-weight: 400; font-size: 11px; text-transform: none; letter-spacing: 0; margin-left: 8px;">Advanced — the prompt sent to GPT for every email in this inbox</span>
+                        <span class="text-soft" style="font-family: var(--font); font-weight: 400; font-size: 11px; text-transform: none; letter-spacing: 0;">The prompt GPT sees for every email in this inbox</span>
                     </summary>
                     <div class="form-group">
                         <label class="form-label">System preamble</label>
@@ -402,7 +465,7 @@
                     <div class="form-group">
                         <label class="form-label">Global guidelines</label>
                         <textarea class="form-textarea" id="fGuidelines"></textarea>
-                        <div class="form-hint">Closing rules and JSON output format.</div>
+                        <div class="form-hint">Closing rules and the required JSON output format.</div>
                     </div>
                 </details>
             </div>
