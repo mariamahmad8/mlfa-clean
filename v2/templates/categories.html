@@ -13,25 +13,43 @@
         .recipient-picker { display: flex; flex-direction: column; gap: 6px; }
         .recipient-search { height: 34px !important; font-size: 13px; }
         .recipient-list {
-            max-height: 160px;
+            max-height: 180px;
             overflow-y: auto;
             border: 1px solid var(--line);
             border-radius: 6px;
-            padding: 6px;
+            padding: 4px;
             background: var(--panel);
             display: flex;
             flex-direction: column;
         }
         .recipient-list .rp-item {
-            display: flex; align-items: center; gap: 8px;
-            padding: 6px 8px;
+            display: flex; align-items: center; gap: 10px;
+            padding: 7px 10px;
             border-radius: 4px;
-            font-size: 12.5px;
+            font-size: 13px;
             cursor: pointer;
         }
         .recipient-list .rp-item:hover { background: var(--panel-2); }
         .recipient-list .rp-item.hidden { display: none; }
-        .recipient-list .rp-item .rp-email { color: var(--text-muted); font-size: 11.5px; margin-left: 4px; }
+        .recipient-list .rp-item .rp-email { color: var(--text-muted); font-size: 12px; margin-left: 6px; }
+
+        /* Destructive section — subtle rust tint, no emoji */
+        .settings-modal .danger-section {
+            background: var(--mlfa-orange-soft);
+            border: 1px solid rgba(184, 61, 38, 0.25);
+            border-radius: 6px;
+            padding: 4px 14px !important;
+            margin-bottom: 4px;
+        }
+        .settings-modal .danger-section .modal-section-heading {
+            color: var(--mlfa-orange);
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            margin: 10px 0 4px;
+        }
+        .settings-modal .danger-section .toggle-label { color: var(--text); }
 
         .rule-row { display: grid; grid-template-columns: 24px 40px minmax(0, 1.2fr) minmax(0, 220px) 80px 100px 160px; gap: 12px; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line-soft); background: var(--panel); cursor: default; }
         .rule-row:last-child { border-bottom: none; }
@@ -79,14 +97,14 @@
     </div>
 
     <div class="modal-backdrop" id="modal" style="display:none;">
-        <div class="modal settings-modal wide">
+        <div class="modal settings-modal">
             <div class="modal-topbar">
                 <div>
                     <h3 class="modal-title" id="modalTitle">Edit category</h3>
                     <div class="meta-line" id="keyMetaLine" style="display:none;">
                         <span>Key</span>
                         <code id="keyMetaValue">donor</code>
-                        <span class="lock" title="Locked after creation to protect existing classifications">🔒 locked</span>
+                        <span class="lock">Locked</span>
                     </div>
                 </div>
                 <div style="display:flex; align-items:center; gap:12px;">
@@ -117,7 +135,7 @@
                     <div id="newKeyRow" class="form-group" style="margin-top: 14px; display:none;">
                         <label class="form-label">Internal key</label>
                         <input class="form-input" id="fKey" placeholder="donor" style="max-width: 260px;">
-                        <div class="form-hint">Permanent tag GPT uses. Lowercase and underscores only. <b>Locked after creation.</b></div>
+                        <div class="form-hint">Permanent tag GPT uses. Lowercase and underscores only. Locked after creation.</div>
                     </div>
                 </div>
 
@@ -130,72 +148,72 @@
                 </div>
 
                 <div class="modal-section">
-                    <div class="form-grid-2">
-                        <div>
-                            <h4 class="modal-section-heading">Forwarding & reply</h4>
-                            <div class="form-group">
-                                <label class="form-label">Forward to</label>
-                                <div class="recipient-picker">
-                                    <input class="form-input recipient-search" id="fRecipSearch" placeholder="Search recipients…" oninput="filterRecipients()">
-                                    <div class="recipient-list" id="fForwardList"></div>
-                                </div>
-                                <div class="form-hint">Pick from the Recipients directory. Empty = don't forward.</div>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Reply template</label>
-                                <select class="form-select" id="fReplySelect">
-                                    <option value="">Don't send an auto-reply</option>
-                                </select>
-                            </div>
+                    <h4 class="modal-section-heading">Forwarding</h4>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <div class="recipient-picker">
+                            <input class="form-input recipient-search" id="fRecipSearch" placeholder="Search recipients by name or email" oninput="filterRecipients()">
+                            <div class="recipient-list" id="fForwardList"></div>
                         </div>
-                        <div>
-                            <h4 class="modal-section-heading">Rules</h4>
-                            <div class="form-group">
-                                <label class="form-label">Amount threshold <span class="text-soft">($)</span></label>
-                                <input class="form-input" type="number" id="fAmount" placeholder="Leave blank if none">
-                                <div class="form-hint">Only forward when GPT detects an amount at or above this.</div>
-                            </div>
-                            <div class="form-group">
-                                <div class="toggle-grid">
-                                    <label class="toggle-row">
-                                        <input type="checkbox" id="fMarkRead">
-                                        <span>
-                                            <span class="toggle-label">Mark as read</span>
-                                            <span class="toggle-desc">After handling, mark read in Outlook.</span>
-                                        </span>
-                                    </label>
-                                    <label class="toggle-row">
-                                        <input type="checkbox" id="fAutoReply">
-                                        <span>
-                                            <span class="toggle-label">Send auto-reply</span>
-                                            <span class="toggle-desc">Master switch for replies.</span>
-                                        </span>
-                                    </label>
-                                    <label class="toggle-row">
-                                        <input type="checkbox" id="fSafeguard">
-                                        <span>
-                                            <span class="toggle-label">Reply safeguard</span>
-                                            <span class="toggle-desc">Only reply once per thread.</span>
-                                        </span>
-                                    </label>
-                                    <label class="toggle-row">
-                                        <input type="checkbox" id="fSkipInternal">
-                                        <span>
-                                            <span class="toggle-label">Skip if sender is internal</span>
-                                            <span class="toggle-desc">Ignore emails from @mlfa.org.</span>
-                                        </span>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
+                        <div class="form-hint">Pick from the Recipients directory. Leave empty to not forward.</div>
                     </div>
                 </div>
 
-                <div class="modal-section" style="padding-top: 16px; border-top: 1px solid var(--line-soft);">
-                    <label class="toggle-row" style="border-bottom: none; padding: 4px 0;">
+                <div class="modal-section">
+                    <h4 class="modal-section-heading">Auto-reply</h4>
+                    <div class="form-group">
+                        <label class="form-label">Reply template</label>
+                        <select class="form-select" id="fReplySelect">
+                            <option value="">Don't send an auto-reply</option>
+                        </select>
+                        <div class="form-hint">The reply is only sent if "Send auto-reply" is on below.</div>
+                    </div>
+                    <div class="form-group" style="max-width: 240px; margin-bottom: 0;">
+                        <label class="form-label">Amount threshold <span class="text-soft">($)</span></label>
+                        <input class="form-input" type="number" id="fAmount" placeholder="Leave blank if none">
+                        <div class="form-hint">Only forward when GPT detects a dollar amount at or above this.</div>
+                    </div>
+                </div>
+
+                <div class="modal-section">
+                    <h4 class="modal-section-heading">Behavior</h4>
+                    <div class="panel">
+                        <label class="toggle-row">
+                            <input type="checkbox" id="fMarkRead">
+                            <span>
+                                <span class="toggle-label">Mark as read after handling</span>
+                                <span class="toggle-desc">Mark the email read in Outlook once the system has processed it.</span>
+                            </span>
+                        </label>
+                        <label class="toggle-row">
+                            <input type="checkbox" id="fAutoReply">
+                            <span>
+                                <span class="toggle-label">Send the auto-reply</span>
+                                <span class="toggle-desc">Master switch. Off means no reply goes out even if a template is selected above.</span>
+                            </span>
+                        </label>
+                        <label class="toggle-row">
+                            <input type="checkbox" id="fSafeguard">
+                            <span>
+                                <span class="toggle-label">Reply safeguard</span>
+                                <span class="toggle-desc">Only send the auto-reply once per email thread. Prevents duplicate replies on follow-ups.</span>
+                            </span>
+                        </label>
+                        <label class="toggle-row">
+                            <input type="checkbox" id="fSkipInternal">
+                            <span>
+                                <span class="toggle-label">Skip if sender is internal</span>
+                                <span class="toggle-desc">Don't apply this category when the email is from an @mlfa.org address.</span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="modal-section danger-section">
+                    <h4 class="modal-section-heading">Destructive</h4>
+                    <label class="toggle-row" style="border-bottom: none;">
                         <input type="checkbox" id="fDeleteImmediately">
                         <span>
-                            <span class="toggle-label" style="color: var(--mlfa-orange);">⚠️ Delete immediately</span>
+                            <span class="toggle-label">Delete immediately</span>
                             <span class="toggle-desc">Every matching email is sent straight to Trash instead of moving to the destination folder. Use for spam-like categories only.</span>
                         </span>
                     </label>
