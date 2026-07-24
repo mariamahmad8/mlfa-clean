@@ -9,34 +9,167 @@
     <script src="/static/security.js?v=2"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Nunito+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="/static/shared.css?v=12">
     <style>
-        /* Category modal top bar — name is the anchor */
-        .settings-modal .cat-topbar { padding: 16px 24px; align-items: flex-start; }
-        .settings-modal .cat-topbar-title { min-width: 0; }
-        .settings-modal .cat-topbar h3 { font-weight: 600; letter-spacing: -0.01em; margin: 0; }
+        /* ============================================================
+           Category modal — dense tabbed admin form.
+           Scoped to .cat-modal so no other settings modal is affected.
+           Same palette as the rest of the hub, tighter + squarer:
+           28px controls, 3px radii, hairline rules, label-left rows.
+           ============================================================ */
+        .settings-modal.cat-modal { max-width: 760px; border-radius: 4px; }
 
-        /* Compact multi-select recipient picker */
-        .recipient-picker { display: flex; flex-direction: column; gap: 6px; }
-        .recipient-search { height: 34px !important; font-size: 13px; }
-        .recipient-list {
-            max-height: 180px;
+        /* Header: title row + tab strip share one block */
+        .cat-modal .modal-topbar {
+            display: block;
+            padding: 12px 18px 0;
+            border-bottom: 1px solid var(--line);
+        }
+        .cat-modal .cat-head {
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 12px;
+        }
+        .cat-modal .modal-title {
+            display: flex; align-items: baseline; gap: 8px;
+            min-width: 0;
+            font-size: 14.5px; font-weight: 600; letter-spacing: 0;
+        }
+        .cat-modal .cat-id {
+            display: inline-flex; align-items: center; gap: 6px;
+            font-size: 11.5px; font-weight: 400; color: var(--text-muted);
+        }
+        .cat-modal .cat-id code {
+            background: var(--panel-2);
+            padding: 1px 5px; border-radius: 2px;
+            font-family: 'SF Mono', Menlo, monospace; font-size: 11px;
+            color: var(--text);
+        }
+        .cat-modal .cat-id .lock { color: var(--text-soft); font-size: 11px; }
+        .cat-modal .cat-head-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+        /* Tab strip — underline active state, sits on the header rule */
+        .cat-modal .cat-tabs { display: flex; gap: 2px; margin-top: 10px; }
+        .cat-modal .cat-tab {
+            display: inline-flex; align-items: center; gap: 6px;
+            appearance: none; background: none; border: none;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+            padding: 6px 10px 7px;
+            font-family: var(--font); font-size: 12.5px; font-weight: 500;
+            color: var(--text-muted); cursor: pointer;
+            transition: color 0.12s ease, border-color 0.12s ease;
+        }
+        .cat-modal .cat-tab:hover { color: var(--text); }
+        .cat-modal .cat-tab.active {
+            color: var(--text); font-weight: 600;
+            border-bottom-color: var(--mlfa-teal);
+        }
+        .cat-modal .tab-badge {
+            font-size: 10.5px; line-height: 1.5;
+            font-variant-numeric: tabular-nums;
+            color: var(--text-muted);
+            background: var(--panel-2);
+            padding: 0 5px; border-radius: 2px;
+        }
+        .cat-modal .cat-tab.active .tab-badge { color: var(--text); }
+        .cat-modal .tab-badge:empty { display: none; }
+        .cat-modal .tab-dot {
+            width: 5px; height: 5px; border-radius: 50%;
+            background: var(--danger); display: none;
+        }
+        .cat-modal .tab-dot.on { display: block; }
+
+        /* Body — fixed floor so switching tabs doesn't resize the modal */
+        .cat-modal .modal-body { padding: 16px 18px; min-height: 290px; }
+        .cat-modal .tab-panel { display: none; }
+        .cat-modal .tab-panel.active { display: block; }
+
+        /* Label-left field rows */
+        .cat-modal .field {
+            display: grid;
+            grid-template-columns: 118px minmax(0, 1fr);
+            column-gap: 14px; align-items: center;
+            padding: 4px 0;
+        }
+        .cat-modal .field > .form-label {
+            margin: 0;
+            font-size: 12.5px; font-weight: 500;
+            text-transform: none; letter-spacing: 0;
+            color: var(--text-muted);
+        }
+        .cat-modal .field.field-top { align-items: start; }
+        .cat-modal .field.field-top > .form-label { padding-top: 6px; }
+        .cat-modal .field > .field-control { min-width: 0; }
+
+        /* Controls sized to their content, not to the modal */
+        .cat-modal .form-input, .cat-modal .form-select {
+            height: 28px; padding: 0 9px;
+            font-size: 12.5px; border-radius: 3px;
+        }
+        .cat-modal .form-textarea {
+            padding: 8px 9px;
+            font-size: 12.5px; line-height: 1.55; border-radius: 3px;
+        }
+        .cat-modal .form-hint { font-size: 11px; margin-top: 4px; }
+        .cat-modal .w-key { max-width: 180px; }
+        .cat-modal .w-amt { max-width: 120px; }
+        .cat-modal .w-sel { max-width: 300px; }
+        .cat-modal .w-txt { max-width: 380px; }
+
+        /* Small uppercase sub-heading inside a tab */
+        .cat-modal .sub-head {
+            display: flex; align-items: center;
+            margin: 0 0 8px;
+            font-size: 10.5px; font-weight: 700;
+            letter-spacing: 0.09em; text-transform: uppercase;
+            color: var(--text-soft);
+        }
+        .cat-modal .divider {
+            border: none; border-top: 1px solid var(--line-soft);
+            margin: 14px 0 12px;
+        }
+        .cat-modal .toggle-row { padding: 5px 0; gap: 9px; }
+        .cat-modal .toggle-row input[type="checkbox"] { width: 13px; height: 13px; }
+        .cat-modal .toggle-row .toggle-label { font-size: 12.5px; }
+        .cat-modal .toggle-list .toggle-row { border-bottom: none; }
+        .cat-modal .modal-footer { padding: 10px 18px; }
+        .cat-modal .modal-footer .btn { min-height: 30px; font-size: 12px; }
+
+        /* Recipient picker — tabular rows, search + selected count toolbar */
+        .picker-toolbar {
+            display: flex; align-items: center; gap: 10px;
+            margin-bottom: 8px;
+        }
+        .picker-toolbar .recipient-search { flex: 1; max-width: 320px; }
+        .picker-toolbar .picker-meta {
+            font-size: 11.5px; color: var(--text-muted);
+            font-variant-numeric: tabular-nums;
+            margin-left: auto;
+        }
+        .cat-modal .recipient-list {
+            max-height: 216px;
             overflow-y: auto;
             border: 1px solid var(--line);
-            border-radius: 6px;
-            padding: 4px;
+            border-radius: 3px;
             background: var(--panel);
-            display: flex;
-            flex-direction: column;
         }
-        .recipient-list .rp-item {
-            display: flex; align-items: center; gap: 10px;
-            padding: 7px 10px;
-            border-radius: 4px;
-            font-size: 13px;
+        .cat-modal .recipient-list .rp-item {
+            display: grid;
+            grid-template-columns: 13px minmax(0, 1fr) minmax(0, auto);
+            gap: 10px; align-items: center;
+            padding: 5px 10px;
+            font-size: 12.5px;
+            border-bottom: 1px solid var(--line-soft);
             cursor: pointer;
         }
-        .recipient-list .rp-item:hover { background: var(--panel-2); }
-        .recipient-list .rp-item.hidden { display: none; }
-        .recipient-list .rp-item .rp-email { color: var(--text-muted); font-size: 12px; margin-left: 6px; }
+        .cat-modal .recipient-list .rp-item:last-child { border-bottom: none; }
+        .cat-modal .recipient-list .rp-item:hover { background: var(--panel-hover); }
+        .cat-modal .recipient-list .rp-item.hidden { display: none; }
+        .cat-modal .recipient-list .rp-item input[type="checkbox"] { width: 13px; height: 13px; margin: 0; }
+        .cat-modal .recipient-list .rp-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .cat-modal .recipient-list .rp-email {
+            color: var(--text-muted); font-size: 11.5px;
+            font-family: 'SF Mono', Menlo, monospace;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
 
 
         .rule-row { display: grid; grid-template-columns: 24px 40px minmax(0, 1.2fr) minmax(0, 220px) 80px 100px 160px; gap: 12px; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line-soft); background: var(--panel); cursor: default; }
@@ -85,91 +218,96 @@
     </div>
 
     <div class="modal-backdrop" id="modal" style="display:none;">
-        <div class="modal settings-modal wide">
+        <div class="modal settings-modal cat-modal">
             <div class="modal-topbar cat-topbar">
-                <div class="cat-topbar-title">
-                    <h3 class="modal-title" id="modalTitle" style="font-size: 20px;">
+                <div class="cat-head">
+                    <h3 class="modal-title" id="modalTitle">
                         <span id="modalCategoryLabel">New category</span>
+                        <span class="cat-id" id="keyMetaLine" style="display:none;">
+                            <code id="keyMetaValue">donor</code>
+                            <span class="lock">Locked</span>
+                        </span>
                     </h3>
-                    <div class="meta-line" id="keyMetaLine" style="display:none;">
-                        Category ID: <code id="keyMetaValue">donor</code>
-                        <span class="lock">·  Locked</span>
+                    <div class="cat-head-right">
+                        <label class="status-check" id="activeStatus">
+                            <input type="checkbox" id="fActive">
+                            <span id="activeStatusText">Active</span>
+                        </label>
+                        <button class="modal-close" onclick="closeModal()" aria-label="Close">×</button>
                     </div>
                 </div>
-                <div style="display:flex; align-items:center; gap:12px;">
-                    <label class="status-check" id="activeStatus">
-                        <input type="checkbox" id="fActive">
-                        <span id="activeStatusText">Active</span>
-                    </label>
-                    <button class="modal-close" onclick="closeModal()" aria-label="Close">×</button>
+                <div class="cat-tabs" role="tablist">
+                    <button type="button" class="cat-tab active" data-tab="general" onclick="switchCatTab('general')">General</button>
+                    <button type="button" class="cat-tab" data-tab="forwarding" onclick="switchCatTab('forwarding')">
+                        Forwarding<span class="tab-badge" id="tabFwdBadge"></span>
+                    </button>
+                    <button type="button" class="cat-tab" data-tab="reply" onclick="switchCatTab('reply')">
+                        Reply<span class="tab-badge" id="tabReplyBadge"></span>
+                    </button>
+                    <button type="button" class="cat-tab" data-tab="behavior" onclick="switchCatTab('behavior')">
+                        Behavior<span class="tab-dot" id="tabBehaviorDot"></span>
+                    </button>
                 </div>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="fRuleId">
                 <input type="hidden" id="fPriority">
 
-                <div class="modal-section">
-                    <h4 class="modal-section-heading">General</h4>
-                    <div class="form-grid-2">
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <label class="form-label">Display name</label>
-                            <input class="form-input" id="fLabel" placeholder="Donor inquiry">
-                        </div>
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <label class="form-label">Move to folder</label>
-                            <input class="form-input" id="fFolder" placeholder="Donor_Related/Grant">
+                <!-- General: identity + the classification prompt -->
+                <div class="tab-panel active" data-panel="general">
+                    <div class="field">
+                        <label class="form-label" for="fLabel">Display name</label>
+                        <input class="form-input w-txt" id="fLabel" placeholder="Donor inquiry">
+                    </div>
+                    <div class="field field-top" id="newKeyRow" style="display:none;">
+                        <label class="form-label" for="fKey">Internal key</label>
+                        <div class="field-control">
+                            <input class="form-input w-key" id="fKey" placeholder="donor">
+                            <div class="form-hint">Lowercase and underscores only. Locked after creation.</div>
                         </div>
                     </div>
-                    <div id="newKeyRow" class="form-group" style="margin-top: 12px; display:none;">
-                        <label class="form-label">Internal key</label>
-                        <input class="form-input" id="fKey" placeholder="donor" style="max-width: 240px;">
-                        <div class="form-hint">Lowercase and underscores only. Locked after creation.</div>
+                    <div class="field">
+                        <label class="form-label" for="fFolder">Move to folder</label>
+                        <input class="form-input w-txt" id="fFolder" placeholder="Donor_Related/Grant">
                     </div>
+                    <hr class="divider">
+                    <div class="sub-head">Classification prompt<span class="info-tip">i<span class="info-content">GPT reads this to decide when an email belongs here. Be specific. Include a few example situations so the model learns edge cases.</span></span></div>
+                    <textarea class="form-textarea" id="fRuleText" style="min-height: 150px;" placeholder="Describe the emails that should match this category, in plain language.&#10;&#10;Example: Emails about donations, tax receipts, matching-gift programs, or planned giving. Include grants from foundations if the sender explicitly names one."></textarea>
                 </div>
 
-                <div class="modal-section">
-                    <h4 class="modal-section-heading">AI classification<span class="info-tip" style="margin-left:6px;">i<span class="info-content">GPT reads this to decide when an email belongs here. Be specific. Include a few example situations so the model learns edge cases.</span></span></h4>
-                    <textarea class="form-textarea" id="fRuleText" style="min-height: 200px;" placeholder="Describe the emails that should match this category, in plain language.&#10;&#10;Example: Emails about donations, tax receipts, matching-gift programs, or planned giving. Include grants from foundations if the sender explicitly names one."></textarea>
-                </div>
-
-                <div class="modal-section">
-                    <h4 class="modal-section-heading">Forwarding</h4>
-                    <div class="recipient-picker">
+                <!-- Forwarding: who gets a copy, and the amount gate -->
+                <div class="tab-panel" data-panel="forwarding">
+                    <div class="picker-toolbar">
                         <input class="form-input recipient-search" id="fRecipSearch" placeholder="Search recipients by name or email" oninput="filterRecipients()">
-                        <div class="recipient-list" id="fForwardList"></div>
+                        <span class="picker-meta"><span id="fwdSelectedCount">0</span> selected</span>
+                    </div>
+                    <div class="recipient-list" id="fForwardList"></div>
+                    <hr class="divider">
+                    <div class="field">
+                        <label class="form-label" for="fAmount">Amount gate ($)<span class="info-tip">i<span class="info-content">Only forward when GPT detects a dollar amount at or above this. Used for donor and invoice rules. Leave blank if amount doesn't matter.</span></span></label>
+                        <div class="field-control">
+                            <input class="form-input w-amt" type="number" id="fAmount" placeholder="Optional">
+                            <div class="form-hint">Leave blank to forward every match regardless of amount.</div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="modal-section">
-                    <h4 class="modal-section-heading">Reply</h4>
-                    <div class="form-grid-2">
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <label class="form-label">Default template</label>
-                            <select class="form-select" id="fReplySelect">
-                                <option value="">Don't send an auto-reply</option>
-                            </select>
-                        </div>
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <label class="form-label">Personal reply template<span class="info-tip" style="margin-left:6px;">i<span class="info-content">Used when GPT detects the email has personal details (a specific case or referral). Falls back to the default reply if empty.</span></span></label>
-                            <select class="form-select" id="fReplyPersonalSelect">
-                                <option value="">Same as default</option>
-                            </select>
-                        </div>
+                <!-- Reply: templates + the switches that govern sending -->
+                <div class="tab-panel" data-panel="reply">
+                    <div class="field">
+                        <label class="form-label" for="fReplySelect">Default template</label>
+                        <select class="form-select w-sel" id="fReplySelect">
+                            <option value="">Don't send an auto-reply</option>
+                        </select>
                     </div>
-                    <div class="form-group" style="margin-top: 12px; max-width: 240px; margin-bottom: 0;">
-                        <label class="form-label">Amount threshold ($)<span class="info-tip" style="margin-left:6px;">i<span class="info-content">Only forward when GPT detects a dollar amount at or above this. Used for donor and invoice rules. Leave blank if amount doesn't matter.</span></span></label>
-                        <input class="form-input" type="number" id="fAmount" placeholder="Optional">
+                    <div class="field">
+                        <label class="form-label" for="fReplyPersonalSelect">Personal template<span class="info-tip">i<span class="info-content">Used when GPT detects the email has personal details (a specific case or referral). Falls back to the default reply if empty.</span></span></label>
+                        <select class="form-select w-sel" id="fReplyPersonalSelect">
+                            <option value="">Same as default</option>
+                        </select>
                     </div>
-                </div>
-
-                <div class="modal-section">
-                    <h4 class="modal-section-heading">Behavior</h4>
+                    <hr class="divider">
                     <div class="toggle-list">
-                        <label class="toggle-row">
-                            <input type="checkbox" id="fMarkRead">
-                            <span class="toggle-label">Mark as read after handling</span>
-                            <span class="info-tip" style="margin-left:auto;">i<span class="info-content">Mark the email as read in Outlook once the system has finished processing it. Uncheck if you want the email to stay bold so staff notice it.</span></span>
-                        </label>
                         <label class="toggle-row">
                             <input type="checkbox" id="fAutoReply">
                             <span class="toggle-label">Send the auto-reply</span>
@@ -180,17 +318,33 @@
                             <span class="toggle-label">Reply only once per thread</span>
                             <span class="info-tip" style="margin-left:auto;">i<span class="info-content">Prevents duplicate auto-replies when a sender follows up. Recommended for any category that sends a reply.</span></span>
                         </label>
+                    </div>
+                </div>
+
+                <!-- Behavior: what happens to the email itself -->
+                <div class="tab-panel" data-panel="behavior">
+                    <div class="toggle-list">
+                        <label class="toggle-row">
+                            <input type="checkbox" id="fMarkRead">
+                            <span class="toggle-label">Mark as read after handling</span>
+                            <span class="info-tip" style="margin-left:auto;">i<span class="info-content">Mark the email as read in Outlook once the system has finished processing it. Uncheck if you want the email to stay bold so staff notice it.</span></span>
+                        </label>
                         <label class="toggle-row">
                             <input type="checkbox" id="fSkipInternal">
                             <span class="toggle-label">Skip when sender is internal</span>
                             <span class="info-tip" style="margin-left:auto;">i<span class="info-content">Don't apply this category when the email is from an @mlfa.org address. Prevents replying to staff forwards.</span></span>
                         </label>
+                    </div>
+                    <hr class="divider">
+                    <div class="sub-head">Destructive</div>
+                    <div class="toggle-list">
                         <label class="toggle-row danger-row">
                             <input type="checkbox" id="fDeleteImmediately">
                             <span class="toggle-label">Delete matching emails immediately</span>
                             <span class="info-tip" style="margin-left:auto;">i<span class="info-content">Send matching emails straight to Trash instead of moving to the destination folder. Use for spam-like categories only.</span></span>
                         </label>
                     </div>
+                    <div class="form-hint">Matching emails go straight to Trash instead of the destination folder.</div>
                 </div>
             </div>
 
@@ -247,9 +401,11 @@
             container.innerHTML = active.map(r => `
                 <label class="rp-item" data-label="${escapeHtml(r.label_recipient.toLowerCase())} ${escapeHtml(r.email.toLowerCase())}">
                     <input type="checkbox" class="fRecipCheck" value="${r.id}" ${(selectedIdSet.has(String(r.id)) || (!selectedIdSet.size && selectedEmailSet.has(r.email.toLowerCase()))) ? 'checked' : ''}>
-                    <span><strong>${escapeHtml(r.label_recipient)}</strong><span class="rp-email">${escapeHtml(r.email)}${r.active ? '' : ' · inactive'}</span></span>
+                    <span class="rp-name">${escapeHtml(r.label_recipient)}</span>
+                    <span class="rp-email">${escapeHtml(r.email)}${r.active ? '' : ' · inactive'}</span>
                 </label>
             `).join('');
+            updateTabBadges();
         }
 
         function filterRecipients() {
@@ -258,6 +414,36 @@
                 const hay = el.dataset.label || '';
                 el.classList.toggle('hidden', q && !hay.includes(q));
             });
+        }
+
+        // --- Tabs -------------------------------------------------------
+        // Panels stay in the DOM when hidden, so saveRule() still reads every
+        // field regardless of which tab is open.
+        function switchCatTab(name) {
+            document.querySelectorAll('.cat-modal .cat-tab').forEach(t => {
+                t.classList.toggle('active', t.dataset.tab === name);
+            });
+            document.querySelectorAll('.cat-modal .tab-panel').forEach(p => {
+                p.classList.toggle('active', p.dataset.panel === name);
+            });
+        }
+
+        // Tabs hide state, so surface it in the tab strip: recipient count,
+        // "Off" when no reply goes out, red dot when deletion is armed.
+        function updateTabBadges() {
+            const checked = document.querySelectorAll('.fRecipCheck:checked').length;
+            const fwdBadge = document.getElementById('tabFwdBadge');
+            if (fwdBadge) fwdBadge.textContent = checked ? String(checked) : '';
+            const count = document.getElementById('fwdSelectedCount');
+            if (count) count.textContent = String(checked);
+
+            const replyOn = document.getElementById('fAutoReply').checked
+                && !!document.getElementById('fReplySelect').value;
+            const replyBadge = document.getElementById('tabReplyBadge');
+            if (replyBadge) replyBadge.textContent = replyOn ? '' : 'Off';
+
+            const dot = document.getElementById('tabBehaviorDot');
+            if (dot) dot.classList.toggle('on', document.getElementById('fDeleteImmediately').checked);
         }
 
         // Status checkbox: label text stays "Active" / "Inactive", visual weight shifts subtly
@@ -298,6 +484,7 @@
             modal.dataset.dirtyBound = '1';
             modal.addEventListener('input', markDirty);
             modal.addEventListener('change', markDirty);
+            modal.addEventListener('change', updateTabBadges);
         }
 
         function renderTemplateSelect(selectedId, selectedBody, selectId, blankLabel) {
@@ -436,9 +623,11 @@
             document.getElementById('fSkipInternal').checked = false;
             document.getElementById('fDeleteImmediately').checked = false;
             // New categories show the key input; hide the metadata line
-            document.getElementById('newKeyRow').style.display = 'block';
+            document.getElementById('newKeyRow').style.display = 'grid';
             document.getElementById('keyMetaLine').style.display = 'none';
             syncActiveStatus();
+            switchCatTab('general');
+            updateTabBadges();
             document.getElementById('modal').style.display = 'flex';
             attachDirtyListeners();
             markDirty(); // creating always counts as a change
@@ -468,9 +657,11 @@
             document.getElementById('fDeleteImmediately').checked = !!r.delete_immediately;
             // Existing category: hide editable key input, show read-only metadata line
             document.getElementById('newKeyRow').style.display = 'none';
-            document.getElementById('keyMetaLine').style.display = 'flex';
+            document.getElementById('keyMetaLine').style.display = 'inline-flex';
             document.getElementById('keyMetaValue').textContent = r.key || '—';
             syncActiveStatus();
+            switchCatTab('general');
+            updateTabBadges();
             document.getElementById('modal').style.display = 'flex';
             attachDirtyListeners();
             markPristine();
