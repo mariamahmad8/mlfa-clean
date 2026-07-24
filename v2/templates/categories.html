@@ -109,6 +109,11 @@
                 <div class="form-hint">Used for emails with case-specific details or referrals. Leave empty to use the default template.</div>
             </div>
 
+            <div class="form-group">
+                <label class="form-label" style="font-family: var(--font-display); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mlfa-teal); margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--line-soft);">Actions</label>
+                <div class="form-hint">Behaviors that apply when an email matches this category.</div>
+            </div>
+
             <div class="form-group" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
                 <label class="form-check"><input type="checkbox" id="fActive"> Active <span class="info-tip">i<span class="info-content">Turn off to temporarily disable this category without deleting it. Inactive categories are ignored by GPT and the router.</span></span></label>
                 <label class="form-check"><input type="checkbox" id="fMarkRead"> Mark as read <span class="info-tip">i<span class="info-content">Automatically mark the email as read after processing. Uncheck for categories where you want the email to stay bold in Outlook (like donor or active_communication).</span></span></label>
@@ -292,7 +297,9 @@
             document.getElementById('keyLockedHint').style.display = 'none';
             document.getElementById('fLabel').value = '';
             document.getElementById('fRuleText').value = '';
-            document.getElementById('fPriority').value = '999';
+            // Default new-category priority = one more than the current max so it lands at the bottom of the list
+            const nextPriority = (rules && rules.length) ? Math.max(...rules.map(r => r.priority || 0)) + 1 : 1;
+            document.getElementById('fPriority').value = String(nextPriority);
             document.getElementById('fAmount').value = '';
             document.getElementById('fFolder').value = '';
             renderRecipientCheckboxes([], []);

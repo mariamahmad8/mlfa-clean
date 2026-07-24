@@ -168,7 +168,7 @@
         </a>
         <div class="inbox-tabs" id="inboxTabs"></div>
         <div class="header-right">
-            {% if current_role == 'admin' %}
+            {% if current_role in ['admin', 'owner'] %}
             <div class="automation-toggle">
                 <span>Automation</span>
                 <div class="switch" id="automationSwitch" onclick="toggleAutomation()"></div>
@@ -308,11 +308,11 @@
                     <h2 class="detail-subject">${escapeHtml(extractSubject(e.meta))}</h2>
                     <div class="detail-meta-grid">
                         <div><div class="label">From</div>${escapeHtml(e.senderName || 'Unknown')}</div>
-                        <div><div class="label">Category</div>${escapeHtml(e.category || 'None')}</div>
-                        <div><div class="label">Amount detected</div>${escapeHtml(e.amountDetected || 'None')}</div>
-                        <div><div class="label">Recipients</div>${escapeHtml(e.recipients || 'None')}</div>
+                        <div><div class="label">Category</div>${escapeHtml(e.category || '—')}</div>
+                        <div><div class="label">Amount detected</div>${e.amountDetected ? escapeHtml(String(e.amountDetected)) : '—'}</div>
+                        <div><div class="label">Recipients</div>${escapeHtml(e.recipients || '—')}</div>
                         <div><div class="label">Needs personal reply</div>${escapeHtml(e.needsReply || 'No')}</div>
-                        <div><div class="label">Reason</div>${escapeHtml(e.reason || 'None')}</div>
+                        <div><div class="label">Reason</div>${escapeHtml(e.reason || '—')}</div>
                     </div>
                 </div>
                 <div class="detail-body">${escapeHtml(e.originalContent || '')}</div>

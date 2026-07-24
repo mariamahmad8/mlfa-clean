@@ -641,8 +641,8 @@ def get_automation_setting():
 @reviewer_bp.route('/api/settings/automation', methods=['POST'])
 @login_required
 def update_automation_setting():
-    if session.get('role') != 'admin':
-        return jsonify({"error": "Admin access required"}), 403
+    if session.get('role') not in {'admin', 'owner'}:
+        return jsonify({"error": "Admin or owner access required"}), 403
     """Toggle automation mode. If turning ON, also process anything already queued."""
     inbox = _get_current_inbox()
     if inbox is None:

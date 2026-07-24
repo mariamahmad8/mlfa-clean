@@ -296,7 +296,7 @@
             `;
 
             document.getElementById('statsBody').innerHTML = `
-                <div class="stats-subtitle">${escapeHtml(s.email_to_watch)} &nbsp;&middot;&nbsp; Today reflects activity since midnight Central Time.</div>
+                <div class="stats-subtitle">${escapeHtml(s.email_to_watch)} &nbsp;&middot;&nbsp; Today reflects activity since midnight Central Time. Totals since Jul 17, 2026.</div>
 
                 <div class="stats-queue">
                     <span class="q-label">In review queue</span>
@@ -305,11 +305,11 @@
 
                 <table class="stats-table">
                     <thead>
-                        <tr><th>Metric</th><th>Today</th><th>All time</th></tr>
+                        <tr><th>Metric</th><th>Today</th><th>Total</th></tr>
                     </thead>
                     <tbody>
                         ${row('Processed', s.today.processed || 0, s.all_time.processed || 0)}
-                        ${row('Rejected / dismissed', (s.today.rejected || 0) + (s.today.dismissed || 0), (s.all_time.rejected || 0) + (s.all_time.dismissed || 0))}
+                        ${row('Rejected / dismissed', (s.today.rejected || 0) + (s.today.dismissed || 0), 0)}
                         ${row('Total processing time', formatDuration(s.today.duration_ms), formatDuration(s.all_time.duration_ms))}
                         ${row('Average per email', formatDuration(s.today.avg_duration_ms), formatDuration(s.all_time.avg_duration_ms))}
                         ${row('Estimated time saved', formatDuration(savedTodayMs), formatDuration(savedAllMs), true)}

@@ -97,6 +97,17 @@
         </div>
     </div>
 
+    <div class="modal-backdrop" id="previewModal" style="display:none;" onclick="if(event.target===this) closePreview()">
+        <div class="modal" style="max-width: 720px;">
+            <h3 class="modal-title" id="previewTitle">Preview</h3>
+            <div class="form-hint" style="margin-bottom: 12px;">This is how the reply body will look. The greeting fills in based on the recipient's name.</div>
+            <div id="previewBody" style="background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; max-height: 60vh; overflow-y: auto; font-size: 14px; line-height: 1.5;"></div>
+            <div class="modal-actions">
+                <button class="btn primary" onclick="closePreview()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let currentInboxId = null;
         let templates = [];
@@ -128,6 +139,9 @@
                     <td class="tpl-preview">${escapeHtml(stripHtml(t.body_html).slice(0, 120))}</td>
                     <td>${t.active ? '<span class="badge success">Active</span>' : '<span class="badge">Inactive</span>'}</td>
                     <td class="actions-cell">
+                        <button class="btn small icon-btn" title="Preview" onclick="openPreview(${t.id})" aria-label="Preview">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
                         <button class="btn small" onclick="openEditModal(${t.id})">Edit</button>
                         <button class="btn small danger" onclick="del(${t.id})">Delete</button>
                     </td>
@@ -156,6 +170,17 @@
         }
 
         function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+        function openPreview(templateId) {
+            const t = templates.find(x => x.id === templateId);
+            if (!t) return;
+            // Substitute {{greeting}} with a sample greeting so the preview looks real
+            const rendered = (t.body_html || '').replace(/\{\{greeting\}\}/g, '<p>Dear Friend,</p>');
+            document.getElementById('previewTitle').textContent = `Preview — ${t.name_template || 'Template'}`;
+            document.getElementById('previewBody').innerHTML = rendered || '<em style="color: var(--text-muted);">(empty template)</em>';
+            document.getElementById('previewModal').style.display = 'flex';
+        }
+        function closePreview() { document.getElementById('previewModal').style.display = 'none'; }
 
         async function save() {
             const id = document.getElementById('fId').value;
