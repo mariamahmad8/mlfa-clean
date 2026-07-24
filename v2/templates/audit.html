@@ -36,9 +36,11 @@
         <table class="data-table">
             <thead>
                 <tr>
-                    <th style="width: 180px;">When</th>
-                    <th style="width: 110px;">Action</th>
-                    <th>What happened</th>
+                    <th>When</th>
+                    <th>Action</th>
+                    <th>Actor</th>
+                    <th>Target</th>
+                    <th>Comment</th>
                 </tr>
             </thead>
             <tbody id="tbody"></tbody>
@@ -71,7 +73,9 @@
                 <tr>
                     <td class="text-small text-muted">${e.created_at ? formatCentral(e.created_at) : '—'}</td>
                     <td>${badgeForAction(e.action)}</td>
-                    <td>${humanSummary(e)}</td>
+                    <td>${escapeHtml(e.actor || '—')}</td>
+                    <td class="text-small" style="font-family: monospace;" title="${escapeHtml(e.email_id || '')}">${formatTarget(e.email_id)}</td>
+                    <td class="text-muted text-small">${humanSummary(e)}</td>
                 </tr>
             `).join('');
         }

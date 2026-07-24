@@ -415,21 +415,7 @@
             const chartSvg = buildDailyChart(daily);
 
             document.getElementById('statsBody').innerHTML = `
-                <div class="stats-subtitle">Live activity from ${escapeHtml(s.email_to_watch)}. "Today" counts everything since midnight Central. "Total" counts everything since we turned this on (Jul 17, 2026).</div>
-
-                <div class="stats-hero">
-                    <div class="h-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                    </div>
-                    <div class="h-text">
-                        Since Jul 17, this hub has handled <strong>${processedTotal} emails</strong> for you — saving your team about <strong>${formatDuration(savedAllMs)}</strong> of manual work.
-                    </div>
-                </div>
-
-                <div class="stats-queue">
-                    <span class="q-label">Waiting for you to review</span>
-                    <span class="q-value">${s.in_review_now || 0}</span>
-                </div>
+                <div class="stats-subtitle">${escapeHtml(s.email_to_watch)} &nbsp;&middot;&nbsp; Today reflects activity since midnight Central Time. Totals since Jul 17, 2026.</div>
 
                 <div class="stats-chart">
                     <div class="stats-chart-header">
@@ -439,7 +425,20 @@
                     ${chartSvg}
                 </div>
 
-                <div class="stats-footnote">Time saved is estimated: we assume a staff member would take about ${HUMAN_MIN_PER_EMAIL} minutes to read, classify, and act on each email by hand.</div>
+                <table class="stats-table">
+                    <thead>
+                        <tr><th>Metric</th><th>Today</th><th>Total</th></tr>
+                    </thead>
+                    <tbody>
+                        ${row('Processed', processedToday, processedTotal)}
+                        ${row('Rejected / dismissed', (s.today.rejected || 0) + (s.today.dismissed || 0), 0)}
+                        ${row('Total processing time', formatDuration(s.today.duration_ms), formatDuration(s.all_time.duration_ms))}
+                        ${row('Average per email', formatDuration(s.today.avg_duration_ms), formatDuration(s.all_time.avg_duration_ms))}
+                        ${row('Estimated time saved', formatDuration(savedTodayMs), formatDuration(savedAllMs), true)}
+                    </tbody>
+                </table>
+
+                <div class="stats-footnote">Estimated time saved assumes ~${HUMAN_MIN_PER_EMAIL} minutes per email for manual triage.</div>
             `;
             document.getElementById('statsTitle').textContent = `${s.display_name} · Stats`;
             document.getElementById('statsModal').style.display = 'flex';
