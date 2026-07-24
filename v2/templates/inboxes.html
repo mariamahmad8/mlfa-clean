@@ -102,21 +102,20 @@
             font-style: italic;
         }
 
-        /* Inbox edit modal — cards, sentence-case labels, tighter density */
+        /* Inbox edit modal — progressive disclosure, sentence case, clear hierarchy */
         .inbox-edit-modal {
-            max-width: 740px;
+            max-width: 720px;
             padding: 0;
             display: flex;
             flex-direction: column;
             max-height: 88vh;
-            background: var(--bg);
+            background: var(--panel);
         }
         .inbox-edit-modal .modal-topbar {
             display: flex;
             align-items: center;
             justify-content: space-between;
             padding: 20px 28px;
-            background: var(--panel);
             border-bottom: 1px solid var(--line-soft);
         }
         .inbox-edit-modal .modal-title {
@@ -129,70 +128,35 @@
             color: var(--text);
         }
         .inbox-edit-modal .modal-close {
-            background: transparent;
-            border: none;
-            font-size: 22px;
-            line-height: 1;
-            color: var(--text-muted);
-            cursor: pointer;
-            padding: 4px 10px;
-            border-radius: 6px;
+            background: transparent; border: none;
+            font-size: 22px; line-height: 1;
+            color: var(--text-muted); cursor: pointer;
+            padding: 4px 10px; border-radius: 6px;
         }
         .inbox-edit-modal .modal-close:hover { background: var(--panel-2); color: var(--text); }
         .inbox-edit-modal .modal-body {
-            padding: 20px 28px;
+            padding: 24px 28px 8px;
             overflow-y: auto;
             flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
         }
-        /* Each section becomes a subtle card, no divider lines */
-        .inbox-edit-modal .modal-section {
-            background: var(--panel);
-            border: 1px solid var(--line-soft);
-            border-radius: 10px;
-            padding: 18px 20px;
-        }
-        .inbox-edit-modal .modal-section-title {
-            font-family: var(--font-display);
-            font-size: 11px;
-            font-weight: 600;
-            letter-spacing: 0.14em;
-            text-transform: uppercase;
-            color: var(--text-muted);
-            margin-bottom: 14px;
-            display: flex;
-            align-items: baseline;
-            gap: 10px;
-        }
-        .inbox-edit-modal .modal-details > summary {
-            cursor: pointer;
-            list-style: none;
-            outline: none;
-            margin: -18px -20px;
-            padding: 18px 20px;
-            border-radius: 10px;
-        }
-        .inbox-edit-modal .modal-details[open] > summary { margin-bottom: 4px; }
-        .inbox-edit-modal .modal-details > summary::-webkit-details-marker { display: none; }
-        .inbox-edit-modal .modal-details > summary::after {
-            content: '›';
-            margin-left: auto;
-            transition: transform 0.15s ease;
-            font-size: 16px;
-            color: var(--text-muted);
+        /* Flat sections separated by whitespace, not cards */
+        .inbox-edit-modal .modal-section { padding: 0 0 28px; }
+        .inbox-edit-modal .modal-section-heading {
             font-family: var(--font);
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+            color: var(--text);
+            margin: 0 0 14px;
+            text-transform: none;
         }
-        .inbox-edit-modal .modal-details[open] > summary::after { transform: rotate(90deg); }
         .inbox-edit-modal .form-grid-2 {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 16px;
+            gap: 20px;
         }
-        .inbox-edit-modal .form-group { margin-bottom: 14px; }
+        .inbox-edit-modal .form-group { margin-bottom: 20px; }
         .inbox-edit-modal .form-group:last-child { margin-bottom: 0; }
-        /* Sentence-case labels; no more ALL CAPS shouting */
         .inbox-edit-modal .form-label {
             font-family: var(--font);
             font-size: 13px;
@@ -204,37 +168,117 @@
         }
         .inbox-edit-modal .form-input,
         .inbox-edit-modal .form-select {
-            height: 36px;
+            height: 38px;
             padding: 0 12px;
             font-size: 13.5px;
+            background: var(--panel);
+            border: 1px solid var(--line);
         }
+        .inbox-edit-modal .form-input:focus,
+        .inbox-edit-modal .form-select:focus { border-color: var(--mlfa-teal); }
         .inbox-edit-modal .form-textarea {
-            min-height: 80px;
+            min-height: 96px;
             padding: 10px 12px;
             font-size: 13.5px;
+            font-family: var(--font);
         }
         .inbox-edit-modal .form-hint {
             font-size: 12px;
-            color: var(--text-soft);
+            color: var(--text-muted);
             margin-top: 6px;
-            line-height: 1.4;
+            line-height: 1.45;
         }
         .inbox-edit-modal .text-soft { color: var(--text-soft); font-weight: 400; }
-        /* Checkbox stack lives INSIDE the section card so it feels grouped */
-        .inbox-edit-modal .check-stack {
+        /* Toggle row: bold label + description underneath, big click target */
+        .inbox-edit-modal .toggle-row {
             display: flex;
-            flex-direction: column;
-            gap: 10px;
-            padding: 12px 14px;
-            background: var(--bg);
-            border-radius: 8px;
-            border: 1px solid var(--line-soft);
-            margin-bottom: 14px;
+            align-items: flex-start;
+            gap: 14px;
+            padding: 12px 0;
+            cursor: pointer;
+            border-bottom: 1px solid var(--line-soft);
         }
-        .inbox-edit-modal .check-stack .form-check { margin: 0; font-size: 13px; }
+        .inbox-edit-modal .toggle-row:last-child { border-bottom: none; }
+        .inbox-edit-modal .toggle-row input[type="checkbox"] {
+            width: 18px; height: 18px;
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+        .inbox-edit-modal .toggle-row .toggle-label {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text);
+            display: block;
+            margin-bottom: 2px;
+        }
+        .inbox-edit-modal .toggle-row .toggle-desc {
+            font-size: 12.5px;
+            color: var(--text-muted);
+            line-height: 1.45;
+        }
+        /* Radio row for the import-choice pattern */
+        .inbox-edit-modal .radio-group {
+            border: 1px solid var(--line-soft);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .inbox-edit-modal .radio-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            cursor: pointer;
+            border-bottom: 1px solid var(--line-soft);
+        }
+        .inbox-edit-modal .radio-row:last-child { border-bottom: none; }
+        .inbox-edit-modal .radio-row.checked { background: var(--accent-soft); }
+        .inbox-edit-modal .radio-row input[type="radio"] {
+            width: 16px; height: 16px;
+            margin: 0; flex-shrink: 0;
+            accent-color: var(--mlfa-teal);
+        }
+        .inbox-edit-modal .radio-row .r-label { font-size: 13.5px; color: var(--text); }
+        .inbox-edit-modal .radio-row .inline-num {
+            width: 60px; height: 30px;
+            padding: 0 8px; font-size: 13px;
+            border: 1px solid var(--line); border-radius: 5px;
+            background: var(--panel);
+            margin: 0 4px;
+        }
+        /* Advanced disclosure — one container with nested rows */
+        .inbox-edit-modal details.disclosure { margin-top: 4px; }
+        .inbox-edit-modal details.disclosure > summary {
+            list-style: none;
+            outline: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 0;
+            font-family: var(--font);
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text);
+            border-top: 1px solid var(--line-soft);
+        }
+        .inbox-edit-modal details.disclosure > summary::-webkit-details-marker { display: none; }
+        .inbox-edit-modal details.disclosure > summary::before {
+            content: '›';
+            display: inline-block;
+            width: 12px;
+            transition: transform 0.15s ease;
+            font-size: 16px;
+            color: var(--text-muted);
+        }
+        .inbox-edit-modal details.disclosure[open] > summary::before { transform: rotate(90deg); }
+        .inbox-edit-modal details.disclosure > .disclosure-body {
+            padding: 8px 0 16px 22px;
+        }
+        /* Sticky footer with dirty-state Save */
         .inbox-edit-modal .modal-footer {
             display: flex;
             justify-content: flex-end;
+            align-items: center;
             gap: 12px;
             padding: 16px 28px;
             background: var(--panel);
@@ -243,8 +287,21 @@
             position: sticky;
             bottom: 0;
         }
-        .inbox-edit-modal .modal-footer .btn { min-height: 36px; padding: 0 18px; }
-        .inbox-edit-modal .modal-footer .btn.primary { padding: 0 22px; font-weight: 600; }
+        .inbox-edit-modal .footer-status {
+            font-size: 12.5px;
+            color: var(--text-muted);
+            margin-right: auto;
+        }
+        .inbox-edit-modal .footer-status.saved { color: var(--success); }
+        .inbox-edit-modal .modal-footer .btn { min-height: 38px; padding: 0 20px; font-size: 13.5px; }
+        .inbox-edit-modal .modal-footer .btn.primary { padding: 0 24px; font-weight: 600; }
+        .inbox-edit-modal .modal-footer .btn.primary:disabled {
+            background: var(--panel-2) !important;
+            border-color: var(--line) !important;
+            color: var(--text-soft) !important;
+            cursor: not-allowed;
+            transform: none;
+        }
         .stats-hero {
             background: var(--accent-soft);
             border: 1px solid var(--mlfa-teal);
@@ -368,9 +425,9 @@
                 <input type="hidden" id="fInboxId">
 
                 <div class="modal-section" id="cloneRow">
-                    <div class="modal-section-title">Start from</div>
+                    <h4 class="modal-section-heading">Start from</h4>
                     <div class="form-group">
-                        <label class="form-label">Clone from existing inbox <span class="text-soft">(optional)</span></label>
+                        <label class="form-label">Clone from an existing inbox <span class="text-soft">(optional)</span></label>
                         <select class="form-select" id="fCloneSource">
                             <option value="">Start blank</option>
                         </select>
@@ -379,100 +436,118 @@
                 </div>
 
                 <div class="modal-section">
-                    <div class="modal-section-title">Basics</div>
-                    <div class="form-grid-2">
-                        <div class="form-group">
-                            <label class="form-label">Display name</label>
-                            <input class="form-input" id="fDisplayName" placeholder="MLFA Info Inbox">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Email address to watch</label>
-                            <input class="form-input" id="fEmail" placeholder="info@mlfa.org">
-                        </div>
+                    <h4 class="modal-section-heading">Basics</h4>
+                    <div class="form-group">
+                        <label class="form-label">Email address</label>
+                        <input class="form-input" id="fEmail" placeholder="info@mlfa.org">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label">Display name</label>
+                        <input class="form-input" id="fDisplayName" placeholder="MLFA Info Inbox">
                     </div>
                 </div>
 
                 <div class="modal-section">
-                    <div class="modal-section-title">Automation</div>
-                    <div class="check-stack">
-                        <label class="form-check">
-                            <input type="checkbox" id="fAutomation">
-                            <span>Enable full automation <span class="text-soft">— skip the human review step</span></span>
-                        </label>
-                        <label class="form-check">
-                            <input type="checkbox" id="fUseThreadContext">
-                            <span>Use thread context when classifying <span class="text-soft">— recommended for follow-ups</span></span>
-                        </label>
-                    </div>
-                    <div class="form-group" style="max-width: 220px;">
-                        <label class="form-label">Backfill days</label>
-                        <input class="form-input" type="number" id="fBackfill" placeholder="2">
-                        <div class="form-hint">Days back to scan on the very first run.</div>
+                    <h4 class="modal-section-heading">Automation</h4>
+                    <label class="toggle-row">
+                        <input type="checkbox" id="fAutomation">
+                        <span>
+                            <span class="toggle-label">Automatically process emails</span>
+                            <span class="toggle-desc">The AI acts on new emails without waiting for a person to approve each one.</span>
+                        </span>
+                    </label>
+                    <label class="toggle-row">
+                        <input type="checkbox" id="fUseThreadContext">
+                        <span>
+                            <span class="toggle-label">Use conversation history</span>
+                            <span class="toggle-desc">The AI considers previous messages in the same thread. Recommended for follow-ups.</span>
+                        </span>
+                    </label>
+
+                    <div class="form-group" style="margin-top: 20px;">
+                        <label class="form-label">Import recent emails</label>
+                        <div class="radio-group" id="backfillRadio">
+                            <label class="radio-row" data-mode="none">
+                                <input type="radio" name="backfillMode" value="none">
+                                <span class="r-label">Don't import old mail</span>
+                            </label>
+                            <label class="radio-row" data-mode="days">
+                                <input type="radio" name="backfillMode" value="days" checked>
+                                <span class="r-label">Import the last <input class="inline-num" type="number" id="fBackfill" min="1" max="90" value="2"> days</span>
+                            </label>
+                        </div>
+                        <div class="form-hint">Only used when this inbox is first connected.</div>
                     </div>
                 </div>
 
                 <div class="modal-section">
-                    <div class="modal-section-title">Filters</div>
+                    <h4 class="modal-section-heading">Filters</h4>
                     <div class="form-grid-2">
                         <div class="form-group">
-                            <label class="form-label">Blocked senders</label>
-                            <textarea class="form-textarea" id="fBlocked" placeholder="spam@example.com"></textarea>
-                            <div class="form-hint">One address per line. Silently skipped on arrival.</div>
+                            <label class="form-label">Ignore senders</label>
+                            <textarea class="form-textarea" id="fBlocked" placeholder="person@example.com&#10;newsletter@company.com"></textarea>
+                            <div class="form-hint">One address per line. Emails from these addresses are ignored.</div>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Internal domains</label>
-                            <textarea class="form-textarea" id="fInternalDomains" placeholder="mlfa.org"></textarea>
-                            <div class="form-hint">One domain per line. Anything from these domains is treated as staff.</div>
+                            <label class="form-label">Internal email domains</label>
+                            <textarea class="form-textarea" id="fInternalDomains" placeholder="mlfa.org&#10;subsidiary.org"></textarea>
+                            <div class="form-hint">One domain per line. Emails from these domains are treated as internal.</div>
                         </div>
                     </div>
                 </div>
 
-                <details class="modal-section modal-details">
-                    <summary class="modal-section-title">
-                        Internal reply bridge
-                        <span class="text-soft" style="font-family: var(--font); font-weight: 400; font-size: 11px; text-transform: none; letter-spacing: 0;">Advanced routing</span>
-                    </summary>
-                    <div class="check-stack">
-                        <label class="form-check">
-                            <input type="checkbox" id="fInternalBridge">
-                            <span>Enable internal reply bridge <span class="text-soft">— staff can relay replies back to the original sender</span></span>
-                        </label>
-                    </div>
-                    <div class="form-grid-2">
-                        <div class="form-group">
-                            <label class="form-label">Internal prefix</label>
-                            <input class="form-input" id="fInternalPrefix" placeholder="[INTERNAL]">
-                            <div class="form-hint">Keeps the reply internal.</div>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">External prefix</label>
-                            <input class="form-input" id="fExternalPrefix" placeholder="[EXTERNAL]">
-                            <div class="form-hint">Sends the reply to the original sender.</div>
-                        </div>
-                    </div>
-                </details>
+                <div class="modal-section" style="padding-bottom: 0;">
+                    <h4 class="modal-section-heading">Advanced</h4>
+                    <div class="form-hint" style="margin-top: -8px; margin-bottom: 4px;">Optional settings most teams never touch.</div>
 
-                <details class="modal-section modal-details">
-                    <summary class="modal-section-title">
-                        AI instructions
-                        <span class="text-soft" style="font-family: var(--font); font-weight: 400; font-size: 11px; text-transform: none; letter-spacing: 0;">The prompt GPT sees for every email in this inbox</span>
-                    </summary>
-                    <div class="form-group">
-                        <label class="form-label">System preamble</label>
-                        <textarea class="form-textarea" id="fPreamble"></textarea>
-                        <div class="form-hint">Intro text describing what this inbox does.</div>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Global guidelines</label>
-                        <textarea class="form-textarea" id="fGuidelines"></textarea>
-                        <div class="form-hint">Closing rules and the required JSON output format.</div>
-                    </div>
-                </details>
+                    <details class="disclosure">
+                        <summary>Internal reply bridge</summary>
+                        <div class="disclosure-body">
+                            <label class="toggle-row" style="border-bottom: none; padding-top: 0;">
+                                <input type="checkbox" id="fInternalBridge">
+                                <span>
+                                    <span class="toggle-label">Enable internal reply bridge</span>
+                                    <span class="toggle-desc">Staff can relay replies back to the original sender using [INTERNAL] or [EXTERNAL] prefixes.</span>
+                                </span>
+                            </label>
+                            <div class="form-grid-2" style="margin-top: 12px;">
+                                <div class="form-group">
+                                    <label class="form-label">Internal prefix</label>
+                                    <input class="form-input" id="fInternalPrefix" placeholder="[INTERNAL]">
+                                    <div class="form-hint">Keeps the reply internal.</div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">External prefix</label>
+                                    <input class="form-input" id="fExternalPrefix" placeholder="[EXTERNAL]">
+                                    <div class="form-hint">Sends the reply to the original sender.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </details>
+
+                    <details class="disclosure">
+                        <summary>AI behavior</summary>
+                        <div class="disclosure-body">
+                            <div class="form-hint" style="margin-top: 0; margin-bottom: 12px;">The prompt GPT sees for every email in this inbox.</div>
+                            <div class="form-group">
+                                <label class="form-label">System preamble</label>
+                                <textarea class="form-textarea" id="fPreamble"></textarea>
+                                <div class="form-hint">Intro describing what this inbox does.</div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Global guidelines</label>
+                                <textarea class="form-textarea" id="fGuidelines"></textarea>
+                                <div class="form-hint">Closing rules and the required JSON output format.</div>
+                            </div>
+                        </div>
+                    </details>
+                </div>
             </div>
 
             <div class="modal-footer">
+                <span class="footer-status" id="footerStatus"></span>
                 <button class="btn" onclick="closeModal()">Cancel</button>
-                <button class="btn primary" onclick="saveInbox()">Save changes</button>
+                <button class="btn primary" id="saveBtn" onclick="saveInbox()" disabled>Save changes</button>
             </div>
         </div>
     </div>
@@ -622,12 +697,49 @@
             document.getElementById('statsModal').style.display = 'none';
         }
 
+        // Dirty-state tracking: Save button stays disabled until the user actually
+        // changes something. Small but makes the modal feel real.
+        function markPristine() {
+            const btn = document.getElementById('saveBtn');
+            if (btn) btn.disabled = true;
+            const status = document.getElementById('footerStatus');
+            if (status) { status.textContent = ''; status.classList.remove('saved'); }
+        }
+        function markDirty() {
+            const btn = document.getElementById('saveBtn');
+            if (btn && btn.disabled) btn.disabled = false;
+            const status = document.getElementById('footerStatus');
+            if (status && status.classList.contains('saved')) {
+                status.textContent = '';
+                status.classList.remove('saved');
+            }
+        }
+        function attachDirtyListeners() {
+            const modal = document.getElementById('modal');
+            if (modal.dataset.dirtyBound) return;
+            modal.dataset.dirtyBound = '1';
+            modal.addEventListener('input', markDirty);
+            modal.addEventListener('change', markDirty);
+        }
+
+        function syncBackfillRadio() {
+            const rows = document.querySelectorAll('#backfillRadio .radio-row');
+            rows.forEach(r => {
+                const input = r.querySelector('input[type="radio"]');
+                r.classList.toggle('checked', input.checked);
+            });
+            const daysChecked = document.querySelector('#backfillRadio input[value="days"]').checked;
+            document.getElementById('fBackfill').disabled = !daysChecked;
+        }
+        document.addEventListener('change', (e) => {
+            if (e.target && e.target.name === 'backfillMode') syncBackfillRadio();
+        });
+
         function openAddModal() {
             document.getElementById('modalTitle').textContent = 'Add inbox';
             document.getElementById('fInboxId').value = '';
-            // Populate clone dropdown
             const cloneSel = document.getElementById('fCloneSource');
-            cloneSel.innerHTML = '<option value="">— Start blank —</option>' +
+            cloneSel.innerHTML = '<option value="">Start blank</option>' +
                 inboxes.map(ib => `<option value="${ib.id}">${escapeHtml(ib.display_name)}</option>`).join('');
             cloneSel.value = '';
             document.getElementById('cloneRow').style.display = 'block';
@@ -637,6 +749,8 @@
             document.getElementById('fBlocked').value = '';
             document.getElementById('fInternalDomains').value = '';
             document.getElementById('fBackfill').value = '2';
+            document.querySelector('#backfillRadio input[value="days"]').checked = true;
+            syncBackfillRadio();
             document.getElementById('fUseThreadContext').checked = true;
             document.getElementById('fInternalBridge').checked = false;
             document.getElementById('fInternalPrefix').value = '[INTERNAL]';
@@ -644,6 +758,8 @@
             document.getElementById('fPreamble').value = '';
             document.getElementById('fGuidelines').value = '';
             document.getElementById('modal').style.display = 'flex';
+            attachDirtyListeners();
+            markDirty(); // adding a new inbox is inherently a change
         }
 
         async function openEditModal(inboxId) {
@@ -652,14 +768,17 @@
             const ib = await res.json();
             document.getElementById('modalTitle').textContent = 'Edit inbox';
             document.getElementById('fInboxId').value = ib.id;
-            // Clone dropdown only makes sense when adding, hide it during edit
             document.getElementById('cloneRow').style.display = 'none';
             document.getElementById('fDisplayName').value = ib.display_name || '';
             document.getElementById('fEmail').value = ib.email_to_watch || '';
             document.getElementById('fAutomation').checked = !!ib.automation_mode;
             document.getElementById('fBlocked').value = (ib.blocked_senders || []).join('\n');
             document.getElementById('fInternalDomains').value = (ib.internal_domains || []).join('\n');
-            document.getElementById('fBackfill').value = ib.backfill_days ?? 2;
+            const days = ib.backfill_days ?? 2;
+            document.getElementById('fBackfill').value = days;
+            const mode = (days > 0) ? 'days' : 'none';
+            document.querySelector(`#backfillRadio input[value="${mode}"]`).checked = true;
+            syncBackfillRadio();
             document.getElementById('fUseThreadContext').checked = ib.use_thread_context !== false;
             document.getElementById('fInternalBridge').checked = !!ib.internal_reply_bridge_enabled;
             document.getElementById('fInternalPrefix').value = ib.internal_reply_internal_prefix || '[INTERNAL]';
@@ -667,6 +786,8 @@
             document.getElementById('fPreamble').value = ib.system_preamble || '';
             document.getElementById('fGuidelines').value = ib.global_guidelines || '';
             document.getElementById('modal').style.display = 'flex';
+            attachDirtyListeners();
+            markPristine(); // fresh edit: nothing has changed yet
         }
 
         function closeModal() {
@@ -675,6 +796,9 @@
 
         async function saveInbox() {
             const id = document.getElementById('fInboxId').value;
+            const btn = document.getElementById('saveBtn');
+            const status = document.getElementById('footerStatus');
+            const backfillMode = document.querySelector('#backfillRadio input[name="backfillMode"]:checked')?.value || 'days';
             const payload = {
                 display_name: document.getElementById('fDisplayName').value,
                 email_to_watch: document.getElementById('fEmail').value,
@@ -684,13 +808,12 @@
                 system_preamble: document.getElementById('fPreamble').value,
                 global_guidelines: document.getElementById('fGuidelines').value,
                 internal_domains: document.getElementById('fInternalDomains').value.split('\n').map(s => s.trim()).filter(Boolean),
-                backfill_days: parseInt(document.getElementById('fBackfill').value || '2', 10),
+                backfill_days: backfillMode === 'none' ? 0 : parseInt(document.getElementById('fBackfill').value || '2', 10),
                 use_thread_context: document.getElementById('fUseThreadContext').checked,
                 internal_reply_bridge_enabled: document.getElementById('fInternalBridge').checked,
                 internal_reply_internal_prefix: document.getElementById('fInternalPrefix').value,
                 internal_reply_external_prefix: document.getElementById('fExternalPrefix').value,
             };
-            // If Clone-from is selected on a new inbox, use the clone endpoint
             const cloneSource = document.getElementById('fCloneSource').value;
             let url, method;
             if (id) {
@@ -703,16 +826,31 @@
                 url = '/api/inboxes';
                 method = 'POST';
             }
+            btn.disabled = true;
+            if (status) { status.textContent = 'Saving…'; status.classList.remove('saved'); }
             const res = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
             });
             if (res.ok) {
-                closeModal();
-                notify('Saved');
-                await loadInboxes();
+                if (id) {
+                    // Edit: stay open and flash a "Saved" indicator like real SaaS
+                    if (status) { status.textContent = '✓ Saved'; status.classList.add('saved'); }
+                    setTimeout(() => {
+                        if (status && status.classList.contains('saved')) { status.textContent = ''; status.classList.remove('saved'); }
+                    }, 2500);
+                    markPristine();
+                    await loadInboxes();
+                } else {
+                    // New inbox: close modal so user sees it in the table
+                    closeModal();
+                    notify('Inbox created');
+                    await loadInboxes();
+                }
             } else {
+                if (status) { status.textContent = ''; status.classList.remove('saved'); }
+                btn.disabled = false;
                 notify('Save failed', 'error');
             }
         }
