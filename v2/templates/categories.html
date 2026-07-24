@@ -9,6 +9,11 @@
     <script src="/static/security.js?v=2"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Nunito+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="/static/shared.css?v=12">
     <style>
+        /* Category modal top bar — name is the anchor */
+        .settings-modal .cat-topbar { padding: 16px 24px; align-items: flex-start; }
+        .settings-modal .cat-topbar-title { min-width: 0; }
+        .settings-modal .cat-topbar h3 { font-weight: 600; letter-spacing: -0.01em; margin: 0; }
+
         /* Compact multi-select recipient picker */
         .recipient-picker { display: flex; flex-direction: column; gap: 6px; }
         .recipient-search { height: 34px !important; font-size: 13px; }
@@ -80,17 +85,19 @@
     </div>
 
     <div class="modal-backdrop" id="modal" style="display:none;">
-        <div class="modal settings-modal">
-            <div class="modal-topbar">
-                <div>
-                    <h3 class="modal-title" id="modalTitle">Edit category</h3>
+        <div class="modal settings-modal wide">
+            <div class="modal-topbar cat-topbar">
+                <div class="cat-topbar-title">
+                    <h3 class="modal-title" id="modalTitle" style="font-size: 20px;">
+                        <span id="modalCategoryLabel">New category</span>
+                    </h3>
                     <div class="meta-line" id="keyMetaLine" style="display:none;">
-                        <code id="keyMetaValue">donor</code>
-                        <span class="lock">locked</span>
+                        Category ID: <code id="keyMetaValue">donor</code>
+                        <span class="lock">·  Locked</span>
                     </div>
                 </div>
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <label class="status-check" id="activeStatus" for="fActive">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <label class="status-check" id="activeStatus">
                         <input type="checkbox" id="fActive">
                         <span id="activeStatusText">Active</span>
                     </label>
@@ -102,6 +109,7 @@
                 <input type="hidden" id="fPriority">
 
                 <div class="modal-section">
+                    <h4 class="modal-section-heading">General</h4>
                     <div class="form-grid-2">
                         <div class="form-group" style="margin-bottom: 0;">
                             <label class="form-label">Display name</label>
@@ -120,14 +128,14 @@
                 </div>
 
                 <div class="modal-section">
-                    <h4 class="modal-section-heading">Classification prompt</h4>
-                    <textarea class="form-textarea" id="fRuleText" style="min-height: 96px;" placeholder="Describe the emails that should match this category. Include example situations."></textarea>
+                    <h4 class="modal-section-heading">AI classification<span class="info-tip" style="margin-left:6px;">i<span class="info-content">GPT reads this to decide when an email belongs here. Be specific. Include a few example situations so the model learns edge cases.</span></span></h4>
+                    <textarea class="form-textarea" id="fRuleText" style="min-height: 200px;" placeholder="Describe the emails that should match this category, in plain language.&#10;&#10;Example: Emails about donations, tax receipts, matching-gift programs, or planned giving. Include grants from foundations if the sender explicitly names one."></textarea>
                 </div>
 
                 <div class="modal-section">
                     <h4 class="modal-section-heading">Forwarding</h4>
                     <div class="recipient-picker">
-                        <input class="form-input recipient-search" id="fRecipSearch" placeholder="Search recipients" oninput="filterRecipients()">
+                        <input class="form-input recipient-search" id="fRecipSearch" placeholder="Search recipients by name or email" oninput="filterRecipients()">
                         <div class="recipient-list" id="fForwardList"></div>
                     </div>
                 </div>
@@ -136,15 +144,21 @@
                     <h4 class="modal-section-heading">Reply</h4>
                     <div class="form-grid-2">
                         <div class="form-group" style="margin-bottom: 0;">
-                            <label class="form-label">Template</label>
+                            <label class="form-label">Default template</label>
                             <select class="form-select" id="fReplySelect">
                                 <option value="">Don't send an auto-reply</option>
                             </select>
                         </div>
                         <div class="form-group" style="margin-bottom: 0;">
-                            <label class="form-label">Amount threshold ($)</label>
-                            <input class="form-input" type="number" id="fAmount" placeholder="Optional">
+                            <label class="form-label">Personal reply template<span class="info-tip" style="margin-left:6px;">i<span class="info-content">Used when GPT detects the email has personal details (a specific case or referral). Falls back to the default reply if empty.</span></span></label>
+                            <select class="form-select" id="fReplyPersonalSelect">
+                                <option value="">Same as default</option>
+                            </select>
                         </div>
+                    </div>
+                    <div class="form-group" style="margin-top: 12px; max-width: 240px; margin-bottom: 0;">
+                        <label class="form-label">Amount threshold ($)<span class="info-tip" style="margin-left:6px;">i<span class="info-content">Only forward when GPT detects a dollar amount at or above this. Used for donor and invoice rules. Leave blank if amount doesn't matter.</span></span></label>
+                        <input class="form-input" type="number" id="fAmount" placeholder="Optional">
                     </div>
                 </div>
 
@@ -154,35 +168,30 @@
                         <label class="toggle-row">
                             <input type="checkbox" id="fMarkRead">
                             <span class="toggle-label">Mark as read after handling</span>
+                            <span class="info-tip" style="margin-left:auto;">i<span class="info-content">Mark the email as read in Outlook once the system has finished processing it. Uncheck if you want the email to stay bold so staff notice it.</span></span>
                         </label>
                         <label class="toggle-row">
                             <input type="checkbox" id="fAutoReply">
                             <span class="toggle-label">Send the auto-reply</span>
+                            <span class="info-tip" style="margin-left:auto;">i<span class="info-content">Master switch for replies. If off, no auto-reply goes out even if a template is selected above.</span></span>
                         </label>
                         <label class="toggle-row">
                             <input type="checkbox" id="fSafeguard">
                             <span class="toggle-label">Reply only once per thread</span>
+                            <span class="info-tip" style="margin-left:auto;">i<span class="info-content">Prevents duplicate auto-replies when a sender follows up. Recommended for any category that sends a reply.</span></span>
                         </label>
                         <label class="toggle-row">
                             <input type="checkbox" id="fSkipInternal">
                             <span class="toggle-label">Skip when sender is internal</span>
+                            <span class="info-tip" style="margin-left:auto;">i<span class="info-content">Don't apply this category when the email is from an @mlfa.org address. Prevents replying to staff forwards.</span></span>
                         </label>
                         <label class="toggle-row danger-row">
                             <input type="checkbox" id="fDeleteImmediately">
                             <span class="toggle-label">Delete matching emails immediately</span>
+                            <span class="info-tip" style="margin-left:auto;">i<span class="info-content">Send matching emails straight to Trash instead of moving to the destination folder. Use for spam-like categories only.</span></span>
                         </label>
                     </div>
                 </div>
-
-                <details class="disclosure">
-                    <summary>Personal reply template</summary>
-                    <div class="disclosure-body">
-                        <select class="form-select" id="fReplyPersonalSelect">
-                            <option value="">Same as default</option>
-                        </select>
-                        <div class="form-hint" style="margin-top: 6px;">Used when GPT detects the email has personal details. Falls back to the default reply if empty.</div>
-                    </div>
-                </details>
             </div>
 
             <div class="modal-footer">
@@ -262,6 +271,9 @@
         }
         document.addEventListener('change', (e) => {
             if (e.target && e.target.id === 'fActive') syncActiveStatus();
+        });
+        document.addEventListener('input', (e) => {
+            if (e.target && e.target.id === 'fLabel') syncCategoryTitle();
         });
 
         // Dirty-state Save button
@@ -396,8 +408,14 @@
             notify('Priorities updated');
         }
 
+        function syncCategoryTitle() {
+            const label = (document.getElementById('fLabel').value || '').trim();
+            const id = document.getElementById('fRuleId').value;
+            document.getElementById('modalCategoryLabel').textContent = label || (id ? 'Untitled category' : 'New category');
+        }
+
         function openAddModal() {
-            document.getElementById('modalTitle').textContent = 'Add category';
+            document.getElementById('modalCategoryLabel').textContent = 'New category';
             document.getElementById('fRuleId').value = '';
             document.getElementById('fKey').value = '';
             document.getElementById('fLabel').value = '';
@@ -430,7 +448,7 @@
             const res = await fetch(`/api/rules/${ruleId}`);
             if (!res.ok) return;
             const r = await res.json();
-            document.getElementById('modalTitle').textContent = 'Edit category';
+            document.getElementById('modalCategoryLabel').textContent = r.label || r.key || 'Untitled category';
             document.getElementById('fRuleId').value = r.id;
             document.getElementById('fKey').value = r.key || '';
             document.getElementById('fLabel').value = r.label || '';

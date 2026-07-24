@@ -556,7 +556,7 @@ input[type="checkbox"], input[type="radio"] {
     background: var(--panel);
     border-radius: 6px;
 }
-.settings-modal.wide { max-width: 780px; }
+.settings-modal.wide { max-width: 900px; }
 .settings-modal .modal-topbar {
     display: flex;
     align-items: center;
