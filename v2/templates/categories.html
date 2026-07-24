@@ -7,135 +7,11 @@
     <link rel="icon" type="image/png" href="/mlfa-favicon.png?v=2">
     <meta name="csrf-token" content="{{ csrf_token }}">
     <script src="/static/security.js?v=2"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Nunito+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="/static/shared.css?v=12">
+    <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Nunito+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="/static/shared.css?v=13">
     <style>
-        /* ============================================================
-           Category modal — dense tabbed admin form.
-           Scoped to .cat-modal so no other settings modal is affected.
-           Same palette as the rest of the hub, tighter + squarer:
-           28px controls, 3px radii, hairline rules, label-left rows.
-           ============================================================ */
-        .settings-modal.cat-modal { max-width: 760px; border-radius: 4px; }
-
-        /* Header: title row + tab strip share one block */
-        .cat-modal .modal-topbar {
-            display: block;
-            padding: 12px 18px 0;
-            border-bottom: 1px solid var(--line);
-        }
-        .cat-modal .cat-head {
-            display: flex; align-items: center; justify-content: space-between;
-            gap: 12px;
-        }
-        .cat-modal .modal-title {
-            display: flex; align-items: baseline; gap: 8px;
-            min-width: 0;
-            font-size: 14.5px; font-weight: 600; letter-spacing: 0;
-        }
-        .cat-modal .cat-id {
-            display: inline-flex; align-items: center; gap: 6px;
-            font-size: 11.5px; font-weight: 400; color: var(--text-muted);
-        }
-        .cat-modal .cat-id code {
-            background: var(--panel-2);
-            padding: 1px 5px; border-radius: 2px;
-            font-family: 'SF Mono', Menlo, monospace; font-size: 11px;
-            color: var(--text);
-        }
-        .cat-modal .cat-id .lock { color: var(--text-soft); font-size: 11px; }
-        .cat-modal .cat-head-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-
-        /* Tab strip — underline active state, sits on the header rule */
-        .cat-modal .cat-tabs { display: flex; gap: 2px; margin-top: 10px; }
-        .cat-modal .cat-tab {
-            display: inline-flex; align-items: center; gap: 6px;
-            appearance: none; background: none; border: none;
-            border-bottom: 2px solid transparent;
-            margin-bottom: -1px;
-            padding: 6px 10px 7px;
-            font-family: var(--font); font-size: 12.5px; font-weight: 500;
-            color: var(--text-muted); cursor: pointer;
-            transition: color 0.12s ease, border-color 0.12s ease;
-        }
-        .cat-modal .cat-tab:hover { color: var(--text); }
-        .cat-modal .cat-tab.active {
-            color: var(--text); font-weight: 600;
-            border-bottom-color: var(--mlfa-teal);
-        }
-        .cat-modal .tab-badge {
-            font-size: 10.5px; line-height: 1.5;
-            font-variant-numeric: tabular-nums;
-            color: var(--text-muted);
-            background: var(--panel-2);
-            padding: 0 5px; border-radius: 2px;
-        }
-        .cat-modal .cat-tab.active .tab-badge { color: var(--text); }
-        .cat-modal .tab-badge:empty { display: none; }
-        .cat-modal .tab-dot {
-            width: 5px; height: 5px; border-radius: 50%;
-            background: var(--danger); display: none;
-        }
-        .cat-modal .tab-dot.on { display: block; }
-
-        /* Body — fixed floor so switching tabs doesn't resize the modal */
-        .cat-modal .modal-body { padding: 16px 18px; min-height: 290px; }
-        .cat-modal .tab-panel { display: none; }
-        .cat-modal .tab-panel.active { display: block; }
-
-        /* Label-left field rows. Gutter is wide enough that a label plus its
-           info icon stays on one line. */
-        .cat-modal .field {
-            display: grid;
-            grid-template-columns: 142px minmax(0, 1fr);
-            column-gap: 14px; align-items: center;
-            padding: 4px 0;
-        }
-        .cat-modal .field > .form-label {
-            display: flex; align-items: center; gap: 5px;
-            margin: 0;
-            font-size: 12.5px; font-weight: 500;
-            text-transform: none; letter-spacing: 0;
-            color: var(--text-muted);
-        }
-        .cat-modal .field > .form-label .info-tip { margin-left: 0; }
-        .cat-modal .field.field-top { align-items: start; }
-        .cat-modal .field.field-top > .form-label { padding-top: 6px; }
-        .cat-modal .field > .field-control { min-width: 0; }
-
-        /* Controls sized to their content, not to the modal */
-        .cat-modal .form-input, .cat-modal .form-select {
-            height: 28px; padding: 0 9px;
-            font-size: 12.5px; border-radius: 3px;
-        }
-        .cat-modal .form-textarea {
-            padding: 8px 9px;
-            font-size: 12.5px; line-height: 1.55; border-radius: 3px;
-        }
-        .cat-modal .form-hint { font-size: 11px; margin-top: 4px; }
-        .cat-modal .w-key { max-width: 180px; }
-        .cat-modal .w-amt { max-width: 120px; }
-        .cat-modal .w-sel { max-width: 300px; }
-        .cat-modal .w-txt { max-width: 380px; }
-
-        /* Small uppercase sub-heading inside a tab. Carries its own separation,
-           so it never needs a divider above it. */
-        .cat-modal .sub-head {
-            display: flex; align-items: center;
-            margin: 16px 0 8px;
-            font-size: 10.5px; font-weight: 700;
-            letter-spacing: 0.09em; text-transform: uppercase;
-            color: var(--text-soft);
-        }
-        .cat-modal .divider {
-            border: none; border-top: 1px solid var(--line-soft);
-            margin: 14px 0 12px;
-        }
-        .cat-modal .toggle-row { padding: 5px 0; gap: 9px; }
-        .cat-modal .toggle-row input[type="checkbox"] { width: 13px; height: 13px; }
-        .cat-modal .toggle-row .toggle-label { font-size: 12.5px; }
-        .cat-modal .toggle-list .toggle-row { border-bottom: none; }
-        .cat-modal .modal-footer { padding: 10px 18px; border-top: none; }
-        .cat-modal .modal-footer .btn { min-height: 30px; font-size: 12px; }
+        /* Category-modal extras on top of the shared .dense-modal system
+           (see shared.css). Only the recipient picker and the rules table
+           below are specific to this page. */
 
         /* Recipient picker — tabular rows, search + selected count toolbar */
         .picker-toolbar {
@@ -148,14 +24,14 @@
             font-variant-numeric: tabular-nums;
             margin-left: auto;
         }
-        .cat-modal .recipient-list {
+        .dense-modal .recipient-list {
             max-height: 216px;
             overflow-y: auto;
             border: 1px solid var(--line);
             border-radius: 3px;
             background: var(--panel);
         }
-        .cat-modal .recipient-list .rp-item {
+        .dense-modal .recipient-list .rp-item {
             display: grid;
             grid-template-columns: 13px minmax(0, 1fr) minmax(0, auto);
             gap: 10px; align-items: center;
@@ -164,12 +40,12 @@
             border-bottom: 1px solid var(--line-soft);
             cursor: pointer;
         }
-        .cat-modal .recipient-list .rp-item:last-child { border-bottom: none; }
-        .cat-modal .recipient-list .rp-item:hover { background: var(--panel-hover); }
-        .cat-modal .recipient-list .rp-item.hidden { display: none; }
-        .cat-modal .recipient-list .rp-item input[type="checkbox"] { width: 13px; height: 13px; margin: 0; }
-        .cat-modal .recipient-list .rp-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .cat-modal .recipient-list .rp-email {
+        .dense-modal .recipient-list .rp-item:last-child { border-bottom: none; }
+        .dense-modal .recipient-list .rp-item:hover { background: var(--panel-hover); }
+        .dense-modal .recipient-list .rp-item.hidden { display: none; }
+        .dense-modal .recipient-list .rp-item input[type="checkbox"] { width: 13px; height: 13px; margin: 0; }
+        .dense-modal .recipient-list .rp-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .dense-modal .recipient-list .rp-email {
             color: var(--text-muted); font-size: 11.5px;
             font-family: 'SF Mono', Menlo, monospace;
             overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -221,34 +97,35 @@
         </main>
     </div>
 
-    <div class="modal-backdrop" id="modal" style="display:none;">
-        <div class="modal settings-modal cat-modal">
-            <div class="modal-topbar cat-topbar">
-                <div class="cat-head">
+    <div class="modal-backdrop dense-backdrop" id="modal" style="display:none;">
+        <div class="modal settings-modal dense-modal">
+            <div class="modal-topbar">
+                <div class="dm-head">
                     <h3 class="modal-title" id="modalTitle">
                         <span id="modalCategoryLabel">New category</span>
-                        <span class="cat-id" id="keyMetaLine" style="display:none;">
+                        <span class="dm-id" id="keyMetaLine" style="display:none;">
                             <code id="keyMetaValue">donor</code>
                             <span class="lock">Locked</span>
                         </span>
                     </h3>
-                    <div class="cat-head-right">
+                    <div class="dm-head-right">
                         <label class="status-check" id="activeStatus">
                             <input type="checkbox" id="fActive">
                             <span id="activeStatusText">Active</span>
                         </label>
+                        <span class="info-tip">i<span class="info-content">Inactive categories are skipped entirely — GPT will not classify anything into them, and no forwarding or replies happen. The category and its settings are kept.</span></span>
                         <button class="modal-close" onclick="closeModal()" aria-label="Close">×</button>
                     </div>
                 </div>
-                <div class="cat-tabs" role="tablist">
-                    <button type="button" class="cat-tab active" data-tab="general" onclick="switchCatTab('general')">General</button>
-                    <button type="button" class="cat-tab" data-tab="forwarding" onclick="switchCatTab('forwarding')">
+                <div class="dm-tabs" role="tablist">
+                    <button type="button" class="dm-tab active" data-tab="general">General</button>
+                    <button type="button" class="dm-tab" data-tab="forwarding">
                         Forwarding<span class="tab-badge" id="tabFwdBadge"></span>
                     </button>
-                    <button type="button" class="cat-tab" data-tab="reply" onclick="switchCatTab('reply')">
+                    <button type="button" class="dm-tab" data-tab="reply">
                         Reply<span class="tab-badge" id="tabReplyBadge"></span>
                     </button>
-                    <button type="button" class="cat-tab" data-tab="behavior" onclick="switchCatTab('behavior')">
+                    <button type="button" class="dm-tab" data-tab="behavior">
                         Behavior<span class="tab-dot" id="tabBehaviorDot"></span>
                     </button>
                 </div>
@@ -260,18 +137,18 @@
                 <!-- General: identity + the classification prompt -->
                 <div class="tab-panel active" data-panel="general">
                     <div class="field">
-                        <label class="form-label" for="fLabel">Display name</label>
+                        <label class="form-label" for="fLabel">Display name<span class="info-tip">i<span class="info-content">The name staff see in this list and across the hub. Safe to rename at any time — it has no effect on how emails are classified.</span></span></label>
                         <input class="form-input w-txt" id="fLabel" placeholder="Donor inquiry">
                     </div>
                     <div class="field field-top" id="newKeyRow" style="display:none;">
-                        <label class="form-label" for="fKey">Internal key</label>
+                        <label class="form-label" for="fKey">Internal key<span class="info-tip">i<span class="info-content">The identifier used in the database, the audit log, and GPT’s output. Lowercase letters and underscores only. It cannot be changed once the category exists.</span></span></label>
                         <div class="field-control">
                             <input class="form-input w-key" id="fKey" placeholder="donor">
                             <div class="form-hint">Lowercase and underscores only. Locked after creation.</div>
                         </div>
                     </div>
                     <div class="field">
-                        <label class="form-label" for="fFolder">Move to folder</label>
+                        <label class="form-label" for="fFolder">Move to folder<span class="info-tip">i<span class="info-content">Outlook folder the email is filed into after handling. Use a slash for subfolders, e.g. Donor_Related/Grant. Leave blank to leave the email where it is.</span></span></label>
                         <input class="form-input w-txt" id="fFolder" placeholder="Donor_Related/Grant">
                     </div>
                     <div class="sub-head">Classification prompt<span class="info-tip">i<span class="info-content">GPT reads this to decide when an email belongs here. Be specific. Include a few example situations so the model learns edge cases.</span></span></div>
@@ -280,6 +157,7 @@
 
                 <!-- Forwarding: who gets a copy, and the amount gate -->
                 <div class="tab-panel" data-panel="forwarding">
+                    <div class="sub-head">Recipients<span class="info-tip">i<span class="info-content">Everyone checked here gets a copy of each email matching this category. Add or remove people on the Recipients page; inactive recipients are hidden unless already selected.</span></span></div>
                     <div class="picker-toolbar">
                         <input class="form-input recipient-search" id="fRecipSearch" placeholder="Search recipients by name or email" oninput="filterRecipients()">
                         <span class="picker-meta"><span id="fwdSelectedCount">0</span> selected</span>
@@ -298,7 +176,7 @@
                 <!-- Reply: templates + the switches that govern sending -->
                 <div class="tab-panel" data-panel="reply">
                     <div class="field">
-                        <label class="form-label" for="fReplySelect">Default template</label>
+                        <label class="form-label" for="fReplySelect">Default template<span class="info-tip">i<span class="info-content">The auto-reply sent back to the sender when this category matches. Pick “Don’t send an auto-reply” to stay silent. Manage the wording on the Reply templates page.</span></span></label>
                         <select class="form-select w-sel" id="fReplySelect">
                             <option value="">Don't send an auto-reply</option>
                         </select>
@@ -346,7 +224,6 @@
                             <span class="info-tip" style="margin-left:auto;">i<span class="info-content">Send matching emails straight to Trash instead of moving to the destination folder. Use for spam-like categories only.</span></span>
                         </label>
                     </div>
-                    <div class="form-hint">Matching emails go straight to Trash instead of the destination folder.</div>
                 </div>
             </div>
 
@@ -418,16 +295,10 @@
             });
         }
 
-        // --- Tabs -------------------------------------------------------
-        // Panels stay in the DOM when hidden, so saveRule() still reads every
-        // field regardless of which tab is open.
+        // Tab clicks are handled globally by activateDenseTab (_settings_nav.html).
+        // This only resets to the first tab when the modal opens.
         function switchCatTab(name) {
-            document.querySelectorAll('.cat-modal .cat-tab').forEach(t => {
-                t.classList.toggle('active', t.dataset.tab === name);
-            });
-            document.querySelectorAll('.cat-modal .tab-panel').forEach(p => {
-                p.classList.toggle('active', p.dataset.panel === name);
-            });
+            activateDenseTab(document.querySelector('#modal .dense-modal'), name);
         }
 
         // Tabs hide state, so surface it in the tab strip: recipient count,

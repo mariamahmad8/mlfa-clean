@@ -8,7 +8,7 @@
     <meta name="csrf-token" content="{{ csrf_token }}">
     <script>window.CURRENT_ROLE = "{{ session.get('role', '') }}";</script>
     <script src="/static/security.js?v=2"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Nunito+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="/static/shared.css?v=12">
+    <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Nunito+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="/static/shared.css?v=13">
     <style>
         /* Stats — restrained tabular dashboard, no icon-box hero cards */
         #statsModal .modal { max-width: 780px; }
@@ -215,128 +215,146 @@
         </div>
     </div>
 
-    <div class="modal-backdrop" id="modal" style="display:none;">
-        <div class="modal settings-modal">
+    <div class="modal-backdrop dense-backdrop" id="modal" style="display:none;">
+        <div class="modal settings-modal dense-modal">
             <div class="modal-topbar">
-                <h3 class="modal-title" id="modalTitle">Edit inbox</h3>
-                <button class="modal-close" onclick="closeModal()" aria-label="Close">×</button>
+                <div class="dm-head">
+                    <h3 class="modal-title">
+                        <span id="modalTitle">Edit inbox</span>
+                        <span class="dm-id" id="inboxMetaLine" style="display:none;">
+                            <code id="inboxMetaValue">info@mlfa.org</code>
+                        </span>
+                    </h3>
+                    <div class="dm-head-right">
+                        <button class="modal-close" onclick="closeModal()" aria-label="Close">×</button>
+                    </div>
+                </div>
+                <div class="dm-tabs" role="tablist">
+                    <button type="button" class="dm-tab active" data-tab="general">General</button>
+                    <button type="button" class="dm-tab" data-tab="automation">
+                        Automation<span class="tab-badge" id="tabAutoBadge"></span>
+                    </button>
+                    <button type="button" class="dm-tab" data-tab="filters">
+                        Filters<span class="tab-badge" id="tabFiltersBadge"></span>
+                    </button>
+                    <button type="button" class="dm-tab" data-tab="bridge">
+                        Reply bridge<span class="tab-badge" id="tabBridgeBadge"></span>
+                    </button>
+                    <button type="button" class="dm-tab" data-tab="prompt">AI prompt</button>
+                </div>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="fInboxId">
 
-                <div class="modal-section" id="cloneRow">
-                    <h4 class="modal-section-heading">Start from</h4>
-                    <div class="form-group">
-                        <label class="form-label">Clone from an existing inbox <span class="text-soft">(optional)</span></label>
-                        <select class="form-select" id="fCloneSource">
-                            <option value="">Start blank</option>
-                        </select>
-                        <div class="form-hint">Copies all category rules, recipients, and templates from the selected inbox.</div>
+                <!-- General: which mailbox, and what to call it -->
+                <div class="tab-panel active" data-panel="general">
+                    <div class="field field-top" id="cloneRow" style="display:none;">
+                        <label class="form-label" for="fCloneSource">Clone from<span class="info-tip">i<span class="info-content">Copies every category rule, recipient, and reply template from the chosen inbox into this new one. The mailbox itself is untouched, and later changes to the source inbox do not carry over.</span></span></label>
+                        <div class="field-control">
+                            <select class="form-select w-sel" id="fCloneSource">
+                                <option value="">Start blank</option>
+                            </select>
+                            <div class="form-hint">Optional. Saves rebuilding the same rules by hand.</div>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="form-label" for="fEmail">Email address<span class="info-tip">i<span class="info-content">The mailbox the system signs into and watches. It must match the Microsoft 365 account exactly — a typo means nothing is ever polled.</span></span></label>
+                        <input class="form-input w-txt" id="fEmail" placeholder="info@mlfa.org">
+                    </div>
+                    <div class="field">
+                        <label class="form-label" for="fDisplayName">Display name<span class="info-tip">i<span class="info-content">The label shown in the hub, the inbox list, and the category picker. Cosmetic only — renaming it changes nothing about how email is handled.</span></span></label>
+                        <input class="form-input w-txt" id="fDisplayName" placeholder="MLFA Info Inbox">
                     </div>
                 </div>
 
-                <div class="modal-section">
-                    <h4 class="modal-section-heading">Basics</h4>
-                    <div class="form-grid-2">
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <label class="form-label">Email address</label>
-                            <input class="form-input" id="fEmail" placeholder="info@mlfa.org">
-                        </div>
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <label class="form-label">Display name</label>
-                            <input class="form-input" id="fDisplayName" placeholder="MLFA Info Inbox">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="modal-section">
-                    <h4 class="modal-section-heading">Automation</h4>
-                    <div class="panel">
+                <!-- Automation: how much the system does on its own -->
+                <div class="tab-panel" data-panel="automation">
+                    <div class="toggle-list">
                         <label class="toggle-row">
                             <input type="checkbox" id="fAutomation">
-                            <span>
-                                <span class="toggle-label">Automatically process emails</span>
-                                <span class="toggle-desc">The AI acts on new emails without waiting for a person to approve each one.</span>
-                            </span>
+                            <span class="toggle-label">Automatically process emails</span>
+                            <span class="info-tip" style="margin-left:auto;">i<span class="info-content">When on, the AI files, forwards, and replies to new email without waiting for anyone. When off, every email waits in the hub for a person to approve or reject it.</span></span>
                         </label>
                         <label class="toggle-row">
                             <input type="checkbox" id="fUseThreadContext">
-                            <span>
-                                <span class="toggle-label">Use conversation history</span>
-                                <span class="toggle-desc">The AI considers previous messages in the same thread. Recommended for follow-ups.</span>
-                            </span>
+                            <span class="toggle-label">Use conversation history</span>
+                            <span class="info-tip" style="margin-left:auto;">i<span class="info-content">Lets the AI read earlier messages in the same thread before deciding. Recommended — it stops follow-ups like “any update?” from being misclassified.</span></span>
                         </label>
-                        <div class="panel-row">
-                            <span class="panel-row-label">Import existing email:</span>
-                            <span>Last</span>
-                            <input class="inline-num" type="number" id="fBackfill" min="0" max="90" value="2">
-                            <span>days</span>
-                            <span class="panel-row-hint">Only on first connection</span>
+                    </div>
+                    <hr class="divider">
+                    <div class="field field-top">
+                        <label class="form-label" for="fBackfill">Import existing email<span class="info-tip">i<span class="info-content">How far back to reach when this inbox first connects. Set 0 to start clean and only handle mail that arrives from now on. Higher numbers mean a larger first run.</span></span></label>
+                        <div class="field-control">
+                            <div class="inline-row">
+                                <span>Last</span>
+                                <input class="inline-num" type="number" id="fBackfill" min="0" max="90" value="2">
+                                <span>days</span>
+                            </div>
+                            <div class="form-hint">Applies only on the first connection, not on later saves.</div>
                         </div>
                     </div>
                 </div>
 
-                <div class="modal-section">
-                    <h4 class="modal-section-heading">Filters</h4>
-                    <div class="form-grid-2">
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <label class="form-label">Ignore senders</label>
-                            <textarea class="form-textarea" id="fBlocked" placeholder="person@example.com&#10;newsletter@company.com" style="min-height: 84px;"></textarea>
+                <!-- Filters: who gets ignored, who counts as staff -->
+                <div class="tab-panel" data-panel="filters">
+                    <div class="field field-top">
+                        <label class="form-label" for="fBlocked">Ignore senders<span class="info-tip">i<span class="info-content">Email from these addresses is skipped entirely — not classified, forwarded, or replied to. Use it for newsletters and no-reply robots. One address per line.</span></span></label>
+                        <div class="field-control">
+                            <textarea class="form-textarea" id="fBlocked" placeholder="person@example.com&#10;newsletter@company.com" style="min-height: 92px;"></textarea>
                             <div class="form-hint">One address per line.</div>
                         </div>
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <label class="form-label">Internal email domains</label>
-                            <textarea class="form-textarea" id="fInternalDomains" placeholder="mlfa.org&#10;subsidiary.org" style="min-height: 84px;"></textarea>
+                    </div>
+                    <div class="field field-top">
+                        <label class="form-label" for="fInternalDomains">Internal domains<span class="info-tip">i<span class="info-content">Senders at these domains count as staff. Categories with “Skip when sender is internal” turned on ignore their email, which stops the system replying to your own team’s forwards. One domain per line, no @.</span></span></label>
+                        <div class="field-control">
+                            <textarea class="form-textarea" id="fInternalDomains" placeholder="mlfa.org&#10;subsidiary.org" style="min-height: 92px;"></textarea>
                             <div class="form-hint">One domain per line. Treated as staff.</div>
                         </div>
                     </div>
                 </div>
 
-                <div class="modal-section" style="padding-bottom: 0;">
-                    <h4 class="modal-section-heading">Advanced</h4>
-                    <div class="form-hint" style="margin-top: -8px; margin-bottom: 4px;">Optional settings most teams never touch.</div>
-
-                    <details class="disclosure">
-                        <summary>Internal reply bridge</summary>
-                        <div class="disclosure-body">
-                            <label class="toggle-row" style="border-bottom: none; padding-top: 0;">
-                                <input type="checkbox" id="fInternalBridge">
-                                <span>
-                                    <span class="toggle-label">Enable internal reply bridge</span>
-                                    <span class="toggle-desc">Staff can relay replies back to the original sender using [INTERNAL] or [EXTERNAL] prefixes.</span>
-                                </span>
-                            </label>
-                            <div class="form-grid-2" style="margin-top: 12px;">
-                                <div class="form-group">
-                                    <label class="form-label">Internal prefix</label>
-                                    <input class="form-input" id="fInternalPrefix" placeholder="[INTERNAL]">
-                                    <div class="form-hint">Keeps the reply internal.</div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">External prefix</label>
-                                    <input class="form-input" id="fExternalPrefix" placeholder="[EXTERNAL]">
-                                    <div class="form-hint">Sends the reply to the original sender.</div>
-                                </div>
-                            </div>
+                <!-- Reply bridge: staff relaying replies through the system -->
+                <div class="tab-panel" data-panel="bridge">
+                    <div class="toggle-list">
+                        <label class="toggle-row">
+                            <input type="checkbox" id="fInternalBridge">
+                            <span class="toggle-label">Enable internal reply bridge</span>
+                            <span class="info-tip" style="margin-left:auto;">i<span class="info-content">Lets staff answer a forwarded email by replying to the system instead of the sender. The prefix at the start of their reply decides whether it stays internal or goes out.</span></span>
+                        </label>
+                    </div>
+                    <hr class="divider">
+                    <div class="field field-top">
+                        <label class="form-label" for="fInternalPrefix">Internal prefix<span class="info-tip">i<span class="info-content">A staff reply starting with this stays inside the organization — the original sender never receives it. Keep the brackets so it is hard to type by accident.</span></span></label>
+                        <div class="field-control">
+                            <input class="form-input w-key" id="fInternalPrefix" placeholder="[INTERNAL]">
+                            <div class="form-hint">Keeps the reply internal.</div>
                         </div>
-                    </details>
-
-                    <details class="disclosure">
-                        <summary>AI behavior</summary>
-                        <div class="disclosure-body">
-                            <div class="form-hint" style="margin-top: 0; margin-bottom: 12px;">The prompt GPT sees for every email in this inbox.</div>
-                            <div class="form-group">
-                                <label class="form-label">System preamble</label>
-                                <textarea class="form-textarea" id="fPreamble"></textarea>
-                                <div class="form-hint">Intro describing what this inbox does.</div>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Global guidelines</label>
-                                <textarea class="form-textarea" id="fGuidelines"></textarea>
-                                <div class="form-hint">Closing rules and the required JSON output format.</div>
-                            </div>
+                    </div>
+                    <div class="field field-top">
+                        <label class="form-label" for="fExternalPrefix">External prefix<span class="info-tip">i<span class="info-content">A staff reply starting with this is sent on to the original sender, with the prefix stripped. Treat it as “this leaves the building”.</span></span></label>
+                        <div class="field-control">
+                            <input class="form-input w-key" id="fExternalPrefix" placeholder="[EXTERNAL]">
+                            <div class="form-hint">Sends the reply to the original sender.</div>
                         </div>
-                    </details>
+                    </div>
+                </div>
+
+                <!-- AI prompt: the wrapper around every classification call -->
+                <div class="tab-panel" data-panel="prompt">
+                    <div class="field field-top">
+                        <label class="form-label" for="fPreamble">System preamble<span class="info-tip">i<span class="info-content">The opening of the prompt GPT sees for every email in this inbox — who the organization is and what this mailbox is for. Category prompts are appended after it.</span></span></label>
+                        <div class="field-control">
+                            <textarea class="form-textarea" id="fPreamble" style="min-height: 96px;"></textarea>
+                            <div class="form-hint">Intro describing what this inbox does.</div>
+                        </div>
+                    </div>
+                    <div class="field field-top">
+                        <label class="form-label" for="fGuidelines">Global guidelines<span class="info-tip">i<span class="info-content">The closing of the prompt: rules that apply to every category, plus the JSON output format the system expects back. Editing the format can break processing for this inbox.</span></span></label>
+                        <div class="field-control">
+                            <textarea class="form-textarea" id="fGuidelines" style="min-height: 96px;"></textarea>
+                            <div class="form-hint">Closing rules and the required JSON output format.</div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -516,6 +534,32 @@
             modal.dataset.dirtyBound = '1';
             modal.addEventListener('input', markDirty);
             modal.addEventListener('change', markDirty);
+            modal.addEventListener('change', updateInboxBadges);
+            modal.addEventListener('input', updateInboxBadges);
+        }
+
+        // Tab clicks are handled globally by activateDenseTab (_settings_nav.html).
+        // This only resets to the first tab when the modal opens.
+        function switchInboxTab(name) {
+            activateDenseTab(document.querySelector('#modal .dense-modal'), name);
+        }
+
+        // Tabs hide state, so report the important bits in the tab strip.
+        function updateInboxBadges() {
+            const auto = document.getElementById('fAutomation').checked;
+            const autoBadge = document.getElementById('tabAutoBadge');
+            if (autoBadge) autoBadge.textContent = auto ? 'Auto' : 'Manual';
+
+            const lines = (id) => document.getElementById(id).value
+                .split('\n').map(s => s.trim()).filter(Boolean).length;
+            const filters = lines('fBlocked') + lines('fInternalDomains');
+            const filtersBadge = document.getElementById('tabFiltersBadge');
+            if (filtersBadge) filtersBadge.textContent = filters ? String(filters) : '';
+
+            const bridgeBadge = document.getElementById('tabBridgeBadge');
+            if (bridgeBadge) {
+                bridgeBadge.textContent = document.getElementById('fInternalBridge').checked ? '' : 'Off';
+            }
         }
 
         // Backfill is now a plain inline number input — no radio sync needed.
@@ -527,7 +571,8 @@
             cloneSel.innerHTML = '<option value="">Start blank</option>' +
                 inboxes.map(ib => `<option value="${ib.id}">${escapeHtml(ib.display_name)}</option>`).join('');
             cloneSel.value = '';
-            document.getElementById('cloneRow').style.display = 'block';
+            document.getElementById('cloneRow').style.display = 'grid';
+            document.getElementById('inboxMetaLine').style.display = 'none';
             document.getElementById('fDisplayName').value = '';
             document.getElementById('fEmail').value = '';
             document.getElementById('fAutomation').checked = false;
@@ -540,6 +585,8 @@
             document.getElementById('fExternalPrefix').value = '[EXTERNAL]';
             document.getElementById('fPreamble').value = '';
             document.getElementById('fGuidelines').value = '';
+            switchInboxTab('general');
+            updateInboxBadges();
             document.getElementById('modal').style.display = 'flex';
             attachDirtyListeners();
             markDirty(); // adding a new inbox is inherently a change
@@ -564,6 +611,10 @@
             document.getElementById('fExternalPrefix').value = ib.internal_reply_external_prefix || '[EXTERNAL]';
             document.getElementById('fPreamble').value = ib.system_preamble || '';
             document.getElementById('fGuidelines').value = ib.global_guidelines || '';
+            document.getElementById('inboxMetaLine').style.display = 'inline-flex';
+            document.getElementById('inboxMetaValue').textContent = ib.email_to_watch || '—';
+            switchInboxTab('general');
+            updateInboxBadges();
             document.getElementById('modal').style.display = 'flex';
             attachDirtyListeners();
             markPristine(); // fresh edit: nothing has changed yet

@@ -817,6 +817,142 @@ input[type="checkbox"], input[type="radio"] {
     box-shadow: none;
 }
 
+/* ---------------------------------------------------------------------------
+   Dense tabbed modal — the "admin form" density used by the category and
+   inbox editors. Opt in by adding .dense-modal next to .settings-modal.
+   Label-left rows, 28px controls, 3px radii, tab strip in the header.
+   Tab switching is wired globally in _settings_nav.html (activateDenseTab).
+   --------------------------------------------------------------------------- */
+.settings-modal.dense-modal { max-width: 760px; border-radius: 4px; }
+
+/* Header: title row + tab strip share one block */
+.dense-modal .modal-topbar {
+    display: block;
+    padding: 12px 18px 0;
+    border-bottom: 1px solid var(--line);
+}
+.dense-modal .dm-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px;
+}
+.dense-modal .modal-title {
+    display: flex; align-items: baseline; gap: 8px;
+    min-width: 0;
+    font-size: 14.5px; font-weight: 600; letter-spacing: 0;
+}
+.dense-modal .dm-id {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11.5px; font-weight: 400; color: var(--text-muted);
+}
+.dense-modal .dm-id code {
+    background: var(--panel-2);
+    padding: 1px 5px; border-radius: 2px;
+    font-family: 'SF Mono', Menlo, monospace; font-size: 11px;
+    color: var(--text);
+}
+.dense-modal .dm-id .lock { color: var(--text-soft); font-size: 11px; }
+.dense-modal .dm-head-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+/* Tab strip — underline active state, sits on the header rule */
+.dense-modal .dm-tabs { display: flex; gap: 2px; margin-top: 10px; }
+.dense-modal .dm-tab {
+    display: inline-flex; align-items: center; gap: 6px;
+    appearance: none; background: none; border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    padding: 6px 10px 7px;
+    font-family: var(--font); font-size: 12.5px; font-weight: 500;
+    color: var(--text-muted); cursor: pointer;
+    transition: color 0.12s ease, border-color 0.12s ease;
+}
+.dense-modal .dm-tab:hover { color: var(--text); }
+.dense-modal .dm-tab.active {
+    color: var(--text); font-weight: 600;
+    border-bottom-color: var(--mlfa-teal);
+}
+.dense-modal .tab-badge {
+    font-size: 10.5px; line-height: 1.5;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-muted);
+    background: var(--panel-2);
+    padding: 0 5px; border-radius: 2px;
+}
+.dense-modal .dm-tab.active .tab-badge { color: var(--text); }
+.dense-modal .tab-badge:empty { display: none; }
+.dense-modal .tab-dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--danger); display: none;
+}
+.dense-modal .tab-dot.on { display: block; }
+
+/* Body sizes to whichever tab is open — no floor, so sparse tabs don't leave
+   dead space. The backdrop anchors the modal near the top (.dense-backdrop)
+   so switching to a taller tab grows downward instead of jumping the centre. */
+.dense-modal .modal-body { padding: 16px 18px; }
+.modal-backdrop.dense-backdrop { align-items: flex-start; padding-top: 7vh; }
+.dense-modal .tab-panel { display: none; }
+.dense-modal .tab-panel.active { display: block; }
+
+/* Label-left field rows. Gutter is wide enough that a label plus its
+   info icon stays on one line. */
+.dense-modal .field {
+    display: grid;
+    grid-template-columns: 142px minmax(0, 1fr);
+    column-gap: 14px; align-items: center;
+    padding: 4px 0;
+}
+.dense-modal .field > .form-label {
+    display: flex; align-items: center; gap: 5px;
+    margin: 0;
+    font-size: 12.5px; font-weight: 500;
+    text-transform: none; letter-spacing: 0;
+    color: var(--text-muted);
+}
+.dense-modal .field > .form-label .info-tip { margin-left: 0; }
+.dense-modal .field.field-top { align-items: start; }
+.dense-modal .field.field-top > .form-label { padding-top: 6px; }
+.dense-modal .field > .field-control { min-width: 0; }
+
+/* Controls sized to their content, not to the modal */
+.dense-modal .form-input, .dense-modal .form-select {
+    height: 28px; padding: 0 9px;
+    font-size: 12.5px; border-radius: 3px;
+}
+.dense-modal .form-textarea {
+    padding: 8px 9px;
+    font-size: 12.5px; line-height: 1.55; border-radius: 3px;
+}
+.dense-modal .form-hint { font-size: 11px; margin-top: 4px; }
+.dense-modal .w-key { max-width: 180px; }
+.dense-modal .w-amt { max-width: 120px; }
+.dense-modal .w-sel { max-width: 300px; }
+.dense-modal .w-txt { max-width: 380px; }
+
+/* Small uppercase sub-heading inside a tab. Carries its own separation,
+   so it never needs a divider above it. */
+.dense-modal .sub-head {
+    display: flex; align-items: center;
+    margin: 16px 0 8px;
+    font-size: 10.5px; font-weight: 700;
+    letter-spacing: 0.09em; text-transform: uppercase;
+    color: var(--text-soft);
+}
+.dense-modal .tab-panel > .sub-head:first-child { margin-top: 0; }
+.dense-modal .divider {
+    border: none; border-top: 1px solid var(--line-soft);
+    margin: 14px 0 12px;
+}
+.dense-modal .toggle-row { padding: 5px 0; gap: 9px; }
+.dense-modal .toggle-row input[type="checkbox"] { width: 13px; height: 13px; }
+.dense-modal .toggle-row .toggle-label { font-size: 12.5px; }
+.dense-modal .toggle-list .toggle-row { border-bottom: none; }
+.dense-modal .modal-footer { padding: 10px 18px; border-top: none; }
+.dense-modal .modal-footer .btn { min-height: 30px; font-size: 12px; }
+
+/* Inline phrase row, e.g. "Import existing email  Last [ 2 ] days" */
+.dense-modal .inline-row { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--text); }
+.dense-modal .inline-row .inline-num { width: 48px; height: 28px; font-size: 12.5px; border-radius: 3px; }
+
 /* Modals */
 .modal-backdrop {
   position: fixed;

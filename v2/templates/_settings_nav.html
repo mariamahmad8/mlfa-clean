@@ -18,6 +18,24 @@
         });
     })();
 
+    // Dense-modal tabs. Shared by the category + inbox editors: clicking a
+    // .dm-tab shows the matching .tab-panel within the same modal. Hidden
+    // panels stay in the DOM, so save handlers still read every field.
+    function activateDenseTab(modal, name) {
+        if (!modal) return;
+        modal.querySelectorAll('.dm-tab').forEach(t => {
+            t.classList.toggle('active', t.dataset.tab === name);
+        });
+        modal.querySelectorAll('.tab-panel').forEach(p => {
+            p.classList.toggle('active', p.dataset.panel === name);
+        });
+    }
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('.dm-tab');
+        if (!btn) return;
+        activateDenseTab(btn.closest('.dense-modal'), btn.dataset.tab);
+    });
+
     // Modern info tooltip: creates a fixed-position floating box so it never
     // gets clipped by scrollable modals or overflow parents.
     (function() {
