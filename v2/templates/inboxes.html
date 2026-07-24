@@ -122,29 +122,38 @@
         .stats-hero .h-icon svg { width: 22px; height: 22px; }
         .stats-hero .h-text { font-size: 13px; color: var(--text); line-height: 1.45; }
         .stats-hero .h-text strong { color: var(--mlfa-teal); font-weight: 700; }
-        .stats-graph {
+        .stats-chart {
             background: var(--panel);
             border: 1px solid var(--line);
             border-radius: 8px;
-            padding: 14px 16px;
+            padding: 18px 20px 12px;
             margin-bottom: 18px;
         }
-        .stats-graph-title {
+        .stats-chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 14px;
+        }
+        .stats-chart-title {
             font-family: var(--font-display);
-            font-size: 11px;
+            font-size: 12px;
             font-weight: 600;
             letter-spacing: 0.12em;
             text-transform: uppercase;
-            color: var(--text-muted);
-            margin-bottom: 10px;
+            color: var(--mlfa-teal);
         }
-        .stats-bar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; font-size: 12px; }
-        .stats-bar-row:last-child { margin-bottom: 0; }
-        .stats-bar-label { flex: 0 0 60px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; font-size: 10px; }
-        .stats-bar-track { flex: 1; height: 14px; background: var(--panel-2); border-radius: 999px; overflow: hidden; }
-        .stats-bar-fill { height: 100%; background: var(--mlfa-teal); border-radius: 999px; transition: width 0.4s ease; }
-        .stats-bar-fill.today { background: var(--mlfa-orange); }
-        .stats-bar-value { flex: 0 0 60px; text-align: right; font-family: var(--font-display); font-weight: 600; color: var(--text); font-size: 14px; }
+        .stats-chart-subtitle {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+        .stats-chart-svg { width: 100%; height: 180px; display: block; }
+        .stats-chart-bar { fill: var(--mlfa-teal); transition: fill 0.15s ease; }
+        .stats-chart-bar:hover { fill: var(--mlfa-orange); }
+        .stats-chart-bar.today { fill: var(--mlfa-orange); }
+        .stats-chart-axis { stroke: var(--line); stroke-width: 1; }
+        .stats-chart-label { font-size: 10px; fill: var(--text-muted); font-family: var(--font); }
+        .stats-chart-value { font-size: 10px; fill: var(--text); font-family: var(--font-display); font-weight: 600; }
     </style>
 </head>
 <body>
@@ -297,6 +306,58 @@
             renderTable();
         }
 
+        function buildDailyChart(daily) {
+            // Real bar chart with dated x-axis, count y-axis labels, and today highlighted
+            if (!daily || !daily.length) {
+                return '<div style="padding: 40px 0; text-align: center; color: var(--text-muted); font-size: 12px;">Not enough data yet — chart will populate as emails are handled.</div>';
+            }
+            const W = 640;         // logical width
+            const H = 180;         // logical height
+            const P_LEFT = 30, P_RIGHT = 8, P_TOP = 10, P_BOTTOM = 32;
+            const chartW = W - P_LEFT - P_RIGHT;
+            const chartH = H - P_TOP - P_BOTTOM;
+            const maxCount = Math.max(1, ...daily.map(d => d.count));
+            // Round the y-axis top up to a nice number
+            const yMax = Math.ceil(maxCount / 5) * 5 || 5;
+            const barGap = 4;
+            const barW = (chartW / daily.length) - barGap;
+            const todayStr = daily[daily.length - 1]?.day;
+
+            const bars = daily.map((d, i) => {
+                const x = P_LEFT + i * (barW + barGap);
+                const barHeight = d.count > 0 ? Math.max(2, (d.count / yMax) * chartH) : 0;
+                const y = P_TOP + chartH - barHeight;
+                const isToday = d.day === todayStr;
+                const showLabel = i === 0 || i === daily.length - 1 || i === Math.floor(daily.length / 2);
+                const dayLabel = new Date(d.day + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                const valueLabel = d.count > 0 ? `<text class="stats-chart-value" x="${x + barW / 2}" y="${y - 4}" text-anchor="middle">${d.count}</text>` : '';
+                const dateLabel = showLabel ? `<text class="stats-chart-label" x="${x + barW / 2}" y="${H - 12}" text-anchor="middle">${dayLabel}</text>` : '';
+                return `
+                    <rect class="stats-chart-bar ${isToday ? 'today' : ''}" x="${x}" y="${y}" width="${barW}" height="${barHeight}" rx="2">
+                        <title>${dayLabel} — ${d.count} emails</title>
+                    </rect>
+                    ${valueLabel}
+                    ${dateLabel}
+                `;
+            }).join('');
+
+            // Y-axis gridlines + labels (0, half, max)
+            const yTicks = [0, yMax / 2, yMax].map(v => {
+                const y = P_TOP + chartH - (v / yMax) * chartH;
+                return `
+                    <line class="stats-chart-axis" x1="${P_LEFT}" y1="${y}" x2="${W - P_RIGHT}" y2="${y}" ${v === 0 ? '' : 'stroke-dasharray="2,3"'}/>
+                    <text class="stats-chart-label" x="${P_LEFT - 6}" y="${y + 3}" text-anchor="end">${Math.round(v)}</text>
+                `;
+            }).join('');
+
+            return `
+                <svg class="stats-chart-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+                    ${yTicks}
+                    ${bars}
+                </svg>
+            `;
+        }
+
         function formatDuration(ms) {
             if (!ms || ms === 0) return '—';
             if (ms < 1000) return `${ms} ms`;
@@ -341,7 +402,10 @@
 
             const processedToday = s.today.processed || 0;
             const processedTotal = s.all_time.processed || 0;
-            const barPct = processedTotal > 0 ? Math.max(3, Math.round((processedToday / processedTotal) * 100)) : 0;
+
+            // Build the SVG bar chart from the last 14 days of processed counts
+            const daily = Array.isArray(s.daily_processed) ? s.daily_processed : [];
+            const chartSvg = buildDailyChart(daily);
 
             document.getElementById('statsBody').innerHTML = `
                 <div class="stats-subtitle">Live activity from ${escapeHtml(s.email_to_watch)}. "Today" counts everything since midnight Central. "Total" counts everything since we turned this on (Jul 17, 2026).</div>
@@ -360,18 +424,12 @@
                     <span class="q-value">${s.in_review_now || 0}</span>
                 </div>
 
-                <div class="stats-graph">
-                    <div class="stats-graph-title">Emails handled — today vs total</div>
-                    <div class="stats-bar-row">
-                        <span class="stats-bar-label">Today</span>
-                        <div class="stats-bar-track"><div class="stats-bar-fill today" style="width: ${processedTotal > 0 ? barPct : 0}%"></div></div>
-                        <span class="stats-bar-value">${processedToday}</span>
+                <div class="stats-chart">
+                    <div class="stats-chart-header">
+                        <span class="stats-chart-title">Emails handled per day</span>
+                        <span class="stats-chart-subtitle">Last 14 days</span>
                     </div>
-                    <div class="stats-bar-row">
-                        <span class="stats-bar-label">Total</span>
-                        <div class="stats-bar-track"><div class="stats-bar-fill" style="width: 100%"></div></div>
-                        <span class="stats-bar-value">${processedTotal}</span>
-                    </div>
+                    ${chartSvg}
                 </div>
 
                 <table class="stats-table">

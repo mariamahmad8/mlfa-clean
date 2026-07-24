@@ -55,6 +55,44 @@ def get_events(inbox_id: int, limit: int = 200) -> List[dict]:
         session.close()
 
 
+def get_daily_processed(inbox_id: int, days: int = 14) -> List[dict]:
+    """
+    Per-day count of processed emails for the last N days (Central Time).
+    Returns rows like {"day": date, "count": int} ordered oldest → newest.
+    Fills in zero-count days so the frontend can plot a continuous bar chart.
+    """
+    processed_actions = ('auto_processed', 'approved', 'approved_bulk', 'auto_processed_on_toggle')
+    session = get_db_session()
+    try:
+        result = session.execute(
+            text("""
+                WITH day_series AS (
+                    SELECT generate_series(
+                        ((now() AT TIME ZONE 'America/Chicago')::date - (:days - 1) * INTERVAL '1 day'),
+                        (now() AT TIME ZONE 'America/Chicago')::date,
+                        INTERVAL '1 day'
+                    )::date AS day
+                )
+                SELECT day_series.day::text AS day,
+                       COALESCE(counts.n, 0) AS count
+                FROM day_series
+                LEFT JOIN (
+                    SELECT (created_at AT TIME ZONE 'America/Chicago')::date AS day,
+                           COUNT(*) AS n
+                    FROM audit_log
+                    WHERE inbox_id = :inbox_id
+                      AND action_taken = ANY(:actions)
+                    GROUP BY 1
+                ) counts ON counts.day = day_series.day
+                ORDER BY day_series.day
+            """),
+            {"inbox_id": inbox_id, "days": days, "actions": list(processed_actions)},
+        )
+        return [dict(row) for row in result.mappings().all()]
+    finally:
+        session.close()
+
+
 def get_stats(inbox_id: int, today_start_utc: datetime) -> dict:
     """
     Efficiency stats for one inbox — today-scoped AND all-time.

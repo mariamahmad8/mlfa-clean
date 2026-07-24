@@ -762,6 +762,7 @@ def inbox_stats(inbox_id):
     today_start_utc = today_start_ct.astimezone(pytz.utc).replace(tzinfo=None)
 
     stats = audit_storage.get_stats(inbox_id, today_start_utc)
+    daily = audit_storage.get_daily_processed(inbox_id, days=14)
     inbox = inbox_storage.get_inbox(inbox_id)
     in_review_now = len(queue_storage.get_pending(inbox_id))
     return jsonify({
@@ -783,6 +784,7 @@ def inbox_stats(inbox_id):
             "duration_ms": int(stats.get("duration_ms_all") or 0),
             "avg_duration_ms": int(stats.get("avg_duration_ms_all") or 0),
         },
+        "daily_processed": [{"day": row["day"], "count": int(row["count"])} for row in daily],
     })
 
 
