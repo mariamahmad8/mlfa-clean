@@ -8,6 +8,60 @@
     <meta name="csrf-token" content="{{ csrf_token }}">
     <script src="/static/security.js?v=2"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Nunito+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="/static/shared.css?v=12">
+    <style>
+        .audit-filter-bar {
+            display: grid;
+            grid-template-columns: minmax(200px, 1.6fr) minmax(140px, 1fr) minmax(130px, 0.8fr) minmax(130px, 0.8fr) auto;
+            gap: 10px;
+            align-items: end;
+            padding: 14px 16px;
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+        .afb-group { display: flex; flex-direction: column; gap: 4px; }
+        .afb-label {
+            font-family: var(--font-display);
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+        .audit-action-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+        .afb-chip {
+            font-family: var(--font-display);
+            font-size: 11px;
+            font-weight: 500;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            padding: 6px 12px;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            background: transparent;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s, border-color 0.15s;
+        }
+        .afb-chip:hover { border-color: var(--mlfa-teal); color: var(--mlfa-teal); }
+        .afb-chip.active {
+            background: var(--mlfa-teal);
+            color: #F5F1EA;
+            border-color: var(--mlfa-teal);
+        }
+        .audit-count-line {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+            font-variant-numeric: tabular-nums;
+        }
+    </style>
 </head>
 <body>
     <header class="app-header">
@@ -29,9 +83,47 @@
         <p class="page-subtitle">Every action taken on every email in this inbox.</p>
 
         <div class="toolbar">
-            <select class="form-select" id="inboxSelect" onchange="loadEvents()" style="max-width: 300px;"></select>
+            <select class="form-select" id="inboxSelect" onchange="loadEvents()" style="max-width: 260px;"></select>
             <button class="btn small" onclick="loadEvents()">Refresh</button>
+            <div style="flex:1"></div>
+            <button class="btn small" onclick="exportCsv()">Export CSV</button>
         </div>
+
+        <div class="audit-filter-bar">
+            <div class="afb-group">
+                <label class="afb-label">Search</label>
+                <input class="form-input" id="fSearch" placeholder="text in the comment..." oninput="renderEvents()">
+            </div>
+            <div class="afb-group">
+                <label class="afb-label">Actor</label>
+                <select class="form-select" id="fActor" onchange="renderEvents()">
+                    <option value="">Anyone</option>
+                </select>
+            </div>
+            <div class="afb-group">
+                <label class="afb-label">From</label>
+                <input class="form-input" type="date" id="fFrom" onchange="renderEvents()">
+            </div>
+            <div class="afb-group">
+                <label class="afb-label">To</label>
+                <input class="form-input" type="date" id="fTo" onchange="renderEvents()">
+            </div>
+            <button class="btn small" onclick="clearFilters()">Clear</button>
+        </div>
+
+        <div class="audit-action-chips" id="fActionChips">
+            <button class="afb-chip active" data-group="all">All actions</button>
+            <button class="afb-chip" data-group="email">Email actions</button>
+            <button class="afb-chip" data-group="settings">Settings changes</button>
+            <button class="afb-chip" data-group="user">User changes</button>
+            <button class="afb-chip" data-action="auto_processed">Auto</button>
+            <button class="afb-chip" data-action="queued_for_review">Queued</button>
+            <button class="afb-chip" data-action="approved">Approved</button>
+            <button class="afb-chip" data-action="rejected">Rejected</button>
+            <button class="afb-chip" data-action="dismissed">Dismissed</button>
+        </div>
+
+        <div class="audit-count-line" id="fCountLine"></div>
 
         <table class="data-table">
             <thead>
@@ -45,12 +137,22 @@
             </thead>
             <tbody id="tbody"></tbody>
         </table>
-        <div id="empty" class="empty-state" style="display:none;">No events yet.</div>
+        <div id="empty" class="empty-state" style="display:none;">No events match your filters.</div>
         </main>
     </div>
 
     <script>
         let currentInboxId = null;
+        let allEvents = [];
+        let activeGroup = 'all';
+        let activeAction = null;
+
+        // Groups of raw action names — used by the chip filter
+        const ACTION_GROUPS = {
+            email: ['auto_processed', 'auto_processed_on_toggle', 'queued_for_review', 'approved', 'approved_bulk', 'rejected', 'dismissed'],
+            settings: ['rule_created', 'rule_updated', 'rule_deleted', 'template_created', 'template_updated', 'template_deleted', 'recipient_created', 'recipient_updated', 'recipient_deleted', 'inbox_created', 'inbox_updated', 'inbox_deleted', 'inbox_cloned'],
+            user: ['user_created', 'user_updated', 'user_deleted'],
+        };
 
         async function loadInboxes() {
             const res = await fetch('/api/inboxes');
@@ -66,10 +168,55 @@
             if (!currentInboxId) return;
             const res = await fetch(`/api/inboxes/${currentInboxId}/audit`);
             if (!res.ok) return;
-            const events = await res.json();
-            document.getElementById('empty').style.display = events.length ? 'none' : 'block';
+            allEvents = await res.json();
+            populateActorDropdown();
+            renderEvents();
+        }
+
+        function populateActorDropdown() {
+            const actors = Array.from(new Set(allEvents.map(e => e.actor || 'system')));
+            actors.sort();
+            const sel = document.getElementById('fActor');
+            const current = sel.value;
+            sel.innerHTML = '<option value="">Anyone</option>' +
+                actors.map(a => `<option value="${escapeHtml(a)}" ${a === current ? 'selected' : ''}>${escapeHtml(a)}</option>`).join('');
+        }
+
+        function currentFilter() {
+            const search = (document.getElementById('fSearch').value || '').trim().toLowerCase();
+            const actor = document.getElementById('fActor').value;
+            const from = document.getElementById('fFrom').value; // yyyy-mm-dd
+            const to = document.getElementById('fTo').value;
+            const fromMs = from ? new Date(from + 'T00:00:00-05:00').getTime() : null; // approx Central
+            const toMs = to ? new Date(to + 'T23:59:59-05:00').getTime() : null;
+            return { search, actor, fromMs, toMs };
+        }
+
+        function matches(e, f) {
+            if (f.actor && (e.actor || '') !== f.actor) return false;
+            const ts = e.created_at ? new Date(e.created_at.endsWith('Z') ? e.created_at : e.created_at + 'Z').getTime() : 0;
+            if (f.fromMs && ts < f.fromMs) return false;
+            if (f.toMs && ts > f.toMs) return false;
+            if (activeAction && e.action !== activeAction && !(activeAction === 'approved' && e.action === 'approved_bulk') && !(activeAction === 'auto_processed' && e.action === 'auto_processed_on_toggle')) return false;
+            if (activeGroup !== 'all' && !activeAction) {
+                const grp = ACTION_GROUPS[activeGroup] || [];
+                if (!grp.includes(e.action)) return false;
+            }
+            if (f.search) {
+                const hay = (humanSummary(e) + ' ' + (e.comment || '') + ' ' + (e.actor || '') + ' ' + (e.email_id || '')).toLowerCase();
+                if (!hay.includes(f.search)) return false;
+            }
+            return true;
+        }
+
+        function renderEvents() {
+            const f = currentFilter();
+            const filtered = allEvents.filter(e => matches(e, f));
+            document.getElementById('fCountLine').textContent =
+                `Showing ${filtered.length.toLocaleString()} of ${allEvents.length.toLocaleString()} events`;
+            document.getElementById('empty').style.display = filtered.length ? 'none' : 'block';
             const tbody = document.getElementById('tbody');
-            tbody.innerHTML = events.map(e => `
+            tbody.innerHTML = filtered.map(e => `
                 <tr>
                     <td class="text-small text-muted">${e.created_at ? formatCentral(e.created_at) : '—'}</td>
                     <td>${badgeForAction(e.action)}</td>
@@ -78,6 +225,75 @@
                     <td class="text-muted text-small">${humanSummary(e)}</td>
                 </tr>
             `).join('');
+        }
+
+        function clearFilters() {
+            document.getElementById('fSearch').value = '';
+            document.getElementById('fActor').value = '';
+            document.getElementById('fFrom').value = '';
+            document.getElementById('fTo').value = '';
+            activeGroup = 'all';
+            activeAction = null;
+            syncChipUI();
+            renderEvents();
+        }
+
+        function syncChipUI() {
+            document.querySelectorAll('.afb-chip').forEach(c => {
+                const g = c.dataset.group;
+                const a = c.dataset.action;
+                const isActive = (a && a === activeAction) || (!a && g === activeGroup && !activeAction);
+                c.classList.toggle('active', isActive);
+            });
+        }
+
+        // Attach chip clicks
+        document.addEventListener('click', (e) => {
+            const chip = e.target.closest('.afb-chip');
+            if (!chip) return;
+            if (chip.dataset.action) {
+                activeAction = activeAction === chip.dataset.action ? null : chip.dataset.action;
+                activeGroup = 'all';
+            } else if (chip.dataset.group) {
+                activeGroup = chip.dataset.group;
+                activeAction = null;
+            }
+            syncChipUI();
+            renderEvents();
+        });
+
+        function exportCsv() {
+            const f = currentFilter();
+            const rows = allEvents.filter(e => matches(e, f));
+            const headers = ['When (Central)', 'Action', 'Actor', 'Target', 'Description', 'Raw comment'];
+            const csvRows = [headers.join(',')];
+            rows.forEach(e => {
+                const when = e.created_at ? formatCentral(e.created_at) : '';
+                const action = e.action || '';
+                const actor = e.actor || '';
+                const target = e.email_id || '';
+                const desc = plainSummary(e);
+                const raw = (e.comment || '').replace(/\s+/g, ' ');
+                csvRows.push([when, action, actor, target, desc, raw].map(csvEscape).join(','));
+            });
+            const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `audit-log-${new Date().toISOString().slice(0, 10)}.csv`;
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(url), 500);
+        }
+        function csvEscape(v) {
+            const s = String(v ?? '');
+            return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+        }
+        function plainSummary(e) {
+            // Strip any HTML tags from humanSummary so the CSV cell is clean text
+            const html = humanSummary(e);
+            const tmp = document.createElement('div');
+            tmp.innerHTML = html;
+            return (tmp.textContent || tmp.innerText || '').trim();
         }
 
         function firstNameFromEmail(email) {

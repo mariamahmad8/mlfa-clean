@@ -101,6 +101,97 @@
             margin-top: 18px;
             font-style: italic;
         }
+
+        /* Inbox edit modal — sectioned, sticky footer, professional shape */
+        .inbox-edit-modal {
+            max-width: 720px;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            max-height: 88vh;
+        }
+        .inbox-edit-modal .modal-topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 18px 24px;
+            border-bottom: 1px solid var(--line);
+        }
+        .inbox-edit-modal .modal-title {
+            margin: 0;
+            font-family: var(--font-display);
+            font-size: 15px;
+            font-weight: 600;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--mlfa-teal);
+        }
+        .inbox-edit-modal .modal-close {
+            background: transparent;
+            border: none;
+            font-size: 22px;
+            line-height: 1;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+        .inbox-edit-modal .modal-close:hover { background: var(--panel-2); color: var(--text); }
+        .inbox-edit-modal .modal-body {
+            padding: 20px 24px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        .inbox-edit-modal .modal-section {
+            padding: 16px 0;
+            border-top: 1px solid var(--line-soft);
+        }
+        .inbox-edit-modal .modal-section:first-of-type { border-top: none; padding-top: 4px; }
+        .inbox-edit-modal .modal-section-title {
+            font-family: var(--font-display);
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+        }
+        .inbox-edit-modal .modal-details > summary {
+            cursor: pointer;
+            list-style: none;
+            outline: none;
+        }
+        .inbox-edit-modal .modal-details > summary::-webkit-details-marker { display: none; }
+        .inbox-edit-modal .modal-details > summary::before {
+            content: '›';
+            display: inline-block;
+            margin-right: 8px;
+            transition: transform 0.15s ease;
+            font-size: 16px;
+            color: var(--text-muted);
+        }
+        .inbox-edit-modal .modal-details[open] > summary::before { transform: rotate(90deg); }
+        .inbox-edit-modal .form-grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+        .inbox-edit-modal .form-group { margin-bottom: 14px; }
+        .inbox-edit-modal .form-group:last-child { margin-bottom: 0; }
+        .inbox-edit-modal .text-soft { color: var(--text-soft); font-weight: 400; }
+        .inbox-edit-modal .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            padding: 14px 24px;
+            border-top: 1px solid var(--line);
+            background: var(--panel);
+            border-radius: 0 0 var(--radius) var(--radius);
+            position: sticky;
+            bottom: 0;
+        }
         .stats-hero {
             background: var(--accent-soft);
             border: 1px solid var(--mlfa-teal);
@@ -215,90 +306,110 @@
     </div>
 
     <div class="modal-backdrop" id="modal" style="display:none;">
-        <div class="modal">
-            <h3 class="modal-title" id="modalTitle">Add inbox</h3>
-            <input type="hidden" id="fInboxId">
-
-            <div class="form-group" id="cloneRow">
-                <label class="form-label">Clone from existing inbox (optional)</label>
-                <select class="form-select" id="fCloneSource">
-                    <option value="">— Start blank —</option>
-                </select>
-                <div class="form-hint">Copies all category rules, recipients, and templates from the selected inbox. You can still edit everything after.</div>
+        <div class="modal inbox-edit-modal">
+            <div class="modal-topbar">
+                <h3 class="modal-title" id="modalTitle">Edit inbox</h3>
+                <button class="modal-close" onclick="closeModal()" aria-label="Close">×</button>
             </div>
+            <div class="modal-body">
+                <input type="hidden" id="fInboxId">
 
-            <div class="form-group">
-                <label class="form-label">Display name</label>
-                <input class="form-input" id="fDisplayName" placeholder="MLFA Info Inbox">
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Email address to watch</label>
-                <input class="form-input" id="fEmail" placeholder="info@mlfa.org">
-            </div>
-
-            <div class="form-group">
-                <label class="form-check">
-                    <input type="checkbox" id="fAutomation">
-                    <span>Enable full automation (skip human review)</span>
-                </label>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Blocked senders (one per line)</label>
-                <textarea class="form-textarea" id="fBlocked" placeholder="spam@example.com"></textarea>
-                <div class="form-hint">Emails from these addresses are silently skipped.</div>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Internal domains (one per line)<span class="info-tip">i<span class="info-content">Email domains treated as internal/staff (e.g. <b>mlfa.org</b>). Used to detect when staff themselves are the sender so the system doesn't send replies or forwards outbound.</span></span></label>
-                <textarea class="form-textarea" id="fInternalDomains" placeholder="mlfa.org"></textarea>
-                <div class="form-hint">Anything @these-domains is treated as an internal/staff sender. Used to skip outbound actions on internal messages and for categories with "skip if internal" enabled.</div>
-            </div>
-
-<div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                <div>
-                    <label class="form-label">Backfill days<span class="info-tip">i<span class="info-content">On the very first run for this inbox, how many days back to scan for unread emails. Default 2. Only matters for initial setup — after that, delta sync handles new emails.</span></span></label>
-                    <input class="form-input" type="number" id="fBackfill" placeholder="2">
-                    <div class="form-hint">How many days back to scan on first run.</div>
+                <div class="form-group" id="cloneRow">
+                    <label class="form-label">Clone from existing inbox <span class="text-soft">(optional)</span></label>
+                    <select class="form-select" id="fCloneSource">
+                        <option value="">— Start blank —</option>
+                    </select>
+                    <div class="form-hint">Copies all category rules, recipients, and templates from the selected inbox.</div>
                 </div>
-                <div>
-                    <label class="form-label">&nbsp;</label>
-                    <label class="form-check"><input type="checkbox" id="fUseThreadContext"> Use thread context in classification <span class="info-tip">i<span class="info-content">Include earlier messages in the same thread when GPT classifies. Helps distinguish "new legal help request" from "following up on my case". Recommended: on.</span></span></label>
+
+                <div class="modal-section">
+                    <div class="modal-section-title">Basics</div>
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label class="form-label">Display name</label>
+                            <input class="form-input" id="fDisplayName" placeholder="MLFA Info Inbox">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Email address to watch</label>
+                            <input class="form-input" id="fEmail" placeholder="info@mlfa.org">
+                        </div>
+                    </div>
                 </div>
-            </div>
 
-            <div class="form-group">
-                <label class="form-check"><input type="checkbox" id="fInternalBridge"> Enable internal reply bridge <span class="info-tip">i<span class="info-content">Advanced feature. Staff can reply to forwarded emails with a special prefix ([EXTERNAL] or [INTERNAL]) and the system relays their reply back to the original sender. Leave off unless MLFA staff use this workflow.</span></span></label>
-                <div class="form-hint">When enabled, staff can respond to forwarded emails and the system relays their reply to the original sender.</div>
-            </div>
-
-            <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                <div>
-                    <label class="form-label">Internal prefix (keeps it internal)</label>
-                    <input class="form-input" id="fInternalPrefix" placeholder="[INTERNAL]">
+                <div class="modal-section">
+                    <div class="modal-section-title">Automation</div>
+                    <div class="form-group">
+                        <label class="form-check">
+                            <input type="checkbox" id="fAutomation">
+                            <span>Enable full automation <span class="text-soft">(skip the human review step)</span></span>
+                        </label>
+                    </div>
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label class="form-label">Backfill days<span class="info-tip">i<span class="info-content">On the very first run for this inbox, how many days back to scan for unread emails. Default 2. Only matters for initial setup — after that, delta sync handles new emails.</span></span></label>
+                            <input class="form-input" type="number" id="fBackfill" placeholder="2">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-check" style="margin-top: 24px;"><input type="checkbox" id="fUseThreadContext"> Use thread context in classification <span class="info-tip">i<span class="info-content">Include earlier messages in the same thread when GPT classifies. Helps distinguish "new legal help request" from "following up on my case". Recommended: on.</span></span></label>
+                        </div>
+                    </div>
                 </div>
-                <div>
-                    <label class="form-label">External prefix (send to original sender)</label>
-                    <input class="form-input" id="fExternalPrefix" placeholder="[EXTERNAL]">
+
+                <div class="modal-section">
+                    <div class="modal-section-title">Filters</div>
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label class="form-label">Blocked senders <span class="text-soft">(one per line)</span></label>
+                            <textarea class="form-textarea" id="fBlocked" placeholder="spam@example.com"></textarea>
+                            <div class="form-hint">Silently skipped on arrival.</div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Internal domains <span class="text-soft">(one per line)</span><span class="info-tip">i<span class="info-content">Email domains treated as internal/staff (e.g. <b>mlfa.org</b>). Used to detect when staff themselves are the sender so the system doesn't send replies or forwards outbound.</span></span></label>
+                            <textarea class="form-textarea" id="fInternalDomains" placeholder="mlfa.org"></textarea>
+                            <div class="form-hint">Anything from these domains is treated as staff.</div>
+                        </div>
+                    </div>
                 </div>
+
+                <div class="modal-section">
+                    <div class="modal-section-title">Internal reply bridge</div>
+                    <div class="form-group">
+                        <label class="form-check"><input type="checkbox" id="fInternalBridge"> Enable internal reply bridge <span class="info-tip">i<span class="info-content">Advanced feature. Staff can reply to forwarded emails with a special prefix ([EXTERNAL] or [INTERNAL]) and the system relays their reply back to the original sender. Leave off unless MLFA staff use this workflow.</span></span></label>
+                        <div class="form-hint">When enabled, staff can reply to a forwarded email with an [EXTERNAL] prefix and the system relays it back to the original sender.</div>
+                    </div>
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label class="form-label">Internal prefix <span class="text-soft">(keeps it internal)</span></label>
+                            <input class="form-input" id="fInternalPrefix" placeholder="[INTERNAL]">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">External prefix <span class="text-soft">(send to original sender)</span></label>
+                            <input class="form-input" id="fExternalPrefix" placeholder="[EXTERNAL]">
+                        </div>
+                    </div>
+                </div>
+
+                <details class="modal-section modal-details">
+                    <summary class="modal-section-title">
+                        AI instructions
+                        <span class="text-soft" style="font-family: var(--font); font-weight: 400; font-size: 11px; text-transform: none; letter-spacing: 0; margin-left: 8px;">Advanced — the prompt sent to GPT for every email in this inbox</span>
+                    </summary>
+                    <div class="form-group">
+                        <label class="form-label">System preamble</label>
+                        <textarea class="form-textarea" id="fPreamble"></textarea>
+                        <div class="form-hint">Intro text describing what this inbox does.</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Global guidelines</label>
+                        <textarea class="form-textarea" id="fGuidelines"></textarea>
+                        <div class="form-hint">Closing rules and JSON output format.</div>
+                    </div>
+                </details>
             </div>
 
-            <div class="form-group">
-                <label class="form-label">System preamble</label>
-                <textarea class="form-textarea" id="fPreamble"></textarea>
-                <div class="form-hint">Intro text for the GPT prompt describing what this inbox does.</div>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Global guidelines</label>
-                <textarea class="form-textarea" id="fGuidelines"></textarea>
-                <div class="form-hint">Closing rules and JSON output format for GPT.</div>
-            </div>
-
-            <div class="modal-actions">
+            <div class="modal-footer">
                 <button class="btn" onclick="closeModal()">Cancel</button>
-                <button class="btn primary" onclick="saveInbox()">Save</button>
+                <button class="btn primary" onclick="saveInbox()">Save changes</button>
             </div>
         </div>
     </div>
