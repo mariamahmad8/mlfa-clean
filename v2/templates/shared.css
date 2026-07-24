@@ -548,49 +548,53 @@ input[type="checkbox"], input[type="radio"] {
 /* Settings-modal design system — sentence case, sections, sticky footer, dirty-state.
    Any edit modal in the settings pages should use the .settings-modal class. */
 .settings-modal {
-    max-width: 820px;
+    max-width: 640px;
     padding: 0;
     display: flex;
     flex-direction: column;
     max-height: 88vh;
     background: var(--panel);
+    border-radius: 6px;
 }
-.settings-modal.wide { max-width: 960px; }
+.settings-modal.wide { max-width: 780px; }
 .settings-modal .modal-topbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 20px 28px;
+    padding: 14px 20px;
     border-bottom: 1px solid var(--line-soft);
 }
 .settings-modal .modal-title {
     margin: 0;
     font-family: var(--font);
-    font-size: 20px;
+    font-size: 15px;
     font-weight: 600;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.005em;
     text-transform: none;
     color: var(--text);
 }
 .settings-modal .modal-close {
     background: transparent; border: none;
-    font-size: 22px; line-height: 1;
+    font-size: 18px; line-height: 1;
     color: var(--text-muted); cursor: pointer;
-    padding: 4px 10px; border-radius: 6px;
+    padding: 4px 8px; border-radius: 4px;
 }
 .settings-modal .modal-close:hover { background: var(--panel-2); color: var(--text); }
 .settings-modal .modal-body {
-    padding: 20px 28px 8px;
+    padding: 18px 20px 4px;
     overflow-y: auto;
     flex: 1;
 }
-/* Rhythm: tight within, generous between */
-.settings-modal .modal-section { padding: 0 0 12px; }
-.settings-modal .modal-section + .modal-section { padding-top: 24px; }
-.settings-modal .modal-section:last-child { padding-bottom: 8px; }
+.settings-modal .modal-section { padding: 0 0 8px; }
+.settings-modal .modal-section + .modal-section {
+    padding-top: 18px;
+    margin-top: 4px;
+    border-top: 1px solid var(--line-soft);
+}
+.settings-modal .modal-section:last-child { padding-bottom: 4px; }
 .settings-modal .modal-section-heading {
     font-family: var(--font);
-    font-size: 15px;
+    font-size: 13px;
     font-weight: 600;
     letter-spacing: -0.005em;
     color: var(--text);
@@ -600,143 +604,129 @@ input[type="checkbox"], input[type="radio"] {
 .settings-modal .form-grid-2 {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 16px;
+    gap: 14px;
 }
-.settings-modal .form-group { margin-bottom: 14px; }
+.settings-modal .form-group { margin-bottom: 12px; }
 .settings-modal .form-group:last-child { margin-bottom: 0; }
 .settings-modal .form-label {
     font-family: var(--font);
-    font-size: 13px;
+    font-size: 12.5px;
     font-weight: 500;
     letter-spacing: 0;
     text-transform: none;
     color: var(--text);
-    margin-bottom: 4px;
+    margin-bottom: 5px;
 }
 .settings-modal .form-input,
 .settings-modal .form-select {
-    height: 38px;
-    padding: 0 12px;
-    font-size: 13.5px;
+    height: 32px;
+    padding: 0 10px;
+    font-size: 13px;
     background: var(--panel);
     border: 1px solid var(--line);
+    border-radius: 4px;
 }
 .settings-modal .form-input:focus,
-.settings-modal .form-select:focus { border-color: var(--mlfa-teal); }
+.settings-modal .form-select:focus { border-color: var(--mlfa-teal); box-shadow: 0 0 0 2px var(--accent-soft); }
 .settings-modal .form-textarea {
-    min-height: 96px;
-    padding: 10px 12px;
-    font-size: 13.5px;
+    min-height: 80px;
+    padding: 8px 10px;
+    font-size: 13px;
     font-family: var(--font);
+    border-radius: 4px;
 }
 .settings-modal .form-hint {
-    font-size: 12px;
-    color: var(--text-muted);
-    margin-top: 6px;
-    line-height: 1.45;
-}
-.settings-modal .text-soft { color: var(--text-soft); font-weight: 400; }
-
-/* Compact grouped panel — puts related toggles + a small setting inline */
-.settings-modal .panel {
-    background: var(--bg);
-    border: 1px solid var(--line-soft);
-    border-radius: 8px;
-    padding: 4px 14px;
-}
-.settings-modal .panel .toggle-row { padding: 12px 0; }
-.settings-modal .panel-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 0;
-    border-top: 1px solid var(--line-soft);
-    font-size: 13.5px;
-    color: var(--text);
-}
-.settings-modal .panel-row .panel-row-label { font-weight: 500; }
-.settings-modal .panel-row .inline-num {
-    width: 56px; height: 30px;
-    padding: 0 8px; font-size: 13px;
-    border: 1px solid var(--line); border-radius: 5px;
-    background: var(--panel);
-    text-align: center;
-}
-.settings-modal .panel-row-hint {
-    font-size: 12px;
-    color: var(--text-muted);
-    margin-left: auto;
-}
-
-/* Status pill in modal header (Active toggle) */
-.settings-modal .modal-topbar-status {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 5px 12px;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 500;
-    background: var(--panel-2);
-    color: var(--text-muted);
-    cursor: pointer;
-    user-select: none;
-    border: 1px solid var(--line-soft);
-}
-.settings-modal .modal-topbar-status.on { background: var(--accent-soft); color: var(--mlfa-teal); border-color: var(--mlfa-teal); }
-.settings-modal .modal-topbar-status .dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: var(--text-soft);
-}
-.settings-modal .modal-topbar-status.on .dot { background: var(--mlfa-teal); }
-
-/* Key metadata under title */
-.settings-modal .meta-line {
     font-size: 11.5px;
     color: var(--text-muted);
     margin-top: 4px;
-    display: flex; align-items: center; gap: 8px;
+    line-height: 1.4;
+}
+.settings-modal .text-soft { color: var(--text-soft); font-weight: 400; }
+
+/* Inline numeric input for phrases like "Import last [ 2 ] days" */
+.settings-modal .inline-num {
+    width: 52px; height: 26px;
+    padding: 0 6px; font-size: 12.5px;
+    border: 1px solid var(--line); border-radius: 4px;
+    background: var(--panel);
+    text-align: center;
+}
+.settings-modal .panel-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 0;
+    font-size: 12.5px;
+    color: var(--text);
+}
+.settings-modal .panel-row .panel-row-label { font-weight: 500; margin-right: 4px; }
+.settings-modal .panel-row-hint {
+    font-size: 11.5px; color: var(--text-muted); margin-left: auto;
+}
+
+/* Small header status control (checkbox that reads like a chip when checked) */
+.settings-modal .status-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+    cursor: pointer;
+    user-select: none;
+    padding: 3px 8px;
+    border-radius: 4px;
+}
+.settings-modal .status-check input[type="checkbox"] { width: 14px; height: 14px; margin: 0; }
+.settings-modal .status-check.on { color: var(--text); }
+
+/* Category meta line under the modal title */
+.settings-modal .meta-line {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    margin-top: 2px;
+    display: flex; align-items: center; gap: 6px;
 }
 .settings-modal .meta-line code {
     background: var(--panel-2);
-    padding: 2px 6px;
-    border-radius: 4px;
+    padding: 1px 5px;
+    border-radius: 3px;
     font-family: 'SF Mono', Menlo, monospace;
     font-size: 11px;
     color: var(--text);
 }
 .settings-modal .meta-line .lock { color: var(--text-soft); font-size: 11px; }
 
-/* Toggle row: bold label + description under, entire row clickable */
+/* Toggle row — label only. Helper text lives elsewhere (or nowhere). */
 .settings-modal .toggle-row {
     display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 10px 0;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
     cursor: pointer;
-    border-bottom: 1px solid var(--line-soft);
 }
-.settings-modal .toggle-row:last-child { border-bottom: none; }
 .settings-modal .toggle-row input[type="checkbox"] {
-    width: 16px; height: 16px;
-    margin-top: 3px; flex-shrink: 0;
+    width: 14px; height: 14px;
+    margin: 0; flex-shrink: 0;
 }
 .settings-modal .toggle-row .toggle-label {
-    font-size: 13.5px; font-weight: 500;
-    color: var(--text); display: block; margin-bottom: 2px;
+    font-size: 13px;
+    color: var(--text);
+    font-weight: 400;
 }
+/* Optional inline muted description after the label */
 .settings-modal .toggle-row .toggle-desc {
-    font-size: 12px; color: var(--text-muted); line-height: 1.4;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-left: 6px;
 }
-/* Compact 2-col checklist for actions */
-.settings-modal .toggle-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    column-gap: 24px;
-    row-gap: 0;
+/* Toggle list — thin dividers between rows */
+.settings-modal .toggle-list .toggle-row {
+    border-bottom: 1px solid var(--line-soft);
 }
-.settings-modal .toggle-grid .toggle-row { border-bottom: 1px solid var(--line-soft); }
-.settings-modal .toggle-grid .toggle-row:nth-last-child(-n+2) { border-bottom: none; }
+.settings-modal .toggle-list .toggle-row:last-child { border-bottom: none; }
+
+/* Danger row — subtle red label, no colored background */
+.settings-modal .danger-row .toggle-label { color: var(--danger); font-weight: 500; }
 
 /* Radio group — vertical list of choices, highlighted when selected */
 .settings-modal .radio-group {
@@ -803,22 +793,22 @@ input[type="checkbox"], input[type="radio"] {
     display: flex;
     justify-content: flex-end;
     align-items: center;
-    gap: 12px;
-    padding: 16px 28px;
+    gap: 8px;
+    padding: 12px 20px;
     background: var(--panel);
     border-top: 1px solid var(--line-soft);
-    border-radius: 0 0 var(--radius) var(--radius);
+    border-radius: 0 0 6px 6px;
     position: sticky;
     bottom: 0;
 }
 .settings-modal .footer-status {
-    font-size: 12.5px;
+    font-size: 12px;
     color: var(--text-muted);
     margin-right: auto;
 }
 .settings-modal .footer-status.saved { color: var(--success); }
-.settings-modal .modal-footer .btn { min-height: 38px; padding: 0 20px; font-size: 13.5px; }
-.settings-modal .modal-footer .btn.primary { padding: 0 24px; font-weight: 600; }
+.settings-modal .modal-footer .btn { min-height: 32px; padding: 0 14px; font-size: 12.5px; }
+.settings-modal .modal-footer .btn.primary { padding: 0 16px; font-weight: 500; }
 .settings-modal .modal-footer .btn.primary:disabled {
     /* Stay clearly primary — dim opacity + no interactivity, but visually still the CTA */
     opacity: 0.55;

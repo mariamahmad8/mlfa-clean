@@ -33,23 +33,6 @@
         .recipient-list .rp-item.hidden { display: none; }
         .recipient-list .rp-item .rp-email { color: var(--text-muted); font-size: 12px; margin-left: 6px; }
 
-        /* Destructive section — subtle rust tint, no emoji */
-        .settings-modal .danger-section {
-            background: var(--mlfa-orange-soft);
-            border: 1px solid rgba(184, 61, 38, 0.25);
-            border-radius: 6px;
-            padding: 4px 14px !important;
-            margin-bottom: 4px;
-        }
-        .settings-modal .danger-section .modal-section-heading {
-            color: var(--mlfa-orange);
-            font-size: 12px;
-            font-weight: 600;
-            letter-spacing: 0.06em;
-            text-transform: uppercase;
-            margin: 10px 0 4px;
-        }
-        .settings-modal .danger-section .toggle-label { color: var(--text); }
 
         .rule-row { display: grid; grid-template-columns: 24px 40px minmax(0, 1.2fr) minmax(0, 220px) 80px 100px 160px; gap: 12px; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line-soft); background: var(--panel); cursor: default; }
         .rule-row:last-child { border-bottom: none; }
@@ -102,26 +85,23 @@
                 <div>
                     <h3 class="modal-title" id="modalTitle">Edit category</h3>
                     <div class="meta-line" id="keyMetaLine" style="display:none;">
-                        <span>Key</span>
                         <code id="keyMetaValue">donor</code>
-                        <span class="lock">Locked</span>
+                        <span class="lock">locked</span>
                     </div>
                 </div>
-                <div style="display:flex; align-items:center; gap:12px;">
-                    <label class="modal-topbar-status" id="activeStatus" for="fActive">
-                        <span class="dot"></span>
-                        <span id="activeStatusText">Inactive</span>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <label class="status-check" id="activeStatus" for="fActive">
+                        <input type="checkbox" id="fActive">
+                        <span id="activeStatusText">Active</span>
                     </label>
                     <button class="modal-close" onclick="closeModal()" aria-label="Close">×</button>
                 </div>
             </div>
-            <input type="checkbox" id="fActive" style="display:none;">
             <div class="modal-body">
                 <input type="hidden" id="fRuleId">
                 <input type="hidden" id="fPriority">
 
                 <div class="modal-section">
-                    <h4 class="modal-section-heading">Basics</h4>
                     <div class="form-grid-2">
                         <div class="form-group" style="margin-bottom: 0;">
                             <label class="form-label">Display name</label>
@@ -132,102 +112,75 @@
                             <input class="form-input" id="fFolder" placeholder="Donor_Related/Grant">
                         </div>
                     </div>
-                    <div id="newKeyRow" class="form-group" style="margin-top: 14px; display:none;">
+                    <div id="newKeyRow" class="form-group" style="margin-top: 12px; display:none;">
                         <label class="form-label">Internal key</label>
-                        <input class="form-input" id="fKey" placeholder="donor" style="max-width: 260px;">
-                        <div class="form-hint">Permanent tag GPT uses. Lowercase and underscores only. Locked after creation.</div>
+                        <input class="form-input" id="fKey" placeholder="donor" style="max-width: 240px;">
+                        <div class="form-hint">Lowercase and underscores only. Locked after creation.</div>
                     </div>
                 </div>
 
                 <div class="modal-section">
-                    <h4 class="modal-section-heading">When does this category apply?</h4>
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <textarea class="form-textarea" id="fRuleText" style="min-height: 110px;" placeholder="Describe the emails that should match this category, in plain language.&#10;&#10;Example: Emails about donations, tax receipts, matching-gift programs, or planned giving."></textarea>
-                        <div class="form-hint">GPT reads this to decide when an email belongs here. Include example situations.</div>
-                    </div>
+                    <h4 class="modal-section-heading">Classification prompt</h4>
+                    <textarea class="form-textarea" id="fRuleText" style="min-height: 96px;" placeholder="Describe the emails that should match this category. Include example situations."></textarea>
                 </div>
 
                 <div class="modal-section">
                     <h4 class="modal-section-heading">Forwarding</h4>
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <div class="recipient-picker">
-                            <input class="form-input recipient-search" id="fRecipSearch" placeholder="Search recipients by name or email" oninput="filterRecipients()">
-                            <div class="recipient-list" id="fForwardList"></div>
-                        </div>
-                        <div class="form-hint">Pick from the Recipients directory. Leave empty to not forward.</div>
+                    <div class="recipient-picker">
+                        <input class="form-input recipient-search" id="fRecipSearch" placeholder="Search recipients" oninput="filterRecipients()">
+                        <div class="recipient-list" id="fForwardList"></div>
                     </div>
                 </div>
 
                 <div class="modal-section">
-                    <h4 class="modal-section-heading">Auto-reply</h4>
-                    <div class="form-group">
-                        <label class="form-label">Reply template</label>
-                        <select class="form-select" id="fReplySelect">
-                            <option value="">Don't send an auto-reply</option>
-                        </select>
-                        <div class="form-hint">The reply is only sent if "Send auto-reply" is on below.</div>
-                    </div>
-                    <div class="form-group" style="max-width: 240px; margin-bottom: 0;">
-                        <label class="form-label">Amount threshold <span class="text-soft">($)</span></label>
-                        <input class="form-input" type="number" id="fAmount" placeholder="Leave blank if none">
-                        <div class="form-hint">Only forward when GPT detects a dollar amount at or above this.</div>
+                    <h4 class="modal-section-heading">Reply</h4>
+                    <div class="form-grid-2">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label">Template</label>
+                            <select class="form-select" id="fReplySelect">
+                                <option value="">Don't send an auto-reply</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label">Amount threshold ($)</label>
+                            <input class="form-input" type="number" id="fAmount" placeholder="Optional">
+                        </div>
                     </div>
                 </div>
 
                 <div class="modal-section">
                     <h4 class="modal-section-heading">Behavior</h4>
-                    <div class="panel">
+                    <div class="toggle-list">
                         <label class="toggle-row">
                             <input type="checkbox" id="fMarkRead">
-                            <span>
-                                <span class="toggle-label">Mark as read after handling</span>
-                                <span class="toggle-desc">Mark the email read in Outlook once the system has processed it.</span>
-                            </span>
+                            <span class="toggle-label">Mark as read after handling</span>
                         </label>
                         <label class="toggle-row">
                             <input type="checkbox" id="fAutoReply">
-                            <span>
-                                <span class="toggle-label">Send the auto-reply</span>
-                                <span class="toggle-desc">Master switch. Off means no reply goes out even if a template is selected above.</span>
-                            </span>
+                            <span class="toggle-label">Send the auto-reply</span>
                         </label>
                         <label class="toggle-row">
                             <input type="checkbox" id="fSafeguard">
-                            <span>
-                                <span class="toggle-label">Reply safeguard</span>
-                                <span class="toggle-desc">Only send the auto-reply once per email thread. Prevents duplicate replies on follow-ups.</span>
-                            </span>
+                            <span class="toggle-label">Reply only once per thread</span>
                         </label>
                         <label class="toggle-row">
                             <input type="checkbox" id="fSkipInternal">
-                            <span>
-                                <span class="toggle-label">Skip if sender is internal</span>
-                                <span class="toggle-desc">Don't apply this category when the email is from an @mlfa.org address.</span>
-                            </span>
+                            <span class="toggle-label">Skip when sender is internal</span>
+                        </label>
+                        <label class="toggle-row danger-row">
+                            <input type="checkbox" id="fDeleteImmediately">
+                            <span class="toggle-label">Delete matching emails immediately</span>
                         </label>
                     </div>
                 </div>
 
-                <div class="modal-section danger-section">
-                    <h4 class="modal-section-heading">Destructive</h4>
-                    <label class="toggle-row" style="border-bottom: none;">
-                        <input type="checkbox" id="fDeleteImmediately">
-                        <span>
-                            <span class="toggle-label">Delete immediately</span>
-                            <span class="toggle-desc">Every matching email is sent straight to Trash instead of moving to the destination folder. Use for spam-like categories only.</span>
-                        </span>
-                    </label>
-                </div>
-
                 <details class="disclosure">
-                    <summary>Advanced: personal reply template</summary>
+                    <summary>Personal reply template</summary>
                     <div class="disclosure-body">
-                        <div class="form-hint" style="margin-top: 0; margin-bottom: 10px;">Used when GPT detects the email has personal details. Falls back to the default reply if empty.</div>
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <select class="form-select" id="fReplyPersonalSelect">
-                                <option value="">Same as default</option>
-                            </select>
-                        </div>
+                        <select class="form-select" id="fReplyPersonalSelect">
+                            <option value="">Same as default</option>
+                        </select>
+                        <div class="form-hint" style="margin-top: 6px;">Used when GPT detects the email has personal details. Falls back to the default reply if empty.</div>
                     </div>
                 </details>
             </div>
@@ -298,23 +251,17 @@
             });
         }
 
-        // Active status pill mirrors the hidden #fActive checkbox in the topbar
+        // Status checkbox: label text stays "Active" / "Inactive", visual weight shifts subtly
         function syncActiveStatus() {
             const box = document.getElementById('fActive');
             const chip = document.getElementById('activeStatus');
             const text = document.getElementById('activeStatusText');
             const on = box && box.checked;
-            if (chip) chip.classList.toggle('on', on);
+            if (chip) chip.classList.toggle('on', !!on);
             if (text) text.textContent = on ? 'Active' : 'Inactive';
         }
-        document.addEventListener('click', (e) => {
-            const chip = e.target.closest('#activeStatus');
-            if (!chip) return;
-            const box = document.getElementById('fActive');
-            if (!box) return;
-            box.checked = !box.checked;
-            syncActiveStatus();
-            markDirty();
+        document.addEventListener('change', (e) => {
+            if (e.target && e.target.id === 'fActive') syncActiveStatus();
         });
 
         // Dirty-state Save button
