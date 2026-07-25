@@ -886,10 +886,9 @@ input[type="checkbox"], input[type="radio"] {
 .dense-modal .tab-dot.on { display: block; }
 
 /* Body sizes to whichever tab is open — no floor, so sparse tabs don't leave
-   dead space. The backdrop anchors the modal near the top (.dense-backdrop)
-   so switching to a taller tab grows downward instead of jumping the centre. */
+   dead space. The modal stays vertically centred (see .modal-backdrop), so a
+   taller tab grows from the middle outward. */
 .dense-modal .modal-body { padding: 16px 18px; }
-.modal-backdrop.dense-backdrop { align-items: flex-start; padding-top: 7vh; }
 .dense-modal .tab-panel { display: none; }
 .dense-modal .tab-panel.active { display: block; }
 
