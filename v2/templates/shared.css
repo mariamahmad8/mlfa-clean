@@ -886,9 +886,12 @@ input[type="checkbox"], input[type="radio"] {
 .dense-modal .tab-dot.on { display: block; }
 
 /* Body sizes to whichever tab is open — no floor, so sparse tabs don't leave
-   dead space. The modal stays vertically centred (see .modal-backdrop), so a
-   taller tab grows from the middle outward. */
+   dead space. The backdrop sits the modal below the page header rather than
+   dead-centre; max-height keeps the tallest tab on screen even on a short
+   laptop display, with the body scrolling instead of overflowing. */
 .dense-modal .modal-body { padding: 16px 18px; }
+.modal-backdrop.dense-backdrop { align-items: flex-start; padding: 18vh 0 4vh; }
+.settings-modal.dense-modal { max-height: 78vh; }
 .dense-modal .tab-panel { display: none; }
 .dense-modal .tab-panel.active { display: block; }
 
