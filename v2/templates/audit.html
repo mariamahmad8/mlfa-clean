@@ -88,19 +88,70 @@
             margin: 2px 0 6px;
             font-variant-numeric: tabular-nums;
         }
-        /* Tighter table rows and better column proportions */
+        /* Log table — single-line rows, tabular figures, day separators.
+           Rows carry no repeated text: the date lives in the day separator and
+           the message ID lives only in Target, never restated in Detail. */
         table.data-table.audit-table th,
         table.data-table.audit-table td {
-            padding: 8px 12px;
+            padding: 6px 12px;
             font-size: 12.5px;
+            white-space: nowrap;
         }
         table.data-table.audit-table th { font-size: 10.5px; }
-        table.data-table.audit-table .col-when { width: 130px; }
-        table.data-table.audit-table .col-action { width: 100px; }
-        table.data-table.audit-table .col-actor { width: 160px; }
-        table.data-table.audit-table .col-target { width: 180px; color: var(--text-muted); }
-        table.data-table.audit-table .col-target .target-primary { color: var(--text); font-weight: 500; }
-        table.data-table.audit-table .col-target .target-secondary { font-family: 'SF Mono', Menlo, monospace; font-size: 11px; color: var(--text-soft); }
+        table.data-table.audit-table .col-when {
+            width: 96px;
+            font-variant-numeric: tabular-nums;
+            color: var(--text-muted);
+        }
+        table.data-table.audit-table .col-action { width: 96px; }
+        table.data-table.audit-table .col-actor { width: 190px; }
+        table.data-table.audit-table .col-target { width: 150px; }
+        table.data-table.audit-table .col-detail { white-space: normal; }
+        table.data-table.audit-table .col-took {
+            width: 76px;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+            color: var(--text-soft);
+        }
+        table.data-table.audit-table .target-primary { color: var(--text); font-weight: 500; }
+        table.data-table.audit-table .target-secondary,
+        table.data-table.audit-table .mono-id {
+            font-family: 'SF Mono', Menlo, monospace;
+            font-size: 11px;
+            color: var(--text-soft);
+        }
+        .actor-system { color: var(--text-muted); }
+
+        /* Day separator row — the date is stated once, not on every line */
+        table.data-table.audit-table tr.day-row td {
+            background: var(--panel-2);
+            padding: 4px 12px;
+            font-size: 10.5px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--line);
+        }
+        table.data-table.audit-table tr.day-row:hover td { background: var(--panel-2); }
+        table.data-table.audit-table tr.day-row .day-count {
+            font-weight: 500;
+            letter-spacing: 0.04em;
+            color: var(--text-soft);
+        }
+
+        /* Category keys as chips instead of "(grant,donor)" in prose */
+        .cat-chip {
+            display: inline-block;
+            margin-left: 6px;
+            padding: 0 5px;
+            border: 1px solid var(--line);
+            border-radius: 2px;
+            background: var(--panel);
+            font-size: 11px;
+            color: var(--text);
+        }
+        .detail-quote { color: var(--text); font-style: italic; }
     </style>
 </head>
 <body>
@@ -161,11 +212,12 @@
         <table class="data-table audit-table">
             <thead>
                 <tr>
-                    <th class="col-when">When</th>
+                    <th class="col-when">Time</th>
                     <th class="col-action">Action</th>
                     <th class="col-actor">Actor</th>
                     <th class="col-target">Target</th>
-                    <th>Comment</th>
+                    <th class="col-detail">Detail</th>
+                    <th class="col-took">Took</th>
                 </tr>
             </thead>
             <tbody id="tbody"></tbody>
@@ -236,7 +288,7 @@
                 if (!grp.includes(e.action)) return false;
             }
             if (f.search) {
-                const hay = (humanSummary(e) + ' ' + (e.comment || '') + ' ' + (e.actor || '') + ' ' + (e.email_id || '')).toLowerCase();
+                const hay = (summaryText(e) + ' ' + (e.comment || '') + ' ' + (e.actor || '') + ' ' + (e.email_id || '')).toLowerCase();
                 if (!hay.includes(f.search)) return false;
             }
             return true;
@@ -248,30 +300,74 @@
             document.getElementById('fCountLine').textContent =
                 `Showing ${filtered.length.toLocaleString()} of ${allEvents.length.toLocaleString()} events`;
             document.getElementById('empty').style.display = filtered.length ? 'none' : 'block';
+            // Count events per day up front so each separator can report its total.
+            const perDay = {};
+            filtered.forEach(e => { const d = centralDay(e.created_at); perDay[d] = (perDay[d] || 0) + 1; });
+
             const tbody = document.getElementById('tbody');
+            let lastDay = null;
             tbody.innerHTML = filtered.map(e => {
-                const target = e.email_id || '';
-                let targetHtml = '<span class="target-primary">—</span>';
-                if (target) {
-                    if (target.includes(':')) {
-                        // Settings-style targets: rule:donor, template:legal_default → readable primary
-                        const [type, ...rest] = target.split(':');
-                        const name = rest.join(':');
-                        targetHtml = `<span class="target-primary">${escapeHtml(name || type)}</span><span class="target-secondary" title="${escapeHtml(target)}"> · ${escapeHtml(type)}</span>`;
-                    } else {
-                        // Outlook message ID → short mono form with full ID in tooltip
-                        targetHtml = `<span class="target-secondary" title="${escapeHtml(target)}">${escapeHtml(target.slice(0, 14))}…</span>`;
-                    }
+                const day = centralDay(e.created_at);
+                let dayRow = '';
+                if (day !== lastDay) {
+                    lastDay = day;
+                    dayRow = `
+                <tr class="day-row">
+                    <td colspan="6">${escapeHtml(day)}<span class="day-count"> · ${perDay[day]} event${perDay[day] === 1 ? '' : 's'}</span></td>
+                </tr>`;
                 }
-                return `
+                return dayRow + `
                 <tr>
-                    <td class="text-small text-muted">${e.created_at ? formatCentral(e.created_at) : '—'}</td>
+                    <td class="col-when" title="${escapeHtml(e.created_at ? formatCentral(e.created_at) + ' Central' : '')}">${escapeHtml(centralTime(e.created_at))}</td>
                     <td>${badgeForAction(e.action)}</td>
-                    <td>${escapeHtml(e.actor || '—')}</td>
-                    <td>${targetHtml}</td>
-                    <td class="text-muted">${humanSummary(e)}</td>
-                </tr>
-            `;}).join('');
+                    <td>${actorHtml(e.actor)}</td>
+                    <td class="col-target">${targetHtml(e.email_id)}</td>
+                    <td class="col-detail text-muted">${summaryHtml(e)}</td>
+                    <td class="col-took">${escapeHtml(formatMs(e.duration_ms))}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        function actorHtml(actor) {
+            if (!actor || actor === 'system') return '<span class="actor-system">System</span>';
+            return escapeHtml(actor);
+        }
+
+        function targetHtml(target) {
+            if (!target) return '<span class="text-soft">—</span>';
+            if (target.includes(':')) {
+                // Settings-style targets: rule:donor, template:legal_default → readable primary
+                const [type, ...rest] = target.split(':');
+                const name = rest.join(':');
+                return `<span class="target-primary">${escapeHtml(name || type)}</span>`
+                    + `<span class="target-secondary" title="${escapeHtml(target)}"> · ${escapeHtml(type)}</span>`;
+            }
+            // Outlook message ID: nothing human in it, so keep it short and mono.
+            // Full value stays available on hover and in the CSV export.
+            return `<span class="mono-id" title="${escapeHtml(target)}">${escapeHtml(target.slice(0, 12))}…</span>`;
+        }
+
+        function formatMs(ms) {
+            if (ms == null || ms === '') return '';
+            const n = Number(ms);
+            if (!isFinite(n) || n <= 0) return '';
+            if (n < 1000) return `${Math.round(n)} ms`;
+            if (n < 60000) return `${(n / 1000).toFixed(1)} s`;
+            return `${(n / 60000).toFixed(1)} min`;
+        }
+
+        // Category keys ("grant,donor") become chips. Free-text comments (a
+        // rejection reason) are quoted instead — never rendered as a fake chip.
+        function isTokenList(comment) {
+            return /^[a-z0-9_]+(\s*,\s*[a-z0-9_]+)*$/.test(comment);
+        }
+        function humanizeToken(t) {
+            const s = t.trim().replace(/_/g, ' ');
+            return s.charAt(0).toUpperCase() + s.slice(1);
+        }
+        function chipsFor(comment) {
+            if (!comment || !isTokenList(comment)) return '';
+            return comment.split(',').map(t => `<span class="cat-chip">${escapeHtml(humanizeToken(t))}</span>`).join('');
         }
 
         function clearFilters() {
@@ -312,16 +408,16 @@
         function exportCsv() {
             const f = currentFilter();
             const rows = allEvents.filter(e => matches(e, f));
-            const headers = ['When (Central)', 'Action', 'Actor', 'Target', 'Description', 'Raw comment'];
+            const headers = ['When (Central)', 'Action', 'Actor', 'Target', 'Description', 'Duration (ms)', 'Raw comment'];
             const csvRows = [headers.join(',')];
             rows.forEach(e => {
                 const when = e.created_at ? formatCentral(e.created_at) : '';
                 const action = e.action || '';
                 const actor = e.actor || '';
                 const target = e.email_id || '';
-                const desc = plainSummary(e);
+                const desc = summaryText(e);
                 const raw = (e.comment || '').replace(/\s+/g, ' ');
-                csvRows.push([when, action, actor, target, desc, raw].map(csvEscape).join(','));
+                csvRows.push([when, action, actor, target, desc, e.duration_ms ?? '', raw].map(csvEscape).join(','));
             });
             const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
             const url = URL.createObjectURL(blob);
@@ -335,13 +431,6 @@
             const s = String(v ?? '');
             return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
         }
-        function plainSummary(e) {
-            // Strip any HTML tags from humanSummary so the CSV cell is clean text
-            const html = humanSummary(e);
-            const tmp = document.createElement('div');
-            tmp.innerHTML = html;
-            return (tmp.textContent || tmp.innerText || '').trim();
-        }
 
         function firstNameFromEmail(email) {
             if (!email || email === 'system') return 'The system';
@@ -350,59 +439,82 @@
             return first.charAt(0).toUpperCase() + first.slice(1);
         }
 
-        // Turn a raw action + comment into a plain-English sentence.
-        function humanSummary(e) {
-            const who = escapeHtml(firstNameFromEmail(e.actor));
+        // Plain-text description of an event. The Actor, Action, Target and Time
+        // columns already carry who/what/which/when, so this only says what the
+        // other columns can't — never the message ID, never the actor's name.
+        function summaryText(e) {
             const raw = String(e.action || '');
             const comment = (e.comment || '').trim();
-            const target = e.email_id || '';
+            const cats = comment && isTokenList(comment)
+                ? comment.split(',').map(humanizeToken).join(', ')
+                : '';
 
             // Category rule actions
-            if (raw === 'rule_created') {
+            if (raw === 'rule_created' || raw === 'rule_updated' || raw === 'rule_deleted') {
                 const label = extractAfter(comment, 'Label:') || comment || 'a category';
-                return `${who} added the "${escapeHtml(label)}" category`;
-            }
-            if (raw === 'rule_updated') {
-                const label = extractAfter(comment, 'Label:') || comment || 'a category';
-                return `${who} edited the "${escapeHtml(label)}" category`;
-            }
-            if (raw === 'rule_deleted') {
-                const label = extractAfter(comment, 'Label:') || comment || 'a category';
-                return `${who} deleted the "${escapeHtml(label)}" category`;
+                const verb = raw === 'rule_created' ? 'Added' : raw === 'rule_updated' ? 'Edited' : 'Deleted';
+                return `${verb} the "${label}" category`;
             }
 
             // Reply template actions
-            if (raw === 'template_created') return `${who} added a reply template (${escapeHtml(comment.replace(/^template:/, '')) || 'unnamed'})`;
-            if (raw === 'template_updated') return `${who} edited a reply template (${escapeHtml(comment.replace(/^template:/, '')) || 'unnamed'})`;
-            if (raw === 'template_deleted') return `${who} deleted a reply template`;
+            if (raw === 'template_created') return `Added reply template "${comment.replace(/^template:/, '') || 'unnamed'}"`;
+            if (raw === 'template_updated') return `Edited reply template "${comment.replace(/^template:/, '') || 'unnamed'}"`;
+            if (raw === 'template_deleted') return 'Deleted a reply template';
 
             // Recipient actions
-            if (raw === 'recipient_created') return `${who} added ${escapeHtml(comment.replace(/^recipient:/, '')) || 'a recipient'} to the directory`;
-            if (raw === 'recipient_updated') return `${who} edited a recipient in the directory (${escapeHtml(comment.replace(/^recipient:/, '')) || 'unknown'})`;
-            if (raw === 'recipient_deleted') return `${who} removed a recipient from the directory`;
+            if (raw === 'recipient_created') return `Added ${comment.replace(/^recipient:/, '') || 'a recipient'} to the directory`;
+            if (raw === 'recipient_updated') return `Edited ${comment.replace(/^recipient:/, '') || 'a recipient'} in the directory`;
+            if (raw === 'recipient_deleted') return 'Removed a recipient from the directory';
 
             // Inbox actions
-            if (raw === 'inbox_created') return `${who} created a new inbox (${escapeHtml(comment) || 'unnamed'})`;
-            if (raw === 'inbox_updated') return `${who} updated the inbox settings`;
-            if (raw === 'inbox_deleted') return `${who} deleted an inbox`;
-            if (raw === 'inbox_cloned') return `${who} cloned an inbox`;
+            if (raw === 'inbox_created') return `Created inbox ${comment || '(unnamed)'}`;
+            if (raw === 'inbox_updated') return 'Updated inbox settings';
+            if (raw === 'inbox_deleted') return 'Deleted an inbox';
+            if (raw === 'inbox_cloned') return 'Cloned an inbox';
 
             // User actions
-            if (raw === 'user_created') return `${who} added a new user (${escapeHtml(comment) || 'unknown'})`;
-            if (raw === 'user_updated') return `${who} updated a user's role or access`;
-            if (raw === 'user_deleted') return `${who} removed a user`;
+            if (raw === 'user_created') return `Added user ${comment || '(unknown)'}`;
+            if (raw === 'user_updated') return `Updated a user's role or access${comment ? ` — ${comment}` : ''}`;
+            if (raw === 'user_deleted') return 'Removed a user';
 
-            // Email-processing actions — actor is usually 'system' or a reviewer email
-            const shortId = target ? escapeHtml(target.slice(0, 12)) + '…' : 'an email';
-            const cat = comment ? ` (${escapeHtml(comment)})` : '';
-            if (raw === 'auto_processed' || raw === 'auto_processed_on_toggle') return `The AI handled ${shortId}${cat} automatically`;
-            if (raw === 'queued_for_review') return `The AI put ${shortId}${cat} in the review queue`;
-            if (raw === 'approved' || raw === 'approved_bulk') return `${who} approved ${shortId}${cat}`;
-            if (raw === 'rejected') return `${who} rejected ${shortId}${comment ? ` — "${escapeHtml(comment)}"` : ''}`;
-            if (raw === 'dismissed') return `${who} dismissed ${shortId}${cat}`;
+            // Email-processing actions
+            if (raw === 'auto_processed' || raw === 'auto_processed_on_toggle') {
+                return cats ? `Handled automatically — ${cats}` : 'Handled automatically';
+            }
+            if (raw === 'queued_for_review') {
+                return cats ? `Queued for review — ${cats}` : 'Queued for review';
+            }
+            if (raw === 'approved' || raw === 'approved_bulk') {
+                if (cats) return `Approved and executed — ${cats}`;
+                return comment ? `Approved and executed — "${comment}"` : 'Approved and executed';
+            }
+            if (raw === 'rejected') return comment ? `Rejected — "${comment}"` : 'Rejected and moved to Trash';
+            if (raw === 'dismissed') return cats ? `Dismissed, no action — ${cats}` : 'Dismissed, no action taken';
 
             // Unknown fallback — still readable
-            return `${who} performed <em>${escapeHtml(raw)}</em>${comment ? ` — ${escapeHtml(comment)}` : ''}`;
+            return `${raw}${comment ? ` — ${comment}` : ''}`;
+        }
+
+        // Table version: same sentence, but category keys render as chips.
+        function summaryHtml(e) {
+            const raw = String(e.action || '');
+            const comment = (e.comment || '').trim();
+            const chips = chipsFor(comment);
+            if (chips) {
+                const lead = {
+                    auto_processed: 'Handled automatically',
+                    auto_processed_on_toggle: 'Handled automatically',
+                    queued_for_review: 'Queued for review',
+                    approved: 'Approved and executed',
+                    approved_bulk: 'Approved and executed',
+                    dismissed: 'Dismissed, no action taken',
+                }[raw];
+                if (lead) return escapeHtml(lead) + chips;
+            }
+            if (raw === 'rejected' && comment) {
+                return 'Rejected — <span class="detail-quote">' + escapeHtml(comment) + '</span>';
+            }
+            return escapeHtml(summaryText(e));
         }
 
         function extractAfter(text, marker) {
@@ -424,16 +536,29 @@
         }
 
         function escapeHtml(s) { if (s == null) return ''; return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-        function formatTarget(t) {
-            if (!t) return '—';
-            // Readable settings-style targets show fully; long Outlook message IDs get truncated
-            if (t.includes(':')) return escapeHtml(t);
-            if (t.length > 16) return escapeHtml(t.slice(0, 12)) + '…';
-            return escapeHtml(t);
+        // Timestamps are stored UTC and always shown in Central Time.
+        function centralDate(iso) {
+            if (!iso) return null;
+            return new Date(iso.endsWith('Z') ? iso : iso + 'Z');
         }
         function formatCentral(iso) {
-            const d = new Date(iso.endsWith('Z') ? iso : iso + 'Z'); // treat as UTC
-            return d.toLocaleString('en-US', { timeZone: 'America/Chicago', dateStyle: 'short', timeStyle: 'medium' });
+            const d = centralDate(iso);
+            if (!d) return '';
+            return d.toLocaleString('en-US', { timeZone: 'America/Chicago', dateStyle: 'medium', timeStyle: 'medium' });
+        }
+        function centralDay(iso) {
+            const d = centralDate(iso);
+            if (!d) return 'Unknown date';
+            return d.toLocaleDateString('en-US', {
+                timeZone: 'America/Chicago', weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+            });
+        }
+        function centralTime(iso) {
+            const d = centralDate(iso);
+            if (!d) return '—';
+            return d.toLocaleTimeString('en-US', {
+                timeZone: 'America/Chicago', hour: 'numeric', minute: '2-digit', second: '2-digit',
+            });
         }
 
         loadInboxes();

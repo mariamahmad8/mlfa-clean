@@ -800,6 +800,7 @@ def list_audit(inbox_id):
             "action": e.get("action_taken"),
             "actor": e.get("actor"),
             "comment": e.get("comment"),
+            "duration_ms": e.get("duration_ms"),
             "created_at": e["created_at"].isoformat() if e.get("created_at") else None,
         }
         for e in events
