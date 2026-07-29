@@ -153,7 +153,7 @@ a:hover { color: var(--accent-hover); }
 }
 
 /* Primary nav — Hub / Settings, always visible so navigation isn't a hunt */
-.app-header .main-nav { display: flex; align-items: center; gap: 2px; flex: 0 0 auto; }
+.app-header .main-nav { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
 .app-header .nav-link {
   padding: 6px 14px;
   border-radius: 6px;
@@ -181,13 +181,12 @@ a:hover { color: var(--accent-hover); }
 .app-header .inbox-tabs:not(:empty) {
   border-left: 1px solid rgba(245, 241, 234, 0.25);
   padding-left: 16px;
-  margin-left: 4px;
+  margin-left: 0;
 }
 
-/* Role pills — one definition used by the header chip and the Users table so a
-   role reads the same everywhere. Red = full access, orange = scoped, yellow =
-   review only. Backgrounds are opaque so they look identical on the cream
-   tables and on the dark teal header. */
+/* Role pills for the Users table. Red = full access, orange = scoped access,
+   yellow = review only. (The header chip states the role as plain secondary
+   text instead — see .user-chip .user-role.) */
 .role-pill {
   display: inline-block;
   padding: 2px 10px;
@@ -203,7 +202,6 @@ a:hover { color: var(--accent-hover); }
 .role-pill.role-owner    { background: #FBEAD6; color: #9E5A10; }
 .role-pill.role-reviewer { background: #F8F1D4; color: #86690D; }
 
-.app-header .role-pill { flex-shrink: 0; font-size: 11px; padding: 2px 9px; }
 
 /* Header buttons — clean ghost pills, cream on teal */
 .app-header .btn {
@@ -260,7 +258,21 @@ a:hover { color: var(--accent-hover); }
   color: #FFFFFF;
   font-family: var(--font-display);
 }
-.app-header .user-chip .user-email { color: #F5F1EA; font-size: 13px; }
+.app-header .user-chip .user-id {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  line-height: 1.2;
+}
+.app-header .user-chip .user-email { color: #F5F1EA; font-size: 13px; max-width: 100%; }
+/* Permission level as quiet secondary text, so it never competes with the email */
+.app-header .user-chip .user-role {
+  font-size: 11.5px;
+  color: rgba(245, 241, 234, 0.6);
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
 .app-header .user-chip .chev {
   margin-left: 4px;
   opacity: 0.7;

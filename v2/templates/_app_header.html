@@ -9,6 +9,7 @@
   Settings is only linked for admins and owners — the /settings routes redirect
   reviewers away, so linking it for them would be a dead end.
 #}
+{% set role_names = {'admin': 'Administrator', 'owner': 'Owner', 'reviewer': 'Reviewer'} %}
 {% set role_caps = {
     'admin': 'Full access — all inboxes, settings, and users',
     'owner': 'Settings and review for assigned inboxes',
@@ -34,10 +35,12 @@
         <div class="user-menu">
             <button type="button" class="user-chip" onclick="toggleUserMenu(event)" title="{{ current_email }}">
                 <div class="avatar">{{ (current_email or '?')[0]|upper }}</div>
-                <div class="user-email">{{ current_email }}</div>
-                {% if current_role %}
-                <span class="role-pill role-{{ current_role }}">{{ current_role|capitalize }}</span>
-                {% endif %}
+                <span class="user-id">
+                    <span class="user-email">{{ current_email }}</span>
+                    {% if current_role %}
+                    <span class="user-role">{{ role_names.get(current_role, current_role|capitalize) }}</span>
+                    {% endif %}
+                </span>
                 <svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
             <div class="user-dropdown">
