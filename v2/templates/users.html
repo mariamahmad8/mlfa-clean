@@ -171,9 +171,10 @@
         function notify(msg, type = 'success') { const el = document.createElement('div'); el.className = `notification ${type}`; el.textContent = msg; document.body.appendChild(el); setTimeout(() => el.remove(), 2000); }
         function escapeHtml(s) { if (s == null) return ''; return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
         function roleBadge(r) {
-            if (r === 'admin')  return '<span class="badge warning">Admin</span>';
-            if (r === 'owner')  return '<span class="badge success">Owner</span>';
-            return '<span class="badge">Reviewer</span>';
+            // Same pill classes as the header chip — see .role-pill in shared.css
+            if (r === 'admin') return '<span class="role-pill role-admin">Admin</span>';
+            if (r === 'owner') return '<span class="role-pill role-owner">Owner</span>';
+            return '<span class="role-pill role-reviewer">Reviewer</span>';
         }
         function formatCentral(iso) {
             const d = new Date(iso.endsWith('Z') ? iso : iso + 'Z');
