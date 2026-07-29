@@ -1,0 +1,61 @@
+{#
+  Shared app header: brand, primary nav, user identity + role.
+
+  Pages can set two optional slots before including this file:
+    {% set active_nav = 'hub' | 'settings' %}   marks the current nav link
+    {% set header_center %}…{% endset %}        page controls beside the nav (hub's inbox tabs)
+    {% set header_extra %}…{% endset %}         page controls beside the user chip
+
+  Settings is only linked for admins and owners — the /settings routes redirect
+  reviewers away, so linking it for them would be a dead end.
+#}
+{% set role_caps = {
+    'admin': 'Full access — all inboxes, settings, and users',
+    'owner': 'Settings and review for assigned inboxes',
+    'reviewer': 'Review queue only — no settings access',
+} %}
+<header class="app-header">
+    <a href="/" class="brand" aria-label="MLFA Email Hub">
+        <img src="/mlfa-logo.jpeg?v=2" alt="MLFA">
+        <span>Email Hub</span>
+    </a>
+
+    <nav class="main-nav" aria-label="Primary">
+        <a href="/" class="nav-link{% if active_nav == 'hub' %} active{% endif %}">Hub</a>
+        {% if current_role in ['admin', 'owner'] %}
+        <a href="/settings" class="nav-link{% if active_nav == 'settings' %} active{% endif %}">Settings</a>
+        {% endif %}
+    </nav>
+
+    {% if header_center %}{{ header_center }}{% endif %}
+
+    <div class="header-right">
+        {% if header_extra %}{{ header_extra }}{% endif %}
+        <div class="user-menu">
+            <button type="button" class="user-chip" onclick="toggleUserMenu(event)" title="{{ current_email }}">
+                <div class="avatar">{{ (current_email or '?')[0]|upper }}</div>
+                <div class="user-email">{{ current_email }}</div>
+                {% if current_role %}
+                <span class="role-badge role-{{ current_role }}">{{ current_role }}</span>
+                {% endif %}
+                <svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="user-dropdown">
+                <div class="user-dropdown-header">
+                    <div class="u-name">{{ current_email }}</div>
+                    <div class="u-role">{{ current_role or 'Signed in' }}</div>
+                    {% if current_role in role_caps %}
+                    <div class="u-caps">{{ role_caps[current_role] }}</div>
+                    {% endif %}
+                </div>
+                <form method="POST" action="/logout" style="margin:0;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button type="submit" class="user-dropdown-item danger">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                        Log out
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</header>

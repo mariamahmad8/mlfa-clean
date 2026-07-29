@@ -85,7 +85,7 @@ a:hover { color: var(--accent-hover); }
   border-bottom: 3px solid var(--mlfa-orange);
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 16px;
   position: sticky;
   top: 0;
@@ -152,6 +152,66 @@ a:hover { color: var(--accent-hover); }
   font-weight: 600;
 }
 
+/* Primary nav — Hub / Settings, always visible so navigation isn't a hunt */
+.app-header .main-nav { display: flex; align-items: center; gap: 2px; flex: 0 0 auto; }
+.app-header .nav-link {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  color: rgba(245, 241, 234, 0.72);
+  text-decoration: none;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.app-header .nav-link:hover { color: #F5F1EA; border-color: rgba(245, 241, 234, 0.35); }
+.app-header .nav-link.active {
+  color: #F5F1EA;
+  background: rgba(245, 241, 234, 0.14);
+  border-color: rgba(245, 241, 234, 0.5);
+  font-weight: 600;
+}
+/* Page-level controls sit behind a rule — which vanishes when there are none.
+   The hub's inbox tabs are filled in by JS, so a separate divider element would
+   hang there alone on first paint. */
+.app-header .inbox-tabs:not(:empty) {
+  border-left: 1px solid rgba(245, 241, 234, 0.25);
+  padding-left: 16px;
+  margin-left: 4px;
+}
+
+/* Role badge in the user chip — states the signed-in permission level */
+.app-header .role-badge {
+  flex-shrink: 0;
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid rgba(245, 241, 234, 0.35);
+  background: rgba(245, 241, 234, 0.14);
+  color: #F5F1EA;
+  font-family: var(--font-display);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+/* Rust = full privilege, sage = scoped privilege, plain = review only */
+.app-header .role-badge.role-admin {
+  background: var(--mlfa-orange);
+  border-color: var(--mlfa-orange);
+  color: #FFFFFF;
+}
+.app-header .role-badge.role-owner {
+  background: rgba(107, 124, 90, 0.95);
+  border-color: rgba(107, 124, 90, 0.95);
+  color: #FFFFFF;
+}
+
 /* Header buttons — clean ghost pills, cream on teal */
 .app-header .btn {
   background: transparent;
@@ -199,7 +259,7 @@ a:hover { color: var(--accent-hover); }
   padding: 4px 12px 4px 4px;
   transition: background 0.15s, border-color 0.15s;
   gap: 10px;
-  max-width: 260px;
+  max-width: 380px;
 }
 .app-header .user-chip:hover { background: rgba(245, 241, 234, 0.14); border-color: rgba(245, 241, 234, 0.7); }
 .app-header .user-chip .avatar {
@@ -255,11 +315,14 @@ a:hover { color: var(--accent-hover); }
 }
 .user-dropdown-header .u-name { font-weight: 600; font-size: 13px; color: var(--text); }
 .user-dropdown-header .u-role { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; }
+/* What the role actually allows — spelled out so nobody has to guess */
+.user-dropdown-header .u-caps { font-size: 11.5px; color: var(--text-muted); line-height: 1.4; margin-top: 5px; }
 
 .app-header .header-right {
   display: flex;
   align-items: center;
   gap: 12px;
+  margin-left: auto;
 }
 
 /* User identity chip */

@@ -9,85 +9,87 @@
     <script src="/static/security.js?v=2"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Nunito+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="/static/shared.css?v=13">
     <style>
-        /* Compact title-and-toolbar header row */
-        .audit-topbar {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin: 0 0 12px;
-            flex-wrap: wrap;
-        }
-        .audit-topbar .page-title { margin: 0; }
-        .audit-topbar .toolbar-left {
-            display: flex; align-items: center; gap: 8px; margin-left: 16px;
-        }
-        .audit-topbar .toolbar-right {
-            margin-left: auto; display: flex; gap: 8px;
-        }
-        .audit-topbar .form-select { max-width: 240px; height: 34px; }
-        /* Slim filter toolbar with proportional widths */
-        .audit-filter-bar {
-            display: grid;
-            grid-template-columns: 40fr 20fr 15fr 15fr auto;
-            gap: 8px;
-            align-items: center;
-            padding: 10px 12px;
-            background: var(--panel);
-            border: 1px solid var(--line-soft);
-            border-radius: 6px;
-            margin-bottom: 8px;
-        }
-        .audit-filter-bar .form-input,
-        .audit-filter-bar .form-select { height: 32px; font-size: 12.5px; }
-        .audit-filter-bar .afb-inline {
+        /* Page head: title, inbox picker, refresh, export */
+        .audit-head { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; }
+        .audit-head .page-title { margin: 0; flex: 0 1 auto; white-space: nowrap; }
+        .audit-head .head-right {
+            margin-left: auto; flex: 0 0 auto;
             display: flex; align-items: center; gap: 6px;
-            font-size: 11px; color: var(--text-muted);
         }
-        .audit-filter-bar .afb-inline label {
-            font-size: 10px;
-            font-weight: 600;
-            letter-spacing: 0.06em;
-            text-transform: uppercase;
+        /* Controls keep their intrinsic width — no shrinking the button until
+           its label wraps onto two lines. */
+        .audit-head .head-right > * { flex: none; white-space: nowrap; }
+        .audit-head .form-select {
+            width: 200px; height: 30px;
+            padding: 0 8px; line-height: 1.2;
+            font-size: 12.5px; border-radius: 3px;
         }
-        /* Two chip groups on one row, tightly spaced */
-        .audit-chip-row {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            margin-bottom: 6px;
-            flex-wrap: wrap;
+        .audit-head .btn { min-height: 30px; height: 30px; font-size: 12px; border-radius: 3px; }
+        .icon-btn-sq {
+            width: 30px; height: 30px;
+            display: inline-flex; align-items: center; justify-content: center;
+            border: 1px solid var(--line); border-radius: 3px;
+            background: var(--panel); color: var(--text-muted);
+            font-size: 13px; cursor: pointer;
         }
-        .audit-chip-group {
-            display: flex; gap: 4px;
-            padding: 3px 4px;
-            border: 1px solid var(--line-soft);
-            border-radius: 999px;
+        .icon-btn-sq:hover { background: var(--panel-2); color: var(--text); }
+
+        /* One filter strip — square, hairline, 28px controls. Dates are labelled
+           so they don't read as two stray mm/dd/yyyy boxes. */
+        .log-filters {
+            display: flex; align-items: center; gap: 8px;
+            padding: 7px 9px;
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 3px;
+            margin-bottom: 12px;
         }
-        .audit-chip-group + .audit-chip-group { margin-left: 8px; }
-        .afb-chip {
-            font-family: var(--font);
-            font-size: 11.5px;
-            font-weight: 500;
-            letter-spacing: 0;
-            text-transform: none;
-            padding: 4px 10px;
-            border-radius: 999px;
-            border: 1px solid transparent;
-            background: transparent;
-            color: var(--text-muted);
-            cursor: pointer;
+        .log-filters .form-input,
+        .log-filters .form-select {
+            height: 28px; font-size: 12.5px; border-radius: 3px; padding: 0 8px;
         }
-        .afb-chip:hover { color: var(--text); background: var(--panel-2); }
-        .afb-chip.active {
-            background: var(--mlfa-teal);
-            color: #F5F1EA;
+        .log-filters .f-search { flex: 1 1 auto; min-width: 160px; }
+        .log-filters .f-actor { width: 168px; flex: none; }
+        .log-filters .f-status { width: 146px; flex: none; }
+        .log-filters .date-group {
+            display: flex; align-items: center; gap: 6px;
+            padding-left: 9px;
+            border-left: 1px solid var(--line-soft);
         }
-        .audit-count-line {
-            font-size: 11.5px;
-            color: var(--text-muted);
-            margin: 2px 0 6px;
+        .log-filters .date-group label {
+            font-size: 10px; font-weight: 700;
+            letter-spacing: 0.08em; text-transform: uppercase;
+            color: var(--text-soft);
+        }
+        .log-filters input[type="date"] { width: 128px; font-variant-numeric: tabular-nums; }
+        .log-filters .btn { min-height: 28px; height: 28px; font-size: 12px; border-radius: 3px; }
+
+        /* View tabs — same underline language as the settings modals, no pills.
+           The table hangs directly off this strip. */
+        .log-tabs {
+            display: flex; align-items: center; gap: 2px;
+            border-bottom: 1px solid var(--line);
+        }
+        .log-tab {
+            appearance: none; background: none; border: none;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+            padding: 6px 10px 7px;
+            font-family: var(--font); font-size: 12.5px; font-weight: 500;
+            color: var(--text-muted); cursor: pointer;
+            transition: color 0.12s ease, border-color 0.12s ease;
+        }
+        .log-tab:hover { color: var(--text); }
+        .log-tab.active {
+            color: var(--text); font-weight: 600;
+            border-bottom-color: var(--mlfa-teal);
+        }
+        .log-count {
+            margin-left: auto; padding-right: 2px;
+            font-size: 11.5px; color: var(--text-muted);
             font-variant-numeric: tabular-nums;
         }
+
         /* Log table — single-line rows, tabular figures, day separators.
            Rows carry no repeated text: the date lives in the day separator and
            the message ID lives only in Target, never restated in Detail. */
@@ -155,59 +157,50 @@
     </style>
 </head>
 <body>
-    <header class="app-header">
-        <a href="/" class="brand" aria-label="MLFA Email Hub">
-            <img src="/mlfa-logo.jpeg?v=2" alt="MLFA">
-            <span>Email Hub</span>
-        </a>
-        <div class="header-right">
-            <div class="user-menu"><button type="button" class="user-chip" onclick="toggleUserMenu(event)" title="{{ current_email }}"><div class="avatar">{{ (current_email or "?")[0]|upper }}</div><div class="user-email">{{ current_email }}</div><svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></button><div class="user-dropdown"><div class="user-dropdown-header"><div class="u-name">{{ current_email }}</div><div class="u-role">Signed in</div></div><form method="POST" action="/logout" style="margin:0;"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" class="user-dropdown-item danger"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Log out</button></form></div></div>
-            <a href="/settings" class="btn small">Back to settings</a>
-            <a href="/" class="btn small">Hub</a>
-        </div>
-    </header>
+    {% set active_nav = 'settings' %}
+    {% include '_app_header.html' %}
 
     <div class="settings-layout">
         {% include '_settings_nav.html' %}
         <main class="settings-content">
-        <div class="audit-topbar">
+        <div class="audit-head">
             <h1 class="page-title">Audit log<span class="info-tip wide" style="margin-left: 10px; width: 18px; height: 18px;">i<span class="info-content"><div class="tip-title">Audit log — what each action means</div><dl class="tip-legend"><dt>Auto</dt><dd>The AI handled the email on its own (classified, forwarded, replied, tagged) without human review.</dd><dt>Queued</dt><dd>The AI wasn't sure, so it added the email to the review hub for a person to look at.</dd><dt>Approved</dt><dd>A reviewer looked at the queued email and clicked Approve. The system then carried out the action plan.</dd><dt>Rejected</dt><dd>A reviewer rejected the queued email. It got moved to Trash and a note went out.</dd><dt>Dismissed</dt><dd>A reviewer decided the email needed no action (spam or irrelevant). Marked read, no reply, no forward.</dd><dt>Created / Updated / Deleted</dt><dd>A staff member added, edited, or removed something like a rule, template, recipient, or user.</dd></dl></span></span></h1>
-            <div class="toolbar-left">
+            <div class="head-right">
                 <select class="form-select" id="inboxSelect" onchange="loadEvents()"></select>
-                <button class="btn small" onclick="loadEvents()" title="Refresh">↻</button>
-            </div>
-            <div class="toolbar-right">
+                <button class="icon-btn-sq" onclick="loadEvents()" title="Refresh">&#8635;</button>
                 <button class="btn small" onclick="exportCsv()">Export CSV</button>
             </div>
         </div>
 
-        <div class="audit-filter-bar">
-            <input class="form-input" id="fSearch" placeholder="Search comment, actor, or target…" oninput="renderEvents()">
-            <select class="form-select" id="fActor" onchange="renderEvents()">
+        <div class="log-filters">
+            <input class="form-input f-search" id="fSearch" placeholder="Search detail, actor, or target…" oninput="renderEvents()">
+            <select class="form-select f-actor" id="fActor" onchange="renderEvents()">
                 <option value="">Any actor</option>
             </select>
-            <input class="form-input" type="date" id="fFrom" title="From date" onchange="renderEvents()">
-            <input class="form-input" type="date" id="fTo" title="To date" onchange="renderEvents()">
+            <select class="form-select f-status" id="fStatus" onchange="onStatusChange()">
+                <option value="">Any action</option>
+                <option value="auto_processed">Auto</option>
+                <option value="queued_for_review">Queued</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+                <option value="dismissed">Dismissed</option>
+            </select>
+            <div class="date-group">
+                <label for="fFrom">From</label>
+                <input class="form-input" type="date" id="fFrom" onchange="renderEvents()">
+                <label for="fTo">To</label>
+                <input class="form-input" type="date" id="fTo" onchange="renderEvents()">
+            </div>
             <button class="btn small" onclick="clearFilters()">Clear</button>
         </div>
 
-        <div class="audit-chip-row" id="fActionChips">
-            <div class="audit-chip-group">
-                <button class="afb-chip active" data-group="all">All</button>
-                <button class="afb-chip" data-group="email">Emails</button>
-                <button class="afb-chip" data-group="settings">Settings</button>
-                <button class="afb-chip" data-group="user">Users</button>
-            </div>
-            <div class="audit-chip-group">
-                <button class="afb-chip" data-action="auto_processed">Auto</button>
-                <button class="afb-chip" data-action="queued_for_review">Queued</button>
-                <button class="afb-chip" data-action="approved">Approved</button>
-                <button class="afb-chip" data-action="rejected">Rejected</button>
-                <button class="afb-chip" data-action="dismissed">Dismissed</button>
-            </div>
+        <div class="log-tabs">
+            <button type="button" class="log-tab active" data-group="all">All</button>
+            <button type="button" class="log-tab" data-group="email">Emails</button>
+            <button type="button" class="log-tab" data-group="settings">Settings</button>
+            <button type="button" class="log-tab" data-group="user">Users</button>
+            <span class="log-count" id="fCountLine"></span>
         </div>
-
-        <div class="audit-count-line" id="fCountLine"></div>
 
         <table class="data-table audit-table">
             <thead>
@@ -375,33 +368,32 @@
             document.getElementById('fActor').value = '';
             document.getElementById('fFrom').value = '';
             document.getElementById('fTo').value = '';
+            document.getElementById('fStatus').value = '';
             activeGroup = 'all';
             activeAction = null;
-            syncChipUI();
+            syncTabUI();
             renderEvents();
         }
 
-        function syncChipUI() {
-            document.querySelectorAll('.afb-chip').forEach(c => {
-                const g = c.dataset.group;
-                const a = c.dataset.action;
-                const isActive = (a && a === activeAction) || (!a && g === activeGroup && !activeAction);
-                c.classList.toggle('active', isActive);
+        function syncTabUI() {
+            document.querySelectorAll('.log-tab').forEach(t => {
+                t.classList.toggle('active', t.dataset.group === activeGroup);
             });
         }
 
-        // Attach chip clicks
+        // Action filter lives in the toolbar select; picking one implies "all groups"
+        // so a status can't be filtered out by the active tab.
+        function onStatusChange() {
+            activeAction = document.getElementById('fStatus').value || null;
+            if (activeAction) { activeGroup = 'all'; syncTabUI(); }
+            renderEvents();
+        }
+
         document.addEventListener('click', (e) => {
-            const chip = e.target.closest('.afb-chip');
-            if (!chip) return;
-            if (chip.dataset.action) {
-                activeAction = activeAction === chip.dataset.action ? null : chip.dataset.action;
-                activeGroup = 'all';
-            } else if (chip.dataset.group) {
-                activeGroup = chip.dataset.group;
-                activeAction = null;
-            }
-            syncChipUI();
+            const tab = e.target.closest('.log-tab');
+            if (!tab) return;
+            activeGroup = tab.dataset.group;
+            syncTabUI();
             renderEvents();
         });
 

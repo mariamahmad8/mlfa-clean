@@ -15,19 +15,8 @@
     </style>
 </head>
 <body>
-    <header class="app-header">
-        <a href="/" class="brand" aria-label="MLFA Email Hub">
-            <img src="/mlfa-logo.jpeg?v=2" alt="MLFA">
-            <span>Email Hub</span>
-        </a>
-        <div class="header-right">
-            <a href="/" class="btn small">Back to hub</a>
-            <form method="POST" action="/logout" style="margin:0;">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                <button type="submit" class="btn small">Log out</button>
-            </form>
-        </div>
-    </header>
+    {% set active_nav = 'settings' %}
+    {% include '_app_header.html' %}
 
     <div class="container">
         <h1 class="page-title">Settings</h1>
