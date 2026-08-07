@@ -22,6 +22,7 @@ from models.NormalizedMessage import NormalizedMessage
 from storage import inbox as inbox_storage
 from storage import rules as rules_storage
 from storage import queue as queue_storage
+from storage import audit as audit_storage
 from adapters import o365
 from engine import pipeline
 from security_logging import log_event
@@ -81,6 +82,8 @@ def poll_inbox(inbox: InboxConfig) -> None:
     o365.ensure_account_fresh()
     rules = rules_storage.get_rules_for_inbox(inbox.id)
 
+    _expire_old_queue_entries(inbox)
+
     # Clean up queue entries that have been externally handled (e.g. by the
     # old hub, another admin, or manually in Outlook). We detect this by
     # checking if the message now has a PAIRActioned tag on Outlook's side.
@@ -94,6 +97,46 @@ def poll_inbox(inbox: InboxConfig) -> None:
 
     # Save the updated tokens so we know where to pick up next time
     o365.save_last_delta(inbox, new_inbox_token, new_junk_token)
+
+
+def _expire_old_queue_entries(inbox: InboxConfig) -> None:
+    """Purge expired Hub records while preserving a trace on the Outlook item."""
+    try:
+        expired = queue_storage.get_expired(inbox.id)
+    except Exception as e:
+        log_event(
+            "worker.queue_expiration_list_failed",
+            level="ERROR",
+            error=e,
+            inbox_db_id=inbox.id,
+        )
+        return
+
+    for row in expired:
+        message_id = row.get("message_id")
+        if not message_id:
+            continue
+        try:
+            raw_msg = o365.fetch_message_safely(inbox, message_id)
+            if raw_msg is not None:
+                o365.remove_email_tags(raw_msg, ["PAIRActioned/queued"])
+                o365.tag_email(raw_msg, ["queue_expired"])
+            audit_storage.log_event(
+                inbox_id=inbox.id,
+                email_id=message_id,
+                action="queue_expired",
+                actor="system",
+                comment=None,
+            )
+        except Exception as e:
+            log_event(
+                "worker.queue_expiration_item_failed",
+                level="ERROR",
+                error=e,
+                inbox_db_id=inbox.id,
+            )
+        finally:
+            queue_storage.remove_from_queue(message_id)
 
 
 def poll_folder(

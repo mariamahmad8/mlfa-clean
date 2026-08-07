@@ -134,7 +134,7 @@ def fetch_unread_since(
     for msg in messages:
         if any((t or "").startswith("PAIRActioned") for t in (msg.categories or [])):
             continue
-        results.append(_to_normalized_message(msg))
+        results.append(normalize_message(msg))
     return results
 
 
@@ -190,7 +190,7 @@ def fetch_messages_delta(
             msg.refresh()
         except Exception:
             pass
-        results.append(_to_normalized_message(msg))
+        results.append(normalize_message(msg))
 
     new_token = getattr(msgs, "delta_token", None) or delta_url
     return results, new_token
@@ -630,11 +630,11 @@ def get_clean_message_text(msg) -> str:
 # Private helpers used internally
 # ---------------------------------------------------------------------------
 
-def _to_normalized_message(msg) -> NormalizedMessage:
+def normalize_message(msg) -> NormalizedMessage:
     """
     Convert an O365 library message into our NormalizedMessage dataclass.
 
-    Called by both fetch functions. After this, the rest of the system
+    Called by fetch functions and the reviewer API. After this, the rest of the system
     works with our clean dataclass and doesn't have to know about the
     O365 library at all.
     """

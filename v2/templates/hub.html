@@ -192,6 +192,7 @@
         let pendingEmails = [];
         let currentInboxId = null;
         let inboxes = [];
+        let reviewCategories = [];
 
         async function loadInboxes() {
             try {
@@ -216,8 +217,15 @@
             currentInboxId = inboxId;
             currentEmail = null;
             renderInboxTabs();
+            await loadReviewCategories();
             await loadPending();
             await loadAutomation();
+        }
+
+        async function loadReviewCategories() {
+            const suffix = currentInboxId ? `?inbox_id=${currentInboxId}` : '';
+            const res = await fetch(`/api/review/categories${suffix}`);
+            reviewCategories = res.ok ? await res.json() : [];
         }
 
         async function loadPending() {
@@ -260,8 +268,26 @@
             return (parts[parts.length - 1] || '').trim();
         }
 
-        function selectEmail(emailId) {
+        async function selectEmail(emailId) {
             currentEmail = pendingEmails.find(e => e.id === emailId);
+            if (!currentEmail) return;
+            currentEmail.contentStatus = 'loading';
+            renderQueue();
+            renderDetail();
+            const suffix = currentInboxId ? `?inbox_id=${currentInboxId}` : '';
+            const res = await fetch(`/api/emails/${encodeURIComponent(emailId)}/content${suffix}`);
+            let data = {};
+            try { data = await res.json(); } catch (_) {}
+            if (res.ok || data.contentStatus === 'unavailable') {
+                Object.assign(currentEmail, data);
+                if (data.subject) {
+                    const parts = (currentEmail.meta || '').split('|');
+                    currentEmail.meta = `${parts[0] || ''} | ${data.sender || ''} | ${data.subject}`;
+                }
+            } else {
+                currentEmail.contentStatus = 'unavailable';
+                currentEmail.originalContent = data.originalContent || data.error || 'Email content is temporarily unavailable.';
+            }
             renderQueue();
             renderDetail();
         }
@@ -273,6 +299,24 @@
                 return;
             }
             const e = currentEmail;
+            const needsManualCategory = e.aiDisabled || !e.category;
+            const manualCategoryPanel = needsManualCategory ? `
+                <div class="card" style="margin-bottom:16px;">
+                    <div class="form-label">Manual category required</div>
+                    <div class="form-hint" style="margin-bottom:8px;">AI is disabled for this inbox. Choose every category that applies before approving.</div>
+                    <select class="form-select" id="manualCategorySelect" multiple size="6">
+                        ${reviewCategories.map(category => `<option value="${escapeHtml(category.key)}">${escapeHtml(category.label)}</option>`).join('')}
+                    </select>
+                    <button class="btn primary" style="margin-top:10px;" onclick="saveManualCategories()">Save categories</button>
+                </div>
+            ` : '';
+            const contentNotice = e.contentStatus === 'loading'
+                ? '<div class="detail-body">Loading securely from Microsoft 365…</div>'
+                : e.contentStatus === 'encrypted_fallback'
+                    ? '<div class="notification warning" style="position:static;margin-bottom:12px;">Microsoft 365 is unavailable. Showing the encrypted temporary copy.</div>'
+                    : e.contentStatus === 'unavailable'
+                        ? '<div class="notification error" style="position:static;margin-bottom:12px;">The original message is unavailable. Approval is disabled until it can be retrieved.</div>'
+                        : '';
             panel.innerHTML = `
                 <div class="detail-header">
                     <h2 class="detail-subject">${escapeHtml(extractSubject(e.meta))}</h2>
@@ -285,9 +329,11 @@
                         <div><div class="label">Reason</div>${escapeHtml(e.reason || '—')}</div>
                     </div>
                 </div>
-                <div class="detail-body">${escapeHtml(e.originalContent || '')}</div>
+                ${manualCategoryPanel}
+                ${contentNotice}
+                ${e.contentStatus === 'loading' ? '' : `<div class="detail-body">${escapeHtml(e.originalContent || '')}</div>`}
                 <div class="detail-actions">
-                    <button class="btn primary" onclick="showAcceptPanel()">Approve</button>
+                    <button class="btn primary" onclick="showAcceptPanel()" ${needsManualCategory || e.contentStatus === 'loading' || e.contentStatus === 'unavailable' ? 'disabled' : ''}>Approve</button>
                     <button class="btn danger" onclick="showRejectPanel()">Reject</button>
                     <button class="btn" onclick="dismissEmail()">Dismiss</button>
                     <div class="spacer"></div>
@@ -312,6 +358,26 @@
                     </div>
                 </div>
             `;
+        }
+
+        async function saveManualCategories() {
+            if (!currentEmail) return;
+            const select = document.getElementById('manualCategorySelect');
+            const categories = Array.from(select.selectedOptions).map(option => option.value);
+            if (!categories.length) {
+                notify('Select at least one category', 'error');
+                return;
+            }
+            const emailId = currentEmail.id;
+            const res = await apiCall(`/api/emails/${encodeURIComponent(emailId)}/manual_categories`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ inbox_id: currentInboxId, categories }),
+            });
+            if (!res) return;
+            notify('Categories saved');
+            await loadPending();
+            await selectEmail(emailId);
         }
 
         function showAcceptPanel() {
@@ -439,11 +505,14 @@
                 .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
 
-        // Boot
-        loadInboxes();
-        loadPending();
-        loadAutomation();
-        setInterval(loadPending, 15000);
+        async function boot() {
+            await loadInboxes();
+            await loadReviewCategories();
+            await loadPending();
+            await loadAutomation();
+            setInterval(loadPending, 15000);
+        }
+        boot();
     </script>
 </body>
 </html>

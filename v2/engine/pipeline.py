@@ -48,6 +48,36 @@ def process_message(
 
     started = time.time()
 
+    if not inbox.send_to_openai:
+        classification_dict = {
+            "categories": [],
+            "recipients": [],
+            "needs_personal_reply": False,
+            "escalation_reason": "AI classification is disabled for this inbox.",
+            "name_sender": None,
+            "amount_detected": None,
+            "ai_disabled": True,
+        }
+        queue.add_to_queue(normalized_msg, inbox, classification_dict)
+        try:
+            o365.tag_email(raw_msg, ["queued"])
+        except Exception as e:
+            log_security_event(
+                "pipeline.queue_tag_failed",
+                level="ERROR",
+                error=e,
+                inbox_db_id=inbox.id,
+            )
+        audit.log_event(
+            inbox_id=inbox.id,
+            email_id=normalized_msg.message_id,
+            action="queued_human_only",
+            actor="system",
+            comment="AI disabled",
+            duration_ms=int((time.time() - started) * 1000),
+        )
+        return
+
     # Step 0 — enrich with thread context and thread-wide tags (for safeguards)
     if inbox.use_thread_context and normalized_msg.conversation_id:
         try:
@@ -83,7 +113,7 @@ def process_message(
             "amount_detected": result.amount_money_detected,
             "reason": result.reason,
         }
-        queue.add_to_queue(normalized_msg, inbox.id, classification_dict)
+        queue.add_to_queue(normalized_msg, inbox, classification_dict)
         # Tag the message with PAIRActioned/queued so delta sync doesn't re-process it
         try:
             o365.tag_email(raw_msg, ["queued"])

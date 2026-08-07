@@ -5,33 +5,36 @@ from sqlalchemy import text
 from adapters.db import get_db_session
 from models.InboxConfig import InboxConfig
 
+
+def _from_row(row) -> InboxConfig:
+    return InboxConfig(
+        id=row["id"],
+        email_to_watch=row["email_to_watch"],
+        display_name=row["display_name"],
+        automation_mode=row["automation_mode"],
+        blocked_senders=row["blocked_senders"],
+        skip_sender_pairs=row["skip_sender_pairs"],
+        system_preamble=row["system_preamble"],
+        global_guidelines=row["global_guidelines"],
+        internal_domains=row.get("internal_domains", []) or [],
+        backfill_days=row.get("backfill_days", 2),
+        use_thread_context=row.get("use_thread_context", True),
+        send_to_openai=row.get("send_to_openai", True),
+        retention_days=row.get("retention_days", 30),
+        internal_reply_bridge_enabled=row.get("internal_reply_bridge_enabled", False),
+        internal_reply_external_prefix=row.get("internal_reply_external_prefix", "[EXTERNAL]"),
+        internal_reply_internal_prefix=row.get("internal_reply_internal_prefix", "[INTERNAL]"),
+        delta_token_inbox=row.get("delta_token_inbox"),
+        delta_token_junk=row.get("delta_token_junk"),
+    )
+
 """Return all inboxes from the database as InboxConfig objects."""
 def get_active_inboxes() -> List[InboxConfig]:
     session = get_db_session()
     try:
         result = session.execute(text("SELECT * FROM inboxes"))
         rows = result.mappings().all()
-        return [
-            InboxConfig(
-                id=row["id"],
-                email_to_watch=row["email_to_watch"],
-                display_name=row["display_name"],
-                automation_mode=row["automation_mode"],
-                blocked_senders=row["blocked_senders"],
-                skip_sender_pairs=row["skip_sender_pairs"],
-                system_preamble=row["system_preamble"],
-                global_guidelines=row["global_guidelines"],
-                internal_domains=row.get("internal_domains", []) or [],
-                backfill_days=row.get("backfill_days", 2),
-                use_thread_context=row.get("use_thread_context", True),
-                internal_reply_bridge_enabled=row.get("internal_reply_bridge_enabled", False),
-                internal_reply_external_prefix=row.get("internal_reply_external_prefix", "[EXTERNAL]"),
-                internal_reply_internal_prefix=row.get("internal_reply_internal_prefix", "[INTERNAL]"),
-                delta_token_inbox=row.get("delta_token_inbox"),
-                delta_token_junk=row.get("delta_token_junk"),
-            )
-            for row in rows
-        ]
+        return [_from_row(row) for row in rows]
     finally:
         session.close()
 
@@ -48,24 +51,7 @@ def get_inbox(inbox_id: int) -> Optional[InboxConfig]:
         if row is None:
             return None
 
-        return InboxConfig(
-            id=row["id"],
-            email_to_watch=row["email_to_watch"],
-            display_name=row["display_name"],
-            automation_mode=row["automation_mode"],
-            blocked_senders=row["blocked_senders"],
-            skip_sender_pairs=row["skip_sender_pairs"],
-            system_preamble=row["system_preamble"],
-            global_guidelines=row["global_guidelines"],
-            internal_domains=row.get("internal_domains", []) or [],
-            backfill_days=row.get("backfill_days", 2),
-            use_thread_context=row.get("use_thread_context", True),
-            internal_reply_bridge_enabled=row.get("internal_reply_bridge_enabled", False),
-            internal_reply_external_prefix=row.get("internal_reply_external_prefix", "[EXTERNAL]"),
-            internal_reply_internal_prefix=row.get("internal_reply_internal_prefix", "[INTERNAL]"),
-            delta_token_inbox=row.get("delta_token_inbox"),
-            delta_token_junk=row.get("delta_token_junk"),
-        )
+        return _from_row(row)
     finally:
         session.close()
 
@@ -76,8 +62,15 @@ def save_inbox(inbox: InboxConfig) -> None:
         session.execute(
             text(
                 """
-                INSERT INTO inboxes (email_to_watch, display_name, automation_mode, blocked_senders, skip_sender_pairs)
-                VALUES (:email_to_watch, :display_name, :automation_mode, :blocked_senders, :skip_sender_pairs)
+                INSERT INTO inboxes (
+                    email_to_watch, display_name, automation_mode,
+                    blocked_senders, skip_sender_pairs, send_to_openai,
+                    retention_days
+                ) VALUES (
+                    :email_to_watch, :display_name, :automation_mode,
+                    :blocked_senders, :skip_sender_pairs, :send_to_openai,
+                    :retention_days
+                )
                 """
             ),
             {
@@ -86,6 +79,8 @@ def save_inbox(inbox: InboxConfig) -> None:
                 "automation_mode": inbox.automation_mode,
                 "blocked_senders": json.dumps(inbox.blocked_senders),
                 "skip_sender_pairs": json.dumps(inbox.skip_sender_pairs),
+                "send_to_openai": inbox.send_to_openai,
+                "retention_days": inbox.retention_days,
             },
         )
         session.commit()
@@ -109,6 +104,8 @@ def update_inbox(inbox: InboxConfig) -> None:
                     internal_domains = :internal_domains,
                     backfill_days = :backfill_days,
                     use_thread_context = :use_thread_context,
+                    send_to_openai = :send_to_openai,
+                    retention_days = :retention_days,
                     internal_reply_bridge_enabled = :internal_reply_bridge_enabled,
                     internal_reply_external_prefix = :internal_reply_external_prefix,
                     internal_reply_internal_prefix = :internal_reply_internal_prefix
@@ -126,6 +123,8 @@ def update_inbox(inbox: InboxConfig) -> None:
                 "internal_domains": json.dumps(inbox.internal_domains),
                 "backfill_days": inbox.backfill_days,
                 "use_thread_context": inbox.use_thread_context,
+                "send_to_openai": inbox.send_to_openai,
+                "retention_days": inbox.retention_days,
                 "internal_reply_bridge_enabled": inbox.internal_reply_bridge_enabled,
                 "internal_reply_external_prefix": inbox.internal_reply_external_prefix,
                 "internal_reply_internal_prefix": inbox.internal_reply_internal_prefix,

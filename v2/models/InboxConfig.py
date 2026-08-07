@@ -14,6 +14,8 @@ class InboxConfig:
     internal_domains: List[str] = field(default_factory=list)
     backfill_days: int = 2
     use_thread_context: bool = True
+    send_to_openai: bool = True
+    retention_days: int = 30
     internal_reply_bridge_enabled: bool = False
     internal_reply_external_prefix: str = "[EXTERNAL]"
     internal_reply_internal_prefix: str = "[INTERNAL]"

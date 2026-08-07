@@ -271,6 +271,11 @@
                             <span class="toggle-label">Use conversation history</span>
                             <span class="info-tip" style="margin-left:auto;">i<span class="info-content">Lets the AI read earlier messages in the same thread before deciding. Recommended — it stops follow-ups like “any update?” from being misclassified.</span></span>
                         </label>
+                        <label class="toggle-row">
+                            <input type="checkbox" id="fSendToOpenAI">
+                            <span class="toggle-label">Allow AI classification</span>
+                            <span class="info-tip" style="margin-left:auto;">i<span class="info-content">When off, this inbox's email content is not sent to OpenAI. New messages wait for a reviewer to choose a category manually.</span></span>
+                        </label>
                     </div>
                     <hr class="divider">
                     <div class="field field-top">
@@ -282,6 +287,16 @@
                                 <span>days</span>
                             </div>
                             <div class="form-hint">Applies only on the first connection, not on later saves.</div>
+                        </div>
+                    </div>
+                    <div class="field field-top">
+                        <label class="form-label" for="fRetention">Hub queue retention<span class="info-tip">i<span class="info-content">How long temporary review records may remain in the Hub database. The original email remains in Microsoft 365.</span></span></label>
+                        <div class="field-control">
+                            <div class="inline-row">
+                                <input class="inline-num" type="number" id="fRetention" min="1" max="365" value="30">
+                                <span>days</span>
+                            </div>
+                            <div class="form-hint">Configure according to MLFA's approved retention policy.</div>
                         </div>
                     </div>
                 </div>
@@ -571,6 +586,8 @@
             document.getElementById('fInternalDomains').value = '';
             document.getElementById('fBackfill').value = '2';
             document.getElementById('fUseThreadContext').checked = true;
+            document.getElementById('fSendToOpenAI').checked = true;
+            document.getElementById('fRetention').value = '30';
             document.getElementById('fInternalBridge').checked = false;
             document.getElementById('fInternalPrefix').value = '[INTERNAL]';
             document.getElementById('fExternalPrefix').value = '[EXTERNAL]';
@@ -597,6 +614,8 @@
             document.getElementById('fInternalDomains').value = (ib.internal_domains || []).join('\n');
             document.getElementById('fBackfill').value = ib.backfill_days ?? 2;
             document.getElementById('fUseThreadContext').checked = ib.use_thread_context !== false;
+            document.getElementById('fSendToOpenAI').checked = ib.send_to_openai !== false;
+            document.getElementById('fRetention').value = ib.retention_days ?? 30;
             document.getElementById('fInternalBridge').checked = !!ib.internal_reply_bridge_enabled;
             document.getElementById('fInternalPrefix').value = ib.internal_reply_internal_prefix || '[INTERNAL]';
             document.getElementById('fExternalPrefix').value = ib.internal_reply_external_prefix || '[EXTERNAL]';
@@ -630,6 +649,8 @@
                 internal_domains: document.getElementById('fInternalDomains').value.split('\n').map(s => s.trim()).filter(Boolean),
                 backfill_days: Math.max(0, parseInt(document.getElementById('fBackfill').value || '0', 10)),
                 use_thread_context: document.getElementById('fUseThreadContext').checked,
+                send_to_openai: document.getElementById('fSendToOpenAI').checked,
+                retention_days: Math.min(365, Math.max(1, parseInt(document.getElementById('fRetention').value || '30', 10))),
                 internal_reply_bridge_enabled: document.getElementById('fInternalBridge').checked,
                 internal_reply_internal_prefix: document.getElementById('fInternalPrefix').value,
                 internal_reply_external_prefix: document.getElementById('fExternalPrefix').value,

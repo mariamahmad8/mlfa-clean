@@ -276,6 +276,10 @@ def get_inbox(inbox_id):
 @admin_required
 def create_inbox():
     data = request.get_json() or {}
+    try:
+        retention_days = _validated_retention_days(data.get("retention_days", 30))
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
     new = InboxConfig(
         id=None,
         email_to_watch=data.get("email_to_watch", ""),
@@ -288,6 +292,8 @@ def create_inbox():
         internal_domains=data.get("internal_domains", []),
         backfill_days=int(data.get("backfill_days", 2)),
         use_thread_context=bool(data.get("use_thread_context", True)),
+        send_to_openai=bool(data.get("send_to_openai", True)),
+        retention_days=retention_days,
         internal_reply_bridge_enabled=bool(data.get("internal_reply_bridge_enabled", False)),
         internal_reply_external_prefix=data.get("internal_reply_external_prefix", "[EXTERNAL]"),
         internal_reply_internal_prefix=data.get("internal_reply_internal_prefix", "[INTERNAL]"),
@@ -305,6 +311,12 @@ def update_inbox(inbox_id):
     if not inbox:
         return jsonify({"error": "Not found"}), 404
     data = request.get_json() or {}
+    try:
+        retention_days = _validated_retention_days(
+            data.get("retention_days", inbox.retention_days)
+        )
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
     inbox.email_to_watch = data.get("email_to_watch", inbox.email_to_watch)
     inbox.display_name = data.get("display_name", inbox.display_name)
     inbox.automation_mode = data.get("automation_mode", inbox.automation_mode)
@@ -315,6 +327,8 @@ def update_inbox(inbox_id):
     inbox.internal_domains = data.get("internal_domains", inbox.internal_domains)
     inbox.backfill_days = int(data.get("backfill_days", inbox.backfill_days))
     inbox.use_thread_context = bool(data.get("use_thread_context", inbox.use_thread_context))
+    inbox.send_to_openai = bool(data.get("send_to_openai", inbox.send_to_openai))
+    inbox.retention_days = retention_days
     inbox.internal_reply_bridge_enabled = bool(data.get("internal_reply_bridge_enabled", inbox.internal_reply_bridge_enabled))
     inbox.internal_reply_external_prefix = data.get("internal_reply_external_prefix", inbox.internal_reply_external_prefix)
     inbox.internal_reply_internal_prefix = data.get("internal_reply_internal_prefix", inbox.internal_reply_internal_prefix)
@@ -349,6 +363,8 @@ def clone_inbox(source_id):
         internal_domains=list(source.internal_domains or []),
         backfill_days=source.backfill_days,
         use_thread_context=source.use_thread_context,
+        send_to_openai=source.send_to_openai,
+        retention_days=source.retention_days,
         internal_reply_bridge_enabled=source.internal_reply_bridge_enabled,
         internal_reply_external_prefix=source.internal_reply_external_prefix,
         internal_reply_internal_prefix=source.internal_reply_internal_prefix,
@@ -908,6 +924,8 @@ def test_classification(inbox_id):
     inbox = inbox_storage.get_inbox(inbox_id)
     if not inbox:
         return jsonify({"error": "Not found"}), 404
+    if not inbox.send_to_openai:
+        return jsonify({"error": "AI classification is disabled for this inbox."}), 409
 
     data = request.get_json() or {}
     fake_msg = NormalizedMessage(
@@ -1000,10 +1018,22 @@ def _inbox_to_dict(inbox):
         "internal_domains": inbox.internal_domains,
         "backfill_days": inbox.backfill_days,
         "use_thread_context": inbox.use_thread_context,
+        "send_to_openai": inbox.send_to_openai,
+        "retention_days": inbox.retention_days,
         "internal_reply_bridge_enabled": inbox.internal_reply_bridge_enabled,
         "internal_reply_external_prefix": inbox.internal_reply_external_prefix,
         "internal_reply_internal_prefix": inbox.internal_reply_internal_prefix,
     }
+
+
+def _validated_retention_days(raw_value):
+    try:
+        days = int(raw_value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Retention days must be an integer.") from exc
+    if days < 1 or days > 365:
+        raise ValueError("Retention days must be between 1 and 365.")
+    return days
 
 
 def _rule_to_dict(rule):

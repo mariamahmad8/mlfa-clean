@@ -36,6 +36,7 @@ from adapters import o365
 from engine import router, pipeline
 from auth import microsoft as microsoft_auth
 from security_logging import log_event
+from security_encryption import queue_security_mode
 
 
 reviewer_bp = Blueprint('reviewer', __name__)
@@ -433,7 +434,24 @@ def get_emails():
     pending_rows = queue_storage.get_pending(inbox.id)
     emails = []
     for row in pending_rows:
-        classification = row.get('classification') or {}
+        try:
+            display = _queue_summary_data(row)
+        except Exception as exc:
+            log_event(
+                "review.queue_payload_read_failed",
+                level="ERROR",
+                error=exc,
+                inbox_db_id=inbox.id,
+            )
+            display = {
+                "subject": "Encrypted message unavailable",
+                "body": "",
+                "sender": "",
+                "received_at": row.get("received_at"),
+                "classification": {},
+                "content_status": "unavailable",
+            }
+        classification = display["classification"]
         categories = classification.get('categories', [])
         recipients = classification.get('recipients', [])
         amount = classification.get('amount_detected')
@@ -453,7 +471,10 @@ def get_emails():
 
         emails.append({
             "id": row['message_id'],
-            "meta": f"FROM: {row.get('received_at', '')} | {row.get('sender', '')} | {row.get('subject_email', '')}",
+            "meta": (
+                f"FROM: {display['received_at'] or ''} | "
+                f"{display['sender']} | {display['subject']}"
+            ),
             "senderName": classification.get('name_sender') or 'Unknown',
             "category": ', '.join(c.replace('_', ' ').title() for c in categories),
             "amountDetected": str(amount) if amount is not None else 'None',
@@ -461,10 +482,120 @@ def get_emails():
             "needsReply": "Yes" if classification.get('needs_personal_reply') else "No",
             "reason": reason_display or 'None',
             "escalation": escalation or 'None',
-            "originalContent": row.get('body_email', ''),
+            "originalContent": "",
+            "contentStatus": "not_loaded",
+            "aiDisabled": bool(classification.get("ai_disabled")),
             "status": "pending",
         })
     return jsonify(emails)
+
+
+@reviewer_bp.route('/api/emails/<email_id>/content')
+@login_required
+def get_email_content(email_id):
+    """Fetch one authorized queue item's content without loading every message."""
+    inbox = _get_current_inbox()
+    if inbox is None:
+        return jsonify({"error": "No active inbox"}), 400
+    row = queue_storage.get_pending_message(inbox.id, email_id)
+    if row is None:
+        return jsonify({"error": "Not in queue"}), 404
+
+    payload = queue_storage.decode_payload(row)
+    mode = queue_security_mode()
+    if mode in {"microsoft_primary", "microsoft_only"}:
+        raw_msg = o365.fetch_message_safely(inbox, email_id)
+        if raw_msg is not None:
+            normalized = o365.normalize_message(raw_msg)
+            return jsonify({
+                "subject": normalized.subject,
+                "sender": normalized.sender,
+                "receivedAt": normalized.received_at,
+                "originalContent": normalized.body,
+                "contentStatus": "microsoft",
+            })
+        if payload.get("body"):
+            return jsonify({
+                "subject": payload.get("subject") or "",
+                "sender": payload.get("sender") or "",
+                "receivedAt": row.get("received_at"),
+                "originalContent": payload.get("body") or "",
+                "contentStatus": "encrypted_fallback",
+                "warning": "Microsoft 365 was unavailable; showing the encrypted fallback copy.",
+            })
+        return jsonify({
+            "subject": payload.get("subject") or "Original message unavailable",
+            "sender": payload.get("sender") or "",
+            "receivedAt": row.get("received_at"),
+            "originalContent": "The original message could not be retrieved from Microsoft 365.",
+            "contentStatus": "unavailable",
+        }), 503
+
+    return jsonify({
+        "subject": payload.get("subject") or "",
+        "sender": payload.get("sender") or "",
+        "receivedAt": row.get("received_at"),
+        "originalContent": payload.get("body") or "",
+        "contentStatus": "encrypted_database" if row.get("sensitive_payload_ciphertext") else "legacy_database",
+    })
+
+
+@reviewer_bp.route('/api/review/categories')
+@login_required
+def review_categories():
+    """Return active category choices for manual, no-AI review."""
+    inbox = _get_current_inbox()
+    if inbox is None:
+        return jsonify([])
+    rules = rules_storage.get_rules_for_inbox(inbox.id)
+    return jsonify([
+        {"key": rule.key, "label": rule.label}
+        for rule in sorted(rules, key=lambda item: item.priority)
+        if rule.active
+    ])
+
+
+@reviewer_bp.route('/api/emails/<email_id>/manual_categories', methods=['POST'])
+@login_required
+def set_manual_categories(email_id):
+    """Apply reviewer-selected categories without sending content to OpenAI."""
+    inbox = _get_current_inbox()
+    if inbox is None:
+        return jsonify({"error": "No active inbox"}), 400
+    row = queue_storage.get_pending_message(inbox.id, email_id)
+    if row is None:
+        return jsonify({"error": "Not in queue"}), 404
+
+    data = request.get_json(silent=True) or {}
+    requested = data.get("categories") or []
+    if not isinstance(requested, list):
+        return jsonify({"error": "Categories must be a list"}), 400
+    requested = list(dict.fromkeys(str(value).strip() for value in requested if str(value).strip()))
+    allowed = {
+        rule.key
+        for rule in rules_storage.get_rules_for_inbox(inbox.id)
+        if rule.active
+    }
+    if not requested or any(value not in allowed for value in requested):
+        return jsonify({"error": "Select at least one valid category"}), 400
+
+    classification = queue_storage.decode_payload(row).get("classification") or {}
+    classification.update({
+        "categories": requested,
+        "ai_disabled": False,
+        "manually_classified": True,
+        "escalation_reason": "Categories selected by an authorized reviewer.",
+    })
+    if not queue_storage.update_classification(inbox.id, email_id, classification):
+        return jsonify({"error": "Not in queue"}), 404
+    audit_storage.log_event(
+        inbox_id=inbox.id,
+        email_id=email_id,
+        action="manually_classified",
+        actor=session.get("user_email", "unknown"),
+        comment=",".join(requested),
+    )
+    return jsonify({"status": "updated", "categories": requested})
 
 
 @reviewer_bp.route('/api/emails/<email_id>/approve', methods=['POST'])
@@ -482,6 +613,10 @@ def approve_email(email_id):
     if inbox is None:
         return jsonify({"error": "No active inbox"}), 400
 
+    row = queue_storage.get_pending_message(inbox.id, email_id)
+    if row is None:
+        return jsonify({"error": "Not in queue"}), 404
+
     raw_msg = o365.fetch_message_safely(inbox, email_id)
     if raw_msg is None:
         queue_storage.remove_from_queue(email_id)
@@ -492,22 +627,25 @@ def approve_email(email_id):
     reviewer_comment = (data.get('comment') or '').strip()
 
     # Re-run router using current rules + the queued classification
-    pending_rows = queue_storage.get_pending(inbox.id)
-    matching = [r for r in pending_rows if r['message_id'] == email_id]
-    if not matching:
-        return jsonify({"error": "Not in queue"}), 404
-    row = matching[0]
-    classification_dict = row.get('classification') or {}
+    classification_dict = queue_storage.decode_payload(row).get('classification') or {}
+    if not classification_dict.get("categories"):
+        return jsonify({"error": "Choose a category before approving this email."}), 400
 
     rules = rules_storage.get_rules_for_inbox(inbox.id)
-    normalized_msg = _build_normalized_from_row(row)
+    normalized_msg = o365.normalize_message(raw_msg)
     classification_result = _classification_from_dict(classification_dict)
     plan = router.decide(classification_result, rules, inbox, normalized_msg)
 
     try:
         pipeline.execute_plan(plan, inbox, raw_msg)
     except Exception as e:
-        return jsonify({"error": f"Execution failed: {e}"}), 500
+        log_event(
+            "review.approval_execution_failed",
+            level="ERROR",
+            error=e,
+            inbox_db_id=inbox.id,
+        )
+        return jsonify({"error": "The approved action could not be completed."}), 500
 
     # If reviewer left a comment, send a notification email summarizing the action
     if reviewer_comment:
@@ -517,12 +655,12 @@ def approve_email(email_id):
                 safe_reviewer = html.escape(str(session.get('user_email', 'unknown')), quote=True)
                 safe_comment = html.escape(reviewer_comment, quote=True)
                 safe_categories = html.escape(str(plan.tag or 'none'), quote=True)
-                safe_subject = html.escape(str(row.get('subject_email', '')), quote=True)
-                safe_sender = html.escape(str(row.get('sender', '')), quote=True)
+                safe_subject = html.escape(normalized_msg.subject, quote=True)
+                safe_sender = html.escape(normalized_msg.sender, quote=True)
                 o365.send_email(
                     inbox,
                     to=notify_to,
-                    subject=f"[Review] Approved: {row.get('subject_email', '')}",
+                    subject=f"[Review] Approved: {normalized_msg.subject}",
                     body_html=(
                         f"<p><strong>Reviewer:</strong> {safe_reviewer}</p>"
                         f"<p><strong>Comment:</strong> {safe_comment}</p>"
@@ -554,6 +692,9 @@ def reject_email(email_id):
     if inbox is None:
         return jsonify({"error": "No active inbox"}), 400
 
+    if queue_storage.get_pending_message(inbox.id, email_id) is None:
+        return jsonify({"error": "Not in queue"}), 404
+
     data = request.get_json(silent=True) or {}
     reason = data.get('reason', '')
 
@@ -581,6 +722,9 @@ def dismiss_email(email_id):
     inbox = _get_current_inbox()
     if inbox is None:
         return jsonify({"error": "No active inbox"}), 400
+
+    if queue_storage.get_pending_message(inbox.id, email_id) is None:
+        return jsonify({"error": "Not in queue"}), 404
 
     raw_msg = o365.fetch_message_safely(inbox, email_id)
     if raw_msg is not None:
@@ -618,8 +762,13 @@ def approve_all_emails():
                 queue_storage.remove_from_queue(email_id)
                 continue
             rules = rules_storage.get_rules_for_inbox(inbox.id)
-            normalized_msg = _build_normalized_from_row(row)
-            classification_result = _classification_from_dict(row.get('classification') or {})
+            normalized_msg = o365.normalize_message(raw_msg)
+            classification_result = _classification_from_dict(
+                queue_storage.decode_payload(row).get('classification') or {}
+            )
+            if not classification_result.categories:
+                errors.append({"id": email_id, "error": "Manual category required"})
+                continue
             plan = router.decide(classification_result, rules, inbox, normalized_msg)
             pipeline.execute_plan(plan, inbox, raw_msg)
             queue_storage.remove_from_queue(email_id)
@@ -632,7 +781,13 @@ def approve_all_emails():
             )
             processed += 1
         except Exception as e:
-            errors.append({"id": email_id, "error": str(e)})
+            log_event(
+                "review.bulk_approval_failed",
+                level="ERROR",
+                error=e,
+                inbox_db_id=inbox.id,
+            )
+            errors.append({"id": email_id, "error": "Action failed"})
 
     return jsonify({"processed": processed, "errors": errors})
 
@@ -678,8 +833,12 @@ def update_automation_setting():
                 if raw_msg is None:
                     queue_storage.remove_from_queue(email_id)
                     continue
-                normalized_msg = _build_normalized_from_row(row)
-                classification_result = _classification_from_dict(row.get('classification') or {})
+                normalized_msg = o365.normalize_message(raw_msg)
+                classification_result = _classification_from_dict(
+                    queue_storage.decode_payload(row).get('classification') or {}
+                )
+                if not classification_result.categories:
+                    continue
                 plan = router.decide(classification_result, rules, fresh, normalized_msg)
                 pipeline.execute_plan(plan, fresh, raw_msg)
                 queue_storage.remove_from_queue(email_id)
@@ -721,21 +880,6 @@ def _get_current_inbox():
     return accessible[0] if accessible else None
 
 
-def _build_normalized_from_row(row):
-    """Reconstruct a NormalizedMessage from a pending_queue row."""
-    from models.NormalizedMessage import NormalizedMessage
-    return NormalizedMessage(
-        message_id=row['message_id'],
-        sender=row.get('sender', ''),
-        subject=row.get('subject_email', ''),
-        body=row.get('body_email', ''),
-        received_at=row.get('received_at'),
-        conversation_id='',
-        thread_messages=[],
-        existing_tags=[],
-    )
-
-
 def _classification_from_dict(d):
     """Reconstruct a ClassificationResult from the stored JSONB dict."""
     from models.ClassificationResult import ClassificationResult
@@ -747,3 +891,15 @@ def _classification_from_dict(d):
         name_sender=d.get('name_sender'),
         amount_money_detected=d.get('amount_detected'),
     )
+
+
+def _queue_summary_data(row):
+    """Return encrypted/legacy queue metadata without a Microsoft round trip."""
+    payload = queue_storage.decode_payload(row)
+    classification = payload.get("classification") or {}
+    return {
+        "subject": payload.get("subject") or "",
+        "sender": payload.get("sender") or "",
+        "received_at": row.get("received_at"),
+        "classification": classification,
+    }
