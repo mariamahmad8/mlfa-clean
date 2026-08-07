@@ -44,6 +44,10 @@ reviewer_bp = Blueprint('reviewer', __name__)
 ADMIN_PASSWORD_HASH = os.getenv('ADMIN_PASSWORD_HASH', '')
 
 
+class _AbortClaim(Exception):
+    """Raised inside a queue claim to roll it back, leaving the email queued."""
+
+
 # ---------------------------------------------------------------------------
 # Auth helpers
 # ---------------------------------------------------------------------------
@@ -475,7 +479,10 @@ def get_emails():
                 f"FROM: {display['received_at'] or ''} | "
                 f"{display['sender']} | {display['subject']}"
             ),
-            "senderName": classification.get('name_sender') or 'Unknown',
+            # The address is what identifies a sender; the GPT-extracted name is
+            # often missing, which is why this used to read "Unknown".
+            "sender": display['sender'] or '',
+            "senderName": classification.get('name_sender') or '',
             "category": ', '.join(c.replace('_', ' ').title() for c in categories),
             "amountDetected": str(amount) if amount is not None else 'None',
             "recipients": ', '.join(recipients) if recipients else 'None',
@@ -617,70 +624,86 @@ def approve_email(email_id):
     if row is None:
         return jsonify({"error": "Not in queue"}), 404
 
-    raw_msg = o365.fetch_message_safely(inbox, email_id)
-    if raw_msg is None:
-        queue_storage.remove_from_queue(email_id)
-        return jsonify({"error": "Original message not found"}), 404
-
     # Optional reviewer comment — sent to REVIEW_NOTIFY_EMAIL if set
     data = request.get_json(silent=True) or {}
     reviewer_comment = (data.get('comment') or '').strip()
 
-    # Re-run router using current rules + the queued classification
+    # Validate before claiming so a missing category leaves the email in the
+    # queue for the reviewer to fix.
     classification_dict = queue_storage.decode_payload(row).get('classification') or {}
     if not classification_dict.get("categories"):
         return jsonify({"error": "Choose a category before approving this email."}), 400
 
-    rules = rules_storage.get_rules_for_inbox(inbox.id)
-    normalized_msg = o365.normalize_message(raw_msg)
-    classification_result = _classification_from_dict(classification_dict)
-    plan = router.decide(classification_result, rules, inbox, normalized_msg)
-
+    # Claim the queue row for the duration of the work. A second request for the
+    # same email (double-clicked Approve, or another reviewer) gets no row and
+    # returns below without sending anything.
     try:
-        pipeline.execute_plan(plan, inbox, raw_msg)
-    except Exception as e:
-        log_event(
-            "review.approval_execution_failed",
-            level="ERROR",
-            error=e,
-            inbox_db_id=inbox.id,
-        )
-        return jsonify({"error": "The approved action could not be completed."}), 500
+        with queue_storage.claim_pending(inbox.id, email_id) as claimed:
+            if claimed is None:
+                return jsonify({
+                    "status": "already_handled",
+                    "error": "This email was already handled.",
+                }), 409
 
-    # If reviewer left a comment, send a notification email summarizing the action
-    if reviewer_comment:
-        notify_to = os.getenv('REVIEW_NOTIFY_EMAIL', '')
-        if notify_to:
+            raw_msg = o365.fetch_message_safely(inbox, email_id)
+            if raw_msg is None:
+                # Message is gone from Outlook — drop it from the queue (the claim
+                # commits on the way out) rather than leaving an unactionable row.
+                return jsonify({"error": "Original message not found"}), 404
+
+            rules = rules_storage.get_rules_for_inbox(inbox.id)
+            normalized_msg = o365.normalize_message(raw_msg)
+            classification_result = _classification_from_dict(classification_dict)
+            plan = router.decide(classification_result, rules, inbox, normalized_msg)
+
             try:
-                safe_reviewer = html.escape(str(session.get('user_email', 'unknown')), quote=True)
-                safe_comment = html.escape(reviewer_comment, quote=True)
-                safe_categories = html.escape(str(plan.tag or 'none'), quote=True)
-                safe_subject = html.escape(normalized_msg.subject, quote=True)
-                safe_sender = html.escape(normalized_msg.sender, quote=True)
-                o365.send_email(
-                    inbox,
-                    to=notify_to,
-                    subject=f"[Review] Approved: {normalized_msg.subject}",
-                    body_html=(
-                        f"<p><strong>Reviewer:</strong> {safe_reviewer}</p>"
-                        f"<p><strong>Comment:</strong> {safe_comment}</p>"
-                        f"<p><strong>Categories:</strong> {safe_categories}</p>"
-                        f"<p><strong>Subject:</strong> {safe_subject}</p>"
-                        f"<p><strong>From:</strong> {safe_sender}</p>"
-                    ),
-                )
+                pipeline.execute_plan(plan, inbox, raw_msg)
             except Exception as e:
-                log_event("review.notification_failed", level="ERROR", error=e)
+                log_event(
+                    "review.approval_execution_failed",
+                    level="ERROR",
+                    error=e,
+                    inbox_db_id=inbox.id,
+                )
+                # Roll the claim back so the email stays in the queue to retry.
+                raise _AbortClaim
 
-    queue_storage.remove_from_queue(email_id)
-    audit_storage.log_event(
-        inbox_id=inbox.id,
-        email_id=email_id,
-        action="approved",
-        actor=session.get('user_email', 'unknown'),
-        comment=reviewer_comment or plan.tag,
-        duration_ms=int((_time.time() - _started) * 1000),
-    )
+            # If reviewer left a comment, send a notification email summarizing the action
+            if reviewer_comment:
+                notify_to = os.getenv('REVIEW_NOTIFY_EMAIL', '')
+                if notify_to:
+                    try:
+                        safe_reviewer = html.escape(str(session.get('user_email', 'unknown')), quote=True)
+                        safe_comment = html.escape(reviewer_comment, quote=True)
+                        safe_categories = html.escape(str(plan.tag or 'none'), quote=True)
+                        safe_subject = html.escape(normalized_msg.subject, quote=True)
+                        safe_sender = html.escape(normalized_msg.sender, quote=True)
+                        o365.send_email(
+                            inbox,
+                            to=notify_to,
+                            subject=f"[Review] Approved: {normalized_msg.subject}",
+                            body_html=(
+                                f"<p><strong>Reviewer:</strong> {safe_reviewer}</p>"
+                                f"<p><strong>Comment:</strong> {safe_comment}</p>"
+                                f"<p><strong>Categories:</strong> {safe_categories}</p>"
+                                f"<p><strong>Subject:</strong> {safe_subject}</p>"
+                                f"<p><strong>From:</strong> {safe_sender}</p>"
+                            ),
+                        )
+                    except Exception as e:
+                        log_event("review.notification_failed", level="ERROR", error=e)
+
+            audit_storage.log_event(
+                inbox_id=inbox.id,
+                email_id=email_id,
+                action="approved",
+                actor=session.get('user_email', 'unknown'),
+                comment=reviewer_comment or plan.tag,
+                duration_ms=int((_time.time() - _started) * 1000),
+            )
+    except _AbortClaim:
+        # execute_plan failed; the claim rolled back, so the email is still queued.
+        return jsonify({"error": "The approved action could not be completed."}), 500
     return jsonify({"status": "approved"})
 
 
@@ -692,26 +715,30 @@ def reject_email(email_id):
     if inbox is None:
         return jsonify({"error": "No active inbox"}), 400
 
-    if queue_storage.get_pending_message(inbox.id, email_id) is None:
-        return jsonify({"error": "Not in queue"}), 404
-
     data = request.get_json(silent=True) or {}
     reason = data.get('reason', '')
 
-    raw_msg = o365.fetch_message_safely(inbox, email_id)
-    if raw_msg is not None:
-        o365.remove_email_tags(raw_msg, ['PAIRActioned/queued'])
-        o365.move_to_trash(inbox, raw_msg)
-        o365.tag_email(raw_msg, ['dismissed'])
+    # Claim first: a second click must not trash-and-log the same email twice.
+    with queue_storage.claim_pending(inbox.id, email_id) as claimed:
+        if claimed is None:
+            return jsonify({
+                "status": "already_handled",
+                "error": "This email was already handled.",
+            }), 409
 
-    queue_storage.remove_from_queue(email_id)
-    audit_storage.log_event(
-        inbox_id=inbox.id,
-        email_id=email_id,
-        action="rejected",
-        actor=session.get('user_email', 'unknown'),
-        comment=reason,
-    )
+        raw_msg = o365.fetch_message_safely(inbox, email_id)
+        if raw_msg is not None:
+            o365.remove_email_tags(raw_msg, ['PAIRActioned/queued'])
+            o365.move_to_trash(inbox, raw_msg)
+            o365.tag_email(raw_msg, ['dismissed'])
+
+        audit_storage.log_event(
+            inbox_id=inbox.id,
+            email_id=email_id,
+            action="rejected",
+            actor=session.get('user_email', 'unknown'),
+            comment=reason,
+        )
     return jsonify({"status": "rejected"})
 
 
@@ -726,20 +753,26 @@ def dismiss_email(email_id):
     if queue_storage.get_pending_message(inbox.id, email_id) is None:
         return jsonify({"error": "Not in queue"}), 404
 
-    raw_msg = o365.fetch_message_safely(inbox, email_id)
-    if raw_msg is not None:
-        o365.remove_email_tags(raw_msg, ['PAIRActioned/queued'])
-        o365.mark_as_read(raw_msg)
-        o365.tag_email(raw_msg, ['dismissed'])
+    with queue_storage.claim_pending(inbox.id, email_id) as claimed:
+        if claimed is None:
+            return jsonify({
+                "status": "already_handled",
+                "error": "This email was already handled.",
+            }), 409
 
-    queue_storage.remove_from_queue(email_id)
-    audit_storage.log_event(
-        inbox_id=inbox.id,
-        email_id=email_id,
-        action="dismissed",
-        actor=session.get('user_email', 'unknown'),
-        comment=None,
-    )
+        raw_msg = o365.fetch_message_safely(inbox, email_id)
+        if raw_msg is not None:
+            o365.remove_email_tags(raw_msg, ['PAIRActioned/queued'])
+            o365.mark_as_read(raw_msg)
+            o365.tag_email(raw_msg, ['dismissed'])
+
+        audit_storage.log_event(
+            inbox_id=inbox.id,
+            email_id=email_id,
+            action="dismissed",
+            actor=session.get('user_email', 'unknown'),
+            comment=None,
+        )
     return jsonify({"status": "dismissed"})
 
 
@@ -757,28 +790,31 @@ def approve_all_emails():
     for row in pending_rows:
         email_id = row['message_id']
         try:
-            raw_msg = o365.fetch_message_safely(inbox, email_id)
-            if raw_msg is None:
-                queue_storage.remove_from_queue(email_id)
-                continue
-            rules = rules_storage.get_rules_for_inbox(inbox.id)
-            normalized_msg = o365.normalize_message(raw_msg)
             classification_result = _classification_from_dict(
                 queue_storage.decode_payload(row).get('classification') or {}
             )
             if not classification_result.categories:
                 errors.append({"id": email_id, "error": "Manual category required"})
                 continue
-            plan = router.decide(classification_result, rules, inbox, normalized_msg)
-            pipeline.execute_plan(plan, inbox, raw_msg)
-            queue_storage.remove_from_queue(email_id)
-            audit_storage.log_event(
-                inbox_id=inbox.id,
-                email_id=email_id,
-                action="approved_bulk",
-                actor=session.get('user_email', 'unknown'),
-                comment=plan.tag,
-            )
+            # Claim per email so a repeated "Approve all" (or a single approval
+            # racing this one) can't act on the same email twice.
+            with queue_storage.claim_pending(inbox.id, email_id) as claimed:
+                if claimed is None:
+                    continue
+                raw_msg = o365.fetch_message_safely(inbox, email_id)
+                if raw_msg is None:
+                    continue
+                rules = rules_storage.get_rules_for_inbox(inbox.id)
+                normalized_msg = o365.normalize_message(raw_msg)
+                plan = router.decide(classification_result, rules, inbox, normalized_msg)
+                pipeline.execute_plan(plan, inbox, raw_msg)
+                audit_storage.log_event(
+                    inbox_id=inbox.id,
+                    email_id=email_id,
+                    action="approved_bulk",
+                    actor=session.get('user_email', 'unknown'),
+                    comment=plan.tag,
+                )
             processed += 1
         except Exception as e:
             log_event(
@@ -829,26 +865,29 @@ def update_automation_setting():
         for row in pending:
             email_id = row['message_id']
             try:
-                raw_msg = o365.fetch_message_safely(fresh, email_id)
-                if raw_msg is None:
-                    queue_storage.remove_from_queue(email_id)
-                    continue
-                normalized_msg = o365.normalize_message(raw_msg)
                 classification_result = _classification_from_dict(
                     queue_storage.decode_payload(row).get('classification') or {}
                 )
                 if not classification_result.categories:
                     continue
-                plan = router.decide(classification_result, rules, fresh, normalized_msg)
-                pipeline.execute_plan(plan, fresh, raw_msg)
-                queue_storage.remove_from_queue(email_id)
-                audit_storage.log_event(
-                    inbox_id=fresh.id,
-                    email_id=email_id,
-                    action="auto_processed_on_toggle",
-                    actor=session.get('user_email', 'unknown'),
-                    comment=plan.tag,
-                )
+                # Same claim as manual approval: toggling automation on twice, or
+                # doing so while a reviewer approves, must not double-send.
+                with queue_storage.claim_pending(inbox.id, email_id) as claimed:
+                    if claimed is None:
+                        continue
+                    raw_msg = o365.fetch_message_safely(fresh, email_id)
+                    if raw_msg is None:
+                        continue
+                    normalized_msg = o365.normalize_message(raw_msg)
+                    plan = router.decide(classification_result, rules, fresh, normalized_msg)
+                    pipeline.execute_plan(plan, fresh, raw_msg)
+                    audit_storage.log_event(
+                        inbox_id=fresh.id,
+                        email_id=email_id,
+                        action="auto_processed_on_toggle",
+                        actor=session.get('user_email', 'unknown'),
+                        comment=plan.tag,
+                    )
                 processed += 1
             except Exception as e:
                 log_event(

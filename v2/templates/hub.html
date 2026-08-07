@@ -249,7 +249,7 @@
             list.innerHTML = pendingEmails.map(email => `
                 <div class="queue-item ${currentEmail?.id === email.id ? 'active' : ''}" onclick='selectEmail(${JSON.stringify(email.id)})'>
                     <button class="queue-dismiss" title="Dismiss" onclick='event.stopPropagation(); dismissById(${JSON.stringify(email.id)})'>×</button>
-                    <div class="from">${escapeHtml(email.senderName || 'Unknown')}</div>
+                    <div class="from">${escapeHtml(email.sender || email.senderName || 'Unknown sender')}</div>
                     <div class="subject">${escapeHtml(extractSubject(email.meta))}</div>
                     <div class="meta-line">${escapeHtml(email.category || 'Unclassified')}</div>
                 </div>
@@ -321,7 +321,7 @@
                 <div class="detail-header">
                     <h2 class="detail-subject">${escapeHtml(extractSubject(e.meta))}</h2>
                     <div class="detail-meta-grid">
-                        <div><div class="label">From</div>${escapeHtml(e.senderName || 'Unknown')}</div>
+                        <div><div class="label">From</div>${escapeHtml(e.sender || e.senderName || 'Unknown sender')}</div>
                         <div><div class="label">Category</div>${escapeHtml(e.category || '—')}</div>
                         <div><div class="label">Amount detected</div>${e.amountDetected ? escapeHtml(String(e.amountDetected)) : '—'}</div>
                         <div><div class="label">Recipients</div>${escapeHtml(e.recipients || '—')}</div>
@@ -410,6 +410,18 @@
         // After any action (approve/reject/dismiss), clear the current email,
         // reload the queue, and either auto-jump to the next pending email or
         // show the empty "Select an email" state.
+        // Guard against a second click landing while an action is still in flight.
+        // The server also refuses a duplicate claim, but this keeps the UI honest
+        // and stops the request being sent at all.
+        let actionInFlight = false;
+        function setActionsBusy(busy, label) {
+            actionInFlight = busy;
+            document.querySelectorAll('.detail-actions .btn, #acceptPanel .btn, #rejectPanel .btn')
+                .forEach(b => { b.disabled = busy; });
+            const confirmBtn = document.querySelector('#acceptPanel .btn.primary');
+            if (confirmBtn && label) confirmBtn.textContent = busy ? label : 'Confirm approve';
+        }
+
         async function advanceAfterAction(justHandledId) {
             currentEmail = null;
             await loadPending();
@@ -422,46 +434,71 @@
         }
 
         async function confirmApprove() {
-            if (!currentEmail) return;
+            if (!currentEmail || actionInFlight) return;
             const justId = currentEmail.id;
             const comment = (document.getElementById('acceptText').value || '').trim();
-            const res = await apiCall(`/api/emails/${currentEmail.id}/approve`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ comment }),
-            });
+            setActionsBusy(true, 'Approving…');
+            let res;
+            try {
+                res = await apiCall(`/api/emails/${justId}/approve`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ comment }),
+                });
+            } finally {
+                setActionsBusy(false);
+            }
             if (!res) return;
             notify('Approved');
             await advanceAfterAction(justId);
         }
 
         async function confirmReject() {
-            if (!currentEmail) return;
+            if (!currentEmail || actionInFlight) return;
             const justId = currentEmail.id;
             const reason = (document.getElementById('rejectText').value || '').trim();
             if (!reason) { notify('Please provide a reason', 'error'); return; }
-            const res = await apiCall(`/api/emails/${currentEmail.id}/reject`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ reason }),
-            });
+            setActionsBusy(true);
+            let res;
+            try {
+                res = await apiCall(`/api/emails/${justId}/reject`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reason }),
+                });
+            } finally {
+                setActionsBusy(false);
+            }
             if (!res) return;
             notify('Rejected');
             await advanceAfterAction(justId);
         }
 
         async function dismissEmail() {
-            if (!currentEmail) return;
+            if (!currentEmail || actionInFlight) return;
             const justId = currentEmail.id;
-            const res = await apiCall(`/api/emails/${currentEmail.id}/dismiss`, { method: 'POST' });
+            setActionsBusy(true);
+            let res;
+            try {
+                res = await apiCall(`/api/emails/${justId}/dismiss`, { method: 'POST' });
+            } finally {
+                setActionsBusy(false);
+            }
             if (!res) return;
             notify('Dismissed');
             await advanceAfterAction(justId);
         }
 
         async function approveAll() {
+            if (actionInFlight) return;
             if (!confirm(`Approve all ${pendingEmails.length} pending emails?`)) return;
-            const res = await apiCall('/api/emails/approve_all', { method: 'POST' });
+            setActionsBusy(true);
+            let res;
+            try {
+                res = await apiCall('/api/emails/approve_all', { method: 'POST' });
+            } finally {
+                setActionsBusy(false);
+            }
             if (!res) return;
             notify('All approved');
             currentEmail = null;

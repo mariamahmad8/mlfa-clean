@@ -143,12 +143,12 @@
                         <input class="form-input w-txt" id="fFolder" placeholder="Donor_Related/Grant">
                     </div>
                     <div class="sub-head">Classification prompt<span class="info-tip">i<span class="info-content">GPT reads this to decide when an email belongs here. Be specific. Include a few example situations so the model learns edge cases.</span></span></div>
-                    <textarea class="form-textarea" id="fRuleText" style="min-height: 150px;" placeholder="Describe the emails that should match this category, in plain language.&#10;&#10;Example: Emails about donations, tax receipts, matching-gift programs, or planned giving. Include grants from foundations if the sender explicitly names one."></textarea>
+                    <textarea class="form-textarea" id="fRuleText" style="min-height: 150px;" placeholder="Describe the emails that belong in this category, in plain language.&#10;&#10;Example: Emails about donations, tax receipts, matching-gift programs, or planned giving. Include grants from foundations if the sender explicitly names one."></textarea>
                 </div>
 
                 <!-- Forwarding: who gets a copy, and the amount gate -->
                 <div class="tab-panel" data-panel="forwarding">
-                    <div class="sub-head">Recipients<span class="info-tip">i<span class="info-content">Everyone checked here gets a copy of each email matching this category. Add or remove people on the Recipients page; inactive recipients are hidden unless already selected.</span></span></div>
+                    <div class="sub-head">Recipients<span class="info-tip">i<span class="info-content">Everyone checked here gets a copy of each email sorted into this category. Add or remove people on the Recipients page; inactive recipients are hidden unless already selected.</span></span></div>
                     <div class="picker-toolbar">
                         <input class="form-input recipient-search" id="fRecipSearch" placeholder="Search recipients by name or email" oninput="filterRecipients()">
                         <span class="picker-meta"><span id="fwdSelectedCount">0</span> selected</span>
@@ -159,7 +159,7 @@
                         <label class="form-label" for="fAmount">Amount gate ($)<span class="info-tip">i<span class="info-content">Only forward when GPT detects a dollar amount at or above this. Used for donor and invoice rules. Leave blank if amount doesn't matter.</span></span></label>
                         <div class="field-control">
                             <input class="form-input w-amt" type="number" id="fAmount" placeholder="Optional">
-                            <div class="form-hint">Leave blank to forward every match regardless of amount.</div>
+                            <div class="form-hint">Leave blank to forward every email in this category, whatever the amount.</div>
                         </div>
                     </div>
                 </div>
@@ -167,7 +167,7 @@
                 <!-- Reply: templates + the switches that govern sending -->
                 <div class="tab-panel" data-panel="reply">
                     <div class="field">
-                        <label class="form-label" for="fReplySelect">Default template<span class="info-tip">i<span class="info-content">The auto-reply sent back to the sender when this category matches. Pick “Don’t send an auto-reply” to stay silent. Manage the wording on the Reply templates page.</span></span></label>
+                        <label class="form-label" for="fReplySelect">Default template<span class="info-tip">i<span class="info-content">The auto-reply sent back to the sender when an email is sorted into this category. Pick “Don’t send an auto-reply” to stay silent. Manage the wording on the Reply templates page.</span></span></label>
                         <select class="form-select w-sel" id="fReplySelect">
                             <option value="">Don't send an auto-reply</option>
                         </select>
@@ -211,8 +211,8 @@
                     <div class="toggle-list">
                         <label class="toggle-row danger-row">
                             <input type="checkbox" id="fDeleteImmediately">
-                            <span class="toggle-label">Delete matching emails immediately</span>
-                            <span class="info-tip" style="margin-left:auto;">i<span class="info-content">Send matching emails straight to Trash instead of moving to the destination folder. Use for spam-like categories only.</span></span>
+                            <span class="toggle-label">Send these emails to Trash</span>
+                            <span class="info-tip" style="margin-left:auto;">i<span class="info-content">Emails sorted into this category go straight to Trash. Nothing else runs on them — no auto-reply, no forwarding, and they are not filed in the folder above. Use only for spam-like categories.</span></span>
                         </label>
                     </div>
                 </div>
@@ -539,8 +539,8 @@
             // Confirm before writing — protects against accidental clicks that would
             // change routing/replies for real MLFA emails.
             const confirmMsg = id
-                ? `Are you sure you want to save your changes to "${label}"? This will change how future emails matching this category are handled.`
-                : `Are you sure you want to create the "${label}" category? It will start matching new emails right away.`;
+                ? `Are you sure you want to save your changes to "${label}"? This will change how future emails in this category are handled.`
+                : `Are you sure you want to create the "${label}" category? It will start sorting new emails right away.`;
             if (!confirm(confirmMsg)) return;
             const amtRaw = document.getElementById('fAmount').value.trim();
             const defaultTemplate = readTemplateSelection('fReplySelect');

@@ -1,4 +1,5 @@
 import json
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
@@ -214,6 +215,41 @@ def update_classification(inbox_id: int, message_id: str, classification: dict) 
             )
         session.commit()
         return True
+    finally:
+        session.close()
+
+
+@contextmanager
+def claim_pending(inbox_id: int, message_id: str):
+    """Take exclusive ownership of a queued email while it is acted on.
+
+    Yields the row dict if this caller won, or None if the email was already
+    claimed — which is what stops a double-clicked Approve from sending two
+    auto-replies, and stops two reviewers from acting on the same email.
+
+    The DELETE runs inside an open transaction and is only committed when the
+    caller's block exits cleanly, so a failed approval rolls back and leaves
+    the email in the queue to retry. A second concurrent claim blocks on the
+    row lock until the first transaction ends, then finds no row and yields
+    None (or, if the first rolled back, wins the claim itself).
+    """
+    session = get_db_session()
+    try:
+        row = session.execute(
+            text(
+                """
+                DELETE FROM pending_queue
+                WHERE inbox_id = :inbox_id AND message_id = :message_id
+                RETURNING *
+                """
+            ),
+            {"inbox_id": inbox_id, "message_id": message_id},
+        ).mappings().first()
+        yield dict(row) if row is not None else None
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
     finally:
         session.close()
 
