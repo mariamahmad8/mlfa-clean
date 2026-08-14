@@ -382,6 +382,8 @@
             if (!res.ok) { notify('Could not load stats', 'error'); return; }
             const s = await res.json();
             const HUMAN_MIN_PER_EMAIL = 2;
+            // The hub has only been recording since this date, so "all time" starts here.
+            const RECORDS_START = 'July 17, 2026';
             const savedTodayMs = (s.today.processed || 0) * HUMAN_MIN_PER_EMAIL * 60 * 1000;
             const savedAllMs = (s.all_time.processed || 0) * HUMAN_MIN_PER_EMAIL * 60 * 1000;
 
@@ -395,11 +397,9 @@
 
             const processedToday = s.today.processed || 0;
             const processedTotal = s.all_time.processed || 0;
-            const rejectedToday = (s.today.rejected || 0) + (s.today.dismissed || 0);
-            const rejectedTotal = (s.all_time.rejected || 0) + (s.all_time.dismissed || 0);
 
             document.getElementById('statsBody').innerHTML = `
-                <div class="stats-subtitle">${escapeHtml(s.email_to_watch)}<br>Today covers everything since midnight Central Time. All time covers everything the hub has recorded.</div>
+                <div class="stats-subtitle">${escapeHtml(s.email_to_watch)}<br>Today covers everything since midnight Central Time. All time covers everything since ${RECORDS_START}, when the hub started keeping records.</div>
 
                 <table class="stats-table">
                     <thead>
@@ -407,7 +407,6 @@
                     </thead>
                     <tbody>
                         ${row('Emails handled', processedToday, processedTotal)}
-                        ${row('Rejected or dismissed', rejectedToday, rejectedTotal)}
                         ${row('Total time handling email', formatDuration(s.today.duration_ms), formatDuration(s.all_time.duration_ms))}
                         ${row('Average time per email', formatDuration(s.today.avg_duration_ms), formatDuration(s.all_time.avg_duration_ms))}
                         ${row('Estimated staff time saved', formatDuration(savedTodayMs), formatDuration(savedAllMs), true)}
