@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MLFA — Stats</title>
+    <title>MLFA Stats</title>
     <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Nunito+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="/static/shared.css?v=13">
     <style>
         .stats-grid {
@@ -116,7 +116,7 @@
         }
 
         function formatDuration(ms) {
-            if (!ms || ms === 0) return '<span class="stat-unit">—</span>';
+            if (!ms || ms === 0) return '<span class="stat-unit">None</span>';
             if (ms < 1000) return `${ms}<span class="stat-unit">ms</span>`;
             if (ms < 60000) return `${(ms / 1000).toFixed(1)}<span class="stat-unit">sec</span>`;
             if (ms < 3600000) return `${(ms / 60000).toFixed(1)}<span class="stat-unit">min</span>`;

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MLFA — Reply Templates</title>
+    <title>MLFA Reply Templates</title>
     <link rel="icon" type="image/png" href="/mlfa-favicon.png?v=2">
     <meta name="csrf-token" content="{{ csrf_token }}">
     <script src="/static/security.js?v=2"></script>
@@ -78,7 +78,7 @@
             </div>
 
             <div class="form-group">
-                <label class="form-check"><input type="checkbox" id="fActive" checked> Active</label><span class="info-tip">i<span class="info-content">Switched-off replies are hidden when you're choosing one for a category. Any category already using it keeps sending it and shows it as inactive, so replies never stop without you noticing.</span></span>
+                <label class="form-check"><input type="checkbox" id="fActive" checked> Active<span class="info-tip">i<span class="info-content">Switched-off replies are hidden when you're choosing one for a category. Any category already using it keeps sending it and shows it as inactive, so replies never stop without you noticing.</span></span></label>
             </div>
 
             <div class="modal-actions">
@@ -167,7 +167,7 @@
             if (!t) return;
             // Substitute {{greeting}} with a sample greeting so the preview looks real
             const rendered = (t.body_html || '').replace(/\{\{greeting\}\}/g, '<p>Dear Friend,</p>');
-            document.getElementById('previewTitle').textContent = `Preview — ${t.name_template || 'Template'}`;
+            document.getElementById('previewTitle').textContent = `Preview: ${t.name_template || 'Template'}`;
             document.getElementById('previewBody').innerHTML = rendered || '<em style="color: var(--text-muted);">(empty template)</em>';
             document.getElementById('previewModal').style.display = 'flex';
         }

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MLFA — Inboxes</title>
+    <title>MLFA Inboxes</title>
     <link rel="icon" type="image/png" href="/mlfa-favicon.png?v=2">
     <meta name="csrf-token" content="{{ csrf_token }}">
     <script>window.CURRENT_ROLE = "{{ session.get('role', '') }}";</script>
@@ -17,15 +17,16 @@
             font-size: 18px;
             font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 0.14em;
+            letter-spacing: 0.05em;
             color: var(--text);
-            margin: 0 0 4px;
+            margin: 0 0 6px;
         }
         .stats-subtitle {
             font-size: 12px;
+            line-height: 1.6;
             color: var(--text-muted);
-            margin: 0 0 24px;
-            padding-bottom: 16px;
+            margin: 0 0 20px;
+            padding-bottom: 14px;
             border-bottom: 1px solid var(--line-soft);
         }
         .stats-queue {
@@ -208,7 +209,7 @@
                 <!-- General: which mailbox, and what to call it -->
                 <div class="tab-panel active" data-panel="general">
                     <div class="field field-top" id="cloneRow" style="display:none;">
-                        <label class="form-label" for="fCloneSource">Clone from<span class="info-tip">i<span class="info-content">Copies the other inbox's categories, recipients, and reply wording into this new one, so you don't set it all up again. It doesn't copy the email address, ignored senders, or AI wording. It's a one-time copy — later changes over there won't show up here.</span></span></label>
+                        <label class="form-label" for="fCloneSource">Clone from<span class="info-tip">i<span class="info-content">Copies the other inbox's categories, recipients, and reply wording into this new one, so you don't set it all up again. It doesn't copy the email address, ignored senders, or AI wording. It's a one-time copy, so later changes over there won't show up here.</span></span></label>
                         <div class="field-control">
                             <select class="form-select w-sel" id="fCloneSource">
                                 <option value="">Start blank</option>
@@ -217,11 +218,11 @@
                         </div>
                     </div>
                     <div class="field">
-                        <label class="form-label" for="fEmail">Email address<span class="info-tip">i<span class="info-content">The mailbox the system signs into and watches for new email. It has to be exactly the same as the Microsoft 365 account — one typo and no email is ever picked up.</span></span></label>
+                        <label class="form-label" for="fEmail">Email address<span class="info-tip">i<span class="info-content">The mailbox the system signs into and watches for new email. It has to be exactly the same as the Microsoft 365 account. One typo and no email is ever picked up.</span></span></label>
                         <input class="form-input w-txt" id="fEmail" placeholder="info@mlfa.org">
                     </div>
                     <div class="field">
-                        <label class="form-label" for="fDisplayName">Display name<span class="info-tip">i<span class="info-content">The name shown around the hub. It's only a label — changing it doesn't affect how email is handled.</span></span></label>
+                        <label class="form-label" for="fDisplayName">Display name<span class="info-tip">i<span class="info-content">The name shown around the hub. It's only a label. Changing it doesn't affect how email is handled.</span></span></label>
                         <input class="form-input w-txt" id="fDisplayName" placeholder="MLFA Info Inbox">
                     </div>
                 </div>
@@ -237,17 +238,17 @@
                         <label class="toggle-row">
                             <input type="checkbox" id="fUseThreadContext">
                             <span class="toggle-label">Use conversation history</span>
-                            <span class="info-tip" style="margin-left:auto;">i<span class="info-content">Lets the AI read the earlier emails in a conversation before it decides. Worth leaving on — a short reply like “any update?” tells you nothing on its own, so it's easy to get wrong.</span></span>
+                            <span class="info-tip" style="margin-left:auto;">i<span class="info-content">Lets the AI read the earlier emails in a conversation before it decides. Worth leaving on, because a short reply like “any update?” tells you nothing on its own and is easy to get wrong.</span></span>
                         </label>
                         <label class="toggle-row">
                             <input type="checkbox" id="fSendToOpenAI">
                             <span class="toggle-label">Allow AI classification</span>
-                            <span class="info-tip" style="margin-left:auto;">i<span class="info-content">Turn this off and nothing from this inbox is sent to OpenAI. New email still shows up in the hub, just without a category — someone picks one by hand, and nothing is ever handled automatically.</span></span>
+                            <span class="info-tip" style="margin-left:auto;">i<span class="info-content">Turn this off and nothing from this inbox is sent to OpenAI. New email still shows up in the hub, just without a category. Someone picks one by hand, and nothing is ever handled automatically.</span></span>
                         </label>
                     </div>
                     <hr class="divider">
                     <div class="field field-top">
-                        <label class="form-label" for="fBackfill">Import existing email<span class="info-tip">i<span class="info-content">How far back to go the first time this inbox connects. Use 0 to start fresh and only handle email that arrives from now on. A big number means a lot of old email gets handled at once — replies and forwards included.</span></span></label>
+                        <label class="form-label" for="fBackfill">Import existing email<span class="info-tip">i<span class="info-content">How far back to go the first time this inbox connects. Use 0 to start fresh and only handle email that arrives from now on. A big number means a lot of old email gets handled at once, replies and forwards included.</span></span></label>
                         <div class="field-control">
                             <div class="inline-row">
                                 <span>Last</span>
@@ -272,7 +273,7 @@
                 <!-- Filters: who gets ignored, who counts as staff -->
                 <div class="tab-panel" data-panel="filters">
                     <div class="field field-top">
-                        <label class="form-label" for="fBlocked">Ignore senders<span class="info-tip">i<span class="info-content">Email from these addresses is thrown out before anything else happens — no category, no review, no history entry. Write each address out in full; a domain on its own or a wildcard won't work. Good for newsletters and automated senders. One per line.</span></span></label>
+                        <label class="form-label" for="fBlocked">Ignore senders<span class="info-tip">i<span class="info-content">Email from these addresses is thrown out before anything else happens: no category, no review, no history entry. Write each address out in full; a domain on its own or a wildcard won't work. Good for newsletters and automated senders. One per line.</span></span></label>
                         <div class="field-control">
                             <textarea class="form-textarea" id="fBlocked" placeholder="person@example.com&#10;newsletter@company.com" style="min-height: 92px;"></textarea>
                             <div class="form-hint">One address per line.</div>
@@ -298,7 +299,7 @@
                     </div>
                     <hr class="divider">
                     <div class="field field-top">
-                        <label class="form-label" for="fInternalPrefix">Internal prefix<span class="info-tip">i<span class="info-content">A staff reply that starts with this stays in-house — the original sender never sees it. Keep the brackets so nobody types it by accident.</span></span></label>
+                        <label class="form-label" for="fInternalPrefix">Internal prefix<span class="info-tip">i<span class="info-content">A staff reply that starts with this stays in-house, and the original sender never sees it. Keep the brackets so nobody types it by accident.</span></span></label>
                         <div class="field-control">
                             <input class="form-input w-key" id="fInternalPrefix" placeholder="[INTERNAL]">
                             <div class="form-hint">Keeps the reply internal.</div>
@@ -316,7 +317,7 @@
                 <!-- AI prompt: the wrapper around every classification call -->
                 <div class="tab-panel" data-panel="prompt">
                     <div class="field field-top">
-                        <label class="form-label" for="fPreamble">System preamble<span class="info-tip">i<span class="info-content">The opening of the instructions the AI reads for every email here — who you are and what this mailbox is for. Your category descriptions come after it.</span></span></label>
+                        <label class="form-label" for="fPreamble">System preamble<span class="info-tip">i<span class="info-content">The opening of the instructions the AI reads for every email here: who you are and what this mailbox is for. Your category descriptions come after it.</span></span></label>
                         <div class="field-control">
                             <textarea class="form-textarea" id="fPreamble" style="min-height: 96px;"></textarea>
                             <div class="form-hint">Intro describing what this inbox does.</div>
@@ -351,7 +352,7 @@
         }
 
         function formatDuration(ms) {
-            if (!ms || ms === 0) return '—';
+            if (!ms || ms === 0) return 'None';
             if (ms < 1000) return `${ms} ms`;
             if (ms < 60000) return `${(ms / 1000).toFixed(1)} s`;
             if (ms < 3600000) return `${(ms / 60000).toFixed(1)} min`;
@@ -394,26 +395,28 @@
 
             const processedToday = s.today.processed || 0;
             const processedTotal = s.all_time.processed || 0;
+            const rejectedToday = (s.today.rejected || 0) + (s.today.dismissed || 0);
+            const rejectedTotal = (s.all_time.rejected || 0) + (s.all_time.dismissed || 0);
 
             document.getElementById('statsBody').innerHTML = `
-                <div class="stats-subtitle">${escapeHtml(s.email_to_watch)} &nbsp;&middot;&nbsp; Today reflects activity since midnight Central Time. Totals since Jul 17, 2026.</div>
+                <div class="stats-subtitle">${escapeHtml(s.email_to_watch)}<br>Today covers everything since midnight Central Time. All time covers everything the hub has recorded.</div>
 
                 <table class="stats-table">
                     <thead>
-                        <tr><th>Metric</th><th>Today</th><th>Total</th></tr>
+                        <tr><th>Measure</th><th>Today</th><th>All time</th></tr>
                     </thead>
                     <tbody>
-                        ${row('Processed', processedToday, processedTotal)}
-                        ${row('Rejected / dismissed', (s.today.rejected || 0) + (s.today.dismissed || 0), 0)}
-                        ${row('Total processing time', formatDuration(s.today.duration_ms), formatDuration(s.all_time.duration_ms))}
-                        ${row('Average per email', formatDuration(s.today.avg_duration_ms), formatDuration(s.all_time.avg_duration_ms))}
-                        ${row('Estimated time saved', formatDuration(savedTodayMs), formatDuration(savedAllMs), true)}
+                        ${row('Emails handled', processedToday, processedTotal)}
+                        ${row('Rejected or dismissed', rejectedToday, rejectedTotal)}
+                        ${row('Total time handling email', formatDuration(s.today.duration_ms), formatDuration(s.all_time.duration_ms))}
+                        ${row('Average time per email', formatDuration(s.today.avg_duration_ms), formatDuration(s.all_time.avg_duration_ms))}
+                        ${row('Estimated staff time saved', formatDuration(savedTodayMs), formatDuration(savedAllMs), true)}
                     </tbody>
                 </table>
 
-                <div class="stats-footnote">Estimated time saved assumes ~${HUMAN_MIN_PER_EMAIL} minutes per email for manual triage.</div>
+                <div class="stats-footnote">Estimated time saved assumes about ${HUMAN_MIN_PER_EMAIL} minutes per email if someone sorted it by hand.</div>
             `;
-            document.getElementById('statsTitle').textContent = `${s.display_name} · Stats`;
+            document.getElementById('statsTitle').textContent = `Stats for ${s.display_name}`;
             document.getElementById('statsModal').style.display = 'flex';
         }
 
@@ -526,7 +529,7 @@
             document.getElementById('fPreamble').value = ib.system_preamble || '';
             document.getElementById('fGuidelines').value = ib.global_guidelines || '';
             document.getElementById('inboxMetaLine').style.display = 'inline-flex';
-            document.getElementById('inboxMetaValue').textContent = ib.email_to_watch || '—';
+            document.getElementById('inboxMetaValue').textContent = ib.email_to_watch || 'None';
             switchInboxTab('general');
             updateInboxBadges();
             document.getElementById('modal').style.display = 'flex';

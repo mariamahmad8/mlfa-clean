@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MLFA — Recipients</title>
+    <title>MLFA Recipients</title>
     <link rel="icon" type="image/png" href="/mlfa-favicon.png?v=2">
     <meta name="csrf-token" content="{{ csrf_token }}">
     <script src="/static/security.js?v=2"></script>
@@ -46,7 +46,7 @@
             <input type="hidden" id="fId">
 
             <div class="form-group">
-                <label class="form-label">Label (display name)<span class="info-tip">i<span class="info-content">The name your team sees when choosing who a category forwards to, so nobody has to recognise an address. It's never used in an email — only the address below receives anything.</span></span></label>
+                <label class="form-label">Label (display name)<span class="info-tip">i<span class="info-content">The name your team sees when choosing who a category forwards to, so nobody has to recognise an address. It's never used in an email. Only the address below receives anything.</span></span></label>
                 <input class="form-input" id="fLabel" placeholder="Mujahid Rasul">
             </div>
 
@@ -56,12 +56,12 @@
             </div>
 
             <div class="form-group">
-                <label class="form-label">Notes (optional)<span class="info-tip">i<span class="info-content">A private note for your team — which team someone is on, or why they're on the list. Senders never see it, and it's never sent in an email.</span></span></label>
+                <label class="form-label">Notes (optional)<span class="info-tip">i<span class="info-content">A private note for your team, like which team someone is on or why they're on the list. Senders never see it, and it's never sent in an email.</span></span></label>
                 <input class="form-input" id="fNotes" placeholder="Legal team">
             </div>
 
             <div class="form-group">
-                <label class="form-check"><input type="checkbox" id="fActive" checked> Active</label><span class="info-tip">i<span class="info-content">Switch someone off and they stop getting forwards, and they're hidden when you pick recipients for a category. They stay ticked where they already were, so you can still see who used to get them.</span></span>
+                <label class="form-check"><input type="checkbox" id="fActive" checked> Active<span class="info-tip">i<span class="info-content">Switch someone off and they stop getting forwards, and they're hidden when you pick recipients for a category. They stay ticked where they already were, so you can still see who used to get them.</span></span></label>
             </div>
 
             <div class="modal-actions">
@@ -100,7 +100,7 @@
                 <tr>
                     <td><strong>${escapeHtml(r.label_recipient)}</strong></td>
                     <td>${escapeHtml(r.email)}</td>
-                    <td class="text-muted">${escapeHtml(r.notes || '—')}</td>
+                    <td class="text-muted">${escapeHtml(r.notes || 'None')}</td>
                     <td>${r.active ? '<span class="badge success">Active</span>' : '<span class="badge">Inactive</span>'}</td>
                     <td class="actions-cell">
                         <button class="btn small" onclick="openEditModal(${r.id})">Edit</button>

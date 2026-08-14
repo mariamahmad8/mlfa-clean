@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MLFA — Review Hub</title>
+    <title>MLFA Review Hub</title>
     <link rel="icon" type="image/png" href="/mlfa-favicon.png?v=2">
     <meta name="csrf-token" content="{{ csrf_token }}">
     <script src="/static/security.js?v=2"></script>
@@ -322,11 +322,11 @@
                     <h2 class="detail-subject">${escapeHtml(extractSubject(e.meta))}</h2>
                     <div class="detail-meta-grid">
                         <div><div class="label">From</div>${escapeHtml(e.sender || e.senderName || 'Unknown sender')}</div>
-                        <div><div class="label">Category</div>${escapeHtml(e.category || '—')}</div>
-                        <div><div class="label">Amount detected</div>${e.amountDetected ? escapeHtml(String(e.amountDetected)) : '—'}</div>
-                        <div><div class="label">Recipients</div>${escapeHtml(e.recipients || '—')}</div>
+                        <div><div class="label">Category</div>${escapeHtml(e.category || 'None')}</div>
+                        <div><div class="label">Amount detected</div>${e.amountDetected ? escapeHtml(String(e.amountDetected)) : 'None'}</div>
+                        <div><div class="label">Recipients</div>${escapeHtml(e.recipients || 'None')}</div>
                         <div><div class="label">Needs personal reply</div>${escapeHtml(e.needsReply || 'No')}</div>
-                        <div><div class="label">Reason</div>${escapeHtml(e.reason || '—')}</div>
+                        <div><div class="label">Reason</div>${escapeHtml(e.reason || 'None')}</div>
                     </div>
                 </div>
                 ${manualCategoryPanel}

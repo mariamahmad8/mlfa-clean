@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MLFA — Preview & Test</title>
+    <title>MLFA Preview and Test</title>
     <link rel="icon" type="image/png" href="/mlfa-favicon.png?v=2">
     <meta name="csrf-token" content="{{ csrf_token }}">
     <script src="/static/security.js?v=2"></script>
@@ -44,7 +44,7 @@
                 <p class="card-desc">Paste a fake email and see the action plan without touching Outlook.</p>
 
                 <div class="form-group" style="margin-top: 12px;">
-                    <label class="form-label">Subject<span class="info-tip">i<span class="info-content">The subject line of the pretend email. Nothing is sent and no real mailbox is touched — this just shows you which category the AI would choose and what would happen next.</span></span></label>
+                    <label class="form-label">Subject<span class="info-tip">i<span class="info-content">The subject line of the pretend email. Nothing is sent and no real mailbox is touched. It just shows which category the AI would choose and what would happen next.</span></span></label>
                     <input class="form-input" id="tSubject" placeholder="Test subject">
                 </div>
                 <div class="form-group">
@@ -52,7 +52,7 @@
                     <input class="form-input" id="tSender" placeholder="person@example.com">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Body<span class="info-tip">i<span class="info-content">The wording of the pretend email. Try the awkward ones — a vague follow-up, or a message that could belong to two categories — to see where your category descriptions need to be clearer.</span></span></label>
+                    <label class="form-label">Body<span class="info-tip">i<span class="info-content">The wording of the pretend email. Try the awkward ones, like a vague follow-up or a message that could belong to two categories, to see where your category descriptions need to be clearer.</span></span></label>
                     <textarea class="form-textarea" id="tBody" placeholder="Email content..."></textarea>
                 </div>
                 <button class="btn primary small" onclick="runTest()">Run test</button>
@@ -110,12 +110,12 @@
             if (!res.ok) { notify('Test failed', 'error'); return; }
             const data = await res.json();
             document.getElementById('testResults').style.display = 'block';
-            document.getElementById('rCategories').textContent = (data.classification.categories || []).join(', ') || '—';
-            document.getElementById('rFolder').textContent = data.plan.delete ? 'Deleted Items (trash)' : (data.plan.move_to_folder || '—');
-            document.getElementById('rForward').textContent = (data.plan.forward_to || []).join(', ') || '—';
-            document.getElementById('rReply').textContent = data.plan.send_reply ? 'Yes — would send auto-reply' : 'No';
-            document.getElementById('rAmount').textContent = data.classification.amount_detected ?? '—';
-            document.getElementById('rReview').textContent = data.plan.requires_human_review ? 'Yes' : 'No — auto-processed';
+            document.getElementById('rCategories').textContent = (data.classification.categories || []).join(', ') || 'None';
+            document.getElementById('rFolder').textContent = data.plan.delete ? 'Deleted Items (trash)' : (data.plan.move_to_folder || 'None');
+            document.getElementById('rForward').textContent = (data.plan.forward_to || []).join(', ') || 'None';
+            document.getElementById('rReply').textContent = data.plan.send_reply ? 'Yes, would send an auto-reply' : 'No';
+            document.getElementById('rAmount').textContent = data.classification.amount_detected ?? 'None';
+            document.getElementById('rReview').textContent = data.plan.requires_human_review ? 'Yes' : 'No, handled automatically';
         }
 
         function notify(msg, type = 'success') { const el = document.createElement('div'); el.className = `notification ${type}`; el.textContent = msg; document.body.appendChild(el); setTimeout(() => el.remove(), 2000); }

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MLFA — Audit Log</title>
+    <title>MLFA Audit Log</title>
     <link rel="icon" type="image/png" href="/mlfa-favicon.png?v=2">
     <meta name="csrf-token" content="{{ csrf_token }}">
     <script src="/static/security.js?v=2"></script>
@@ -164,7 +164,7 @@
         {% include '_settings_nav.html' %}
         <main class="settings-content">
         <div class="audit-head">
-            <h1 class="page-title">Audit log<span class="info-tip wide" style="margin-left: 10px; width: 18px; height: 18px;">i<span class="info-content"><div class="tip-title">Audit log — what each action means</div><dl class="tip-legend"><dt>Auto</dt><dd>The AI handled the email on its own — sorted it, filed it, and sent any forward or reply — with nobody reviewing it.</dd><dt>Queued</dt><dd>The email went to the hub for someone to look at, because automation is off for this inbox or because no category fitted it.</dd><dt>Queued (AI off)</dt><dd>It went to the hub without a category, because AI sorting is off for this inbox. Someone picks the category by hand.</dd><dt>Approved</dt><dd>Someone approved it in the hub, and the system then did the filing, forwarding, and reply for its category. Your current category settings are used — not the ones from when it arrived.</dd><dt>Rejected</dt><dd>Someone rejected it and gave a reason. It went to Trash, and no reply or forward was sent.</dd><dt>Dismissed</dt><dd>Someone decided it needed nothing — junk, or not for us. Marked as read, with no reply and no forward.</dd><dt>Expired</dt><dd>Nobody reviewed it in time, so the hub let it go. It got a queue_expired label in Outlook, and was never filed, forwarded, or replied to.</dd><dt>Created / Updated / Deleted</dt><dd>Someone on your team added, edited, or removed a category, reply, recipient, user, or inbox.</dd></dl></span></span></h1>
+            <h1 class="page-title">Audit log<span class="info-tip wide" style="margin-left: 10px; width: 18px; height: 18px;">i<span class="info-content"><div class="tip-title">Audit log: what each action means</div><dl class="tip-legend"><dt>Auto</dt><dd>The AI handled the email on its own. It sorted it, filed it, and sent any forward or reply, with nobody reviewing it.</dd><dt>Queued</dt><dd>The email went to the hub for someone to look at, because automation is off for this inbox or because no category fitted it.</dd><dt>Queued (AI off)</dt><dd>It went to the hub without a category, because AI sorting is off for this inbox. Someone picks the category by hand.</dd><dt>Approved</dt><dd>Someone approved it in the hub, and the system then did the filing, forwarding, and reply for its category. Your current category settings are used, not the ones from when it arrived.</dd><dt>Rejected</dt><dd>Someone rejected it and gave a reason. It went to Trash, and no reply or forward was sent.</dd><dt>Dismissed</dt><dd>Someone decided it needed nothing, like junk or something not meant for you. Marked as read, with no reply and no forward.</dd><dt>Expired</dt><dd>Nobody reviewed it in time, so the hub let it go. It got a queue_expired label in Outlook, and was never filed, forwarded, or replied to.</dd><dt>Created / Updated / Deleted</dt><dd>Someone on your team added, edited, or removed a category, reply, recipient, user, or inbox.</dd></dl></span></span></h1>
             <div class="head-right">
                 <select class="form-select" id="inboxSelect" onchange="loadEvents()"></select>
                 <button class="icon-btn-sq" onclick="loadEvents()" title="Refresh">&#8635;</button>
@@ -307,7 +307,7 @@
                     lastDay = day;
                     dayRow = `
                 <tr class="day-row">
-                    <td colspan="6">${escapeHtml(day)}<span class="day-count"> · ${perDay[day]} event${perDay[day] === 1 ? '' : 's'}</span></td>
+                    <td colspan="6">${escapeHtml(day)}<span class="day-count"> (${perDay[day]} event${perDay[day] === 1 ? '' : 's'})</span></td>
                 </tr>`;
                 }
                 return dayRow + `
@@ -328,13 +328,13 @@
         }
 
         function targetHtml(target) {
-            if (!target) return '<span class="text-soft">—</span>';
+            if (!target) return '<span class="text-soft">None</span>';
             if (target.includes(':')) {
                 // Settings-style targets: rule:donor, template:legal_default → readable primary
                 const [type, ...rest] = target.split(':');
                 const name = rest.join(':');
                 return `<span class="target-primary">${escapeHtml(name || type)}</span>`
-                    + `<span class="target-secondary" title="${escapeHtml(target)}"> · ${escapeHtml(type)}</span>`;
+                    + `<span class="target-secondary" title="${escapeHtml(target)}"> (${escapeHtml(type)})</span>`;
             }
             // Outlook message ID: nothing human in it, so keep it short and mono.
             // Full value stays available on hover and in the CSV export.
@@ -467,27 +467,27 @@
 
             // User actions
             if (raw === 'user_created') return `Added user ${comment || '(unknown)'}`;
-            if (raw === 'user_updated') return `Updated a user's role or access${comment ? ` — ${comment}` : ''}`;
+            if (raw === 'user_updated') return `Updated a user's role or access${comment ? `: ${comment}` : ''}`;
             if (raw === 'user_deleted') return 'Removed a user';
 
             // Email-processing actions
             if (raw === 'auto_processed' || raw === 'auto_processed_on_toggle') {
-                return cats ? `Handled automatically — ${cats}` : 'Handled automatically';
+                return cats ? `Handled automatically: ${cats}` : 'Handled automatically';
             }
             if (raw === 'queued_for_review') {
-                return cats ? `Queued for review — ${cats}` : 'Queued for review';
+                return cats ? `Queued for review: ${cats}` : 'Queued for review';
             }
             if (raw === 'approved' || raw === 'approved_bulk') {
-                if (cats) return `Approved and carried out — ${cats}`;
-                return comment ? `Approved and carried out — "${comment}"` : 'Approved and carried out';
+                if (cats) return `Approved and carried out: ${cats}`;
+                return comment ? `Approved and carried out: "${comment}"` : 'Approved and carried out';
             }
-            if (raw === 'queue_expired') return 'Left the hub unreviewed — never filed, forwarded, or replied to';
-            if (raw === 'queued_human_only') return 'Queued without a category — AI sorting is off for this inbox';
-            if (raw === 'rejected') return comment ? `Rejected — "${comment}"` : 'Rejected and moved to Trash';
-            if (raw === 'dismissed') return cats ? `Dismissed, no action — ${cats}` : 'Dismissed, no action taken';
+            if (raw === 'queue_expired') return 'Left the hub unreviewed, so it was never filed, forwarded, or replied to';
+            if (raw === 'queued_human_only') return 'Queued without a category, because AI sorting is off for this inbox';
+            if (raw === 'rejected') return comment ? `Rejected: "${comment}"` : 'Rejected and moved to Trash';
+            if (raw === 'dismissed') return cats ? `Dismissed, no action: ${cats}` : 'Dismissed, no action taken';
 
             // Unknown fallback — still readable
-            return `${raw}${comment ? ` — ${comment}` : ''}`;
+            return `${raw}${comment ? `: ${comment}` : ''}`;
         }
 
         // Table version: same sentence, but category keys render as chips.
@@ -507,7 +507,7 @@
                 if (lead) return escapeHtml(lead) + chips;
             }
             if (raw === 'rejected' && comment) {
-                return 'Rejected — <span class="detail-quote">' + escapeHtml(comment) + '</span>';
+                return 'Rejected: <span class="detail-quote">' + escapeHtml(comment) + '</span>';
             }
             return escapeHtml(summaryText(e));
         }
@@ -552,7 +552,7 @@
         }
         function centralTime(iso) {
             const d = centralDate(iso);
-            if (!d) return '—';
+            if (!d) return 'Unknown';
             return d.toLocaleTimeString('en-US', {
                 timeZone: 'America/Chicago', hour: 'numeric', minute: '2-digit', second: '2-digit',
             });
