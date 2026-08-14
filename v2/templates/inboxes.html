@@ -407,6 +407,8 @@
                     </thead>
                     <tbody>
                         ${row('Emails handled', processedToday, processedTotal)}
+                        ${row('Rejected', s.today.rejected || 0, s.all_time.rejected || 0)}
+                        ${row('Dismissed', s.today.dismissed || 0, s.all_time.dismissed || 0)}
                         ${row('Total time handling email', formatDuration(s.today.duration_ms), formatDuration(s.all_time.duration_ms))}
                         ${row('Average time per email', formatDuration(s.today.avg_duration_ms), formatDuration(s.all_time.avg_duration_ms))}
                         ${row('Estimated staff time saved', formatDuration(savedTodayMs), formatDuration(savedAllMs), true)}
