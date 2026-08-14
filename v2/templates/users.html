@@ -16,7 +16,7 @@
     <div class="settings-layout">
         {% include '_settings_nav.html' %}
         <main class="settings-content">
-        <h1 class="page-title">Users<span class="info-tip" style="margin-left: 10px; width: 20px; height: 20px;">i<span class="info-content"><b>Admin:</b> full access to all inboxes, settings, users, and audit logs. Can create and delete inboxes.<br><br><b>Owner:</b> hub and settings access for their assigned inboxes only. Can edit categories, recipients, and templates. Cannot manage users or add/delete inboxes.<br><br><b>Reviewer:</b> can only approve or reject emails in the queue for their assigned inboxes. No settings access.</span></span></h1>
+        <h1 class="page-title">Users<span class="info-tip" style="margin-left: 10px; width: 20px; height: 20px;">i<span class="info-content"><b>Admin:</b> everything — every inbox, all settings, users, and history. Can add and remove inboxes.<br><br><b>Owner:</b> the hub and settings for the inboxes they're assigned, so they can edit categories, recipients, and replies. Can't manage users or add and remove inboxes.<br><br><b>Reviewer:</b> approves or rejects email waiting in the hub, for the inboxes they're assigned. No settings.</span></span></h1>
         <p class="page-subtitle">People who can sign in. Hover the info icon above for a quick role reference.</p>
 
         <div class="toolbar">
@@ -52,7 +52,7 @@
             </div>
 
             <div class="form-group">
-                <label class="form-label">Role<span class="info-tip">i<span class="info-content"><b>Reviewer:</b> approves emails in the queue for their assigned inboxes. <b>Owner:</b> reviewer access plus can edit settings (categories, recipients, templates) for their assigned inboxes. <b>Admin:</b> full access to everything and can manage users.</span></span></label>
+                <label class="form-label">Role<span class="info-tip">i<span class="info-content"><b>Reviewer:</b> approves or rejects email waiting in the hub. <b>Owner:</b> the same, plus editing settings (categories, recipients, replies) for the inboxes they're assigned. <b>Admin:</b> everything, including managing users.</span></span></label>
                 <select class="form-select" id="fRole">
                     <option value="reviewer">Reviewer</option>
                     <option value="owner">Owner</option>
@@ -62,7 +62,7 @@
             </div>
 
             <div class="form-group" id="assignedInboxesRow">
-                <label class="form-label">Assigned inboxes<span class="info-tip">i<span class="info-content">For reviewers and owners: check the inboxes they should have access to. Admins always see all inboxes regardless of what's checked.</span></span></label>
+                <label class="form-label">Assigned inboxes<span class="info-tip">i<span class="info-content">For reviewers and owners, tick the inboxes they should be able to see. Admins see every inbox no matter what's ticked here.</span></span></label>
                 <div id="fAssignedList" style="border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 8px; max-height: 180px; overflow-y: auto;"></div>
                 <div class="form-hint">Reviewers only see queues from checked inboxes. Admins always see everything regardless.</div>
             </div>

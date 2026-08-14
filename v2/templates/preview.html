@@ -44,15 +44,15 @@
                 <p class="card-desc">Paste a fake email and see the action plan without touching Outlook.</p>
 
                 <div class="form-group" style="margin-top: 12px;">
-                    <label class="form-label">Subject</label>
+                    <label class="form-label">Subject<span class="info-tip">i<span class="info-content">The subject line of the pretend email. Nothing is sent and no real mailbox is touched — this just shows you which category the AI would choose and what would happen next.</span></span></label>
                     <input class="form-input" id="tSubject" placeholder="Test subject">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Sender</label>
+                    <label class="form-label">Sender<span class="info-tip">i<span class="info-content">Who the pretend email is from. Use one of your own staff addresses to check that “Skip when sender is internal” behaves the way you expect.</span></span></label>
                     <input class="form-input" id="tSender" placeholder="person@example.com">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Body</label>
+                    <label class="form-label">Body<span class="info-tip">i<span class="info-content">The wording of the pretend email. Try the awkward ones — a vague follow-up, or a message that could belong to two categories — to see where your category descriptions need to be clearer.</span></span></label>
                     <textarea class="form-textarea" id="tBody" placeholder="Email content..."></textarea>
                 </div>
                 <button class="btn primary small" onclick="runTest()">Run test</button>

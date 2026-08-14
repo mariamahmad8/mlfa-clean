@@ -104,7 +104,7 @@
                             <input type="checkbox" id="fActive">
                             <span id="activeStatusText">Active</span>
                         </label>
-                        <span class="info-tip">i<span class="info-content">Inactive categories are skipped entirely — GPT will not classify anything into them, and no forwarding or replies happen. The category and its settings are kept.</span></span>
+                        <span class="info-tip">i<span class="info-content">Turn this off and the AI stops using this category — nothing gets sorted into it, and no forwards or replies go out. Your settings here are kept, so you can switch it back on later.</span></span>
                         <button class="modal-close" onclick="closeModal()" aria-label="Close">×</button>
                     </div>
                 </div>
@@ -128,27 +128,27 @@
                 <!-- General: identity + the classification prompt -->
                 <div class="tab-panel active" data-panel="general">
                     <div class="field">
-                        <label class="form-label" for="fLabel">Display name<span class="info-tip">i<span class="info-content">The name staff see in this list and across the hub. Safe to rename at any time — it has no effect on how emails are classified.</span></span></label>
+                        <label class="form-label" for="fLabel">Display name<span class="info-tip">i<span class="info-content">The name your team sees in this list and around the hub. Change it whenever you like; it has no effect on how email gets sorted.</span></span></label>
                         <input class="form-input w-txt" id="fLabel" placeholder="Donor inquiry">
                     </div>
                     <div class="field field-top" id="newKeyRow" style="display:none;">
-                        <label class="form-label" for="fKey">Internal key<span class="info-tip">i<span class="info-content">The identifier used in the database, the audit log, and GPT’s output. Lowercase letters and underscores only. It cannot be changed once the category exists.</span></span></label>
+                        <label class="form-label" for="fKey">Internal key<span class="info-tip">i<span class="info-content">A short id the system uses behind the scenes. Lowercase letters and underscores only. It can't be changed later, because your history and reply settings point to it.</span></span></label>
                         <div class="field-control">
                             <input class="form-input w-key" id="fKey" placeholder="donor">
                             <div class="form-hint">Lowercase and underscores only. Locked after creation.</div>
                         </div>
                     </div>
                     <div class="field">
-                        <label class="form-label" for="fFolder">Move to folder<span class="info-tip">i<span class="info-content">Outlook folder the email is filed into after handling. Use a slash for subfolders, e.g. Donor_Related/Grant. Leave blank to leave the email where it is.</span></span></label>
+                        <label class="form-label" for="fFolder">Move to folder<span class="info-tip">i<span class="info-content">The Outlook folder this email is moved to once it's been handled. Folders live under your Inbox, and if one isn't there yet the system makes it for you — so Donor_Related/Grant becomes Inbox › Donor_Related › Grant. Leave it blank to leave the email in the inbox.</span></span></label>
                         <input class="form-input w-txt" id="fFolder" placeholder="Donor_Related/Grant">
                     </div>
-                    <div class="sub-head">Classification prompt<span class="info-tip">i<span class="info-content">GPT reads this to decide when an email belongs here. Be specific. Include a few example situations so the model learns edge cases.</span></span></div>
+                    <div class="sub-head">Classification prompt<span class="info-tip">i<span class="info-content">Describe, in your own words, which emails belong here. The AI reads this next to your other categories and picks the one that fits best — so say what makes this one different, and give an example or two.</span></span></div>
                     <textarea class="form-textarea" id="fRuleText" style="min-height: 150px;" placeholder="Describe the emails that belong in this category, in plain language.&#10;&#10;Example: Emails about donations, tax receipts, matching-gift programs, or planned giving. Include grants from foundations if the sender explicitly names one."></textarea>
                 </div>
 
                 <!-- Forwarding: who gets a copy, and the amount gate -->
                 <div class="tab-panel" data-panel="forwarding">
-                    <div class="sub-head">Recipients<span class="info-tip">i<span class="info-content">Everyone checked here gets a copy of each email sorted into this category. Add or remove people on the Recipients page; inactive recipients are hidden unless already selected.</span></span></div>
+                    <div class="sub-head">Recipients<span class="info-tip">i<span class="info-content">Everyone you tick here gets a copy of every email that lands in this category. Add or remove people on the Recipients page. Anyone switched off there is hidden here, unless they're already ticked.</span></span></div>
                     <div class="picker-toolbar">
                         <input class="form-input recipient-search" id="fRecipSearch" placeholder="Search recipients by name or email" oninput="filterRecipients()">
                         <span class="picker-meta"><span id="fwdSelectedCount">0</span> selected</span>
@@ -156,7 +156,7 @@
                     <div class="recipient-list" id="fForwardList"></div>
                     <hr class="divider">
                     <div class="field field-top">
-                        <label class="form-label" for="fAmount">Amount gate ($)<span class="info-tip">i<span class="info-content">Only forward when GPT detects a dollar amount at or above this. Used for donor and invoice rules. Leave blank if amount doesn't matter.</span></span></label>
+                        <label class="form-label" for="fAmount">Amount gate ($)<span class="info-tip">i<span class="info-content">This only affects forwarding. Put a number here and emails are only forwarded when the AI finds a dollar amount that big or bigger — and it won't forward at all if it can't find an amount. Either way the email is still filed and still gets a reply. Leave it blank to forward everything.</span></span></label>
                         <div class="field-control">
                             <input class="form-input w-amt" type="number" id="fAmount" placeholder="Optional">
                             <div class="form-hint">Leave blank to forward every email in this category, whatever the amount.</div>
@@ -167,13 +167,13 @@
                 <!-- Reply: templates + the switches that govern sending -->
                 <div class="tab-panel" data-panel="reply">
                     <div class="field">
-                        <label class="form-label" for="fReplySelect">Default template<span class="info-tip">i<span class="info-content">The auto-reply sent back to the sender when an email is sorted into this category. Pick “Don’t send an auto-reply” to stay silent. Manage the wording on the Reply templates page.</span></span></label>
+                        <label class="form-label" for="fReplySelect">Default template<span class="info-tip">i<span class="info-content">The reply that goes back to the sender when an email lands in this category. Choose “Don't send an auto-reply” to stay quiet. You write the wording on the Reply templates page.</span></span></label>
                         <select class="form-select w-sel" id="fReplySelect">
                             <option value="">Don't send an auto-reply</option>
                         </select>
                     </div>
                     <div class="field">
-                        <label class="form-label" for="fReplyPersonalSelect">Personal template<span class="info-tip">i<span class="info-content">Used when GPT detects the email has personal details (a specific case or referral). Falls back to the default reply if empty.</span></span></label>
+                        <label class="form-label" for="fReplyPersonalSelect">Personal template<span class="info-tip">i<span class="info-content">A different reply for when the email is about someone's own situation — a specific case, person, or referral — rather than a general question. Leave it on “Same as default” to send everyone the same reply.</span></span></label>
                         <select class="form-select w-sel" id="fReplyPersonalSelect">
                             <option value="">Same as default</option>
                         </select>
@@ -183,12 +183,12 @@
                         <label class="toggle-row">
                             <input type="checkbox" id="fAutoReply">
                             <span class="toggle-label">Send the auto-reply</span>
-                            <span class="info-tip" style="margin-left:auto;">i<span class="info-content">Master switch for replies. If off, no auto-reply goes out even if a template is selected above.</span></span>
+                            <span class="info-tip" style="margin-left:auto;">i<span class="info-content">The on/off switch for replies in this category. A reply only goes out if this is on and you've picked a template above. With it off, nothing is sent.</span></span>
                         </label>
                         <label class="toggle-row">
                             <input type="checkbox" id="fSafeguard">
                             <span class="toggle-label">Reply only once per thread</span>
-                            <span class="info-tip" style="margin-left:auto;">i<span class="info-content">Prevents duplicate auto-replies when a sender follows up. Recommended for any category that sends a reply.</span></span>
+                            <span class="info-tip" style="margin-left:auto;">i<span class="info-content">Checks whether this category already replied earlier in the same email conversation, and stays quiet if it did. Worth leaving on, so someone writing back doesn't get the same reply twice.</span></span>
                         </label>
                     </div>
                 </div>
@@ -199,12 +199,12 @@
                         <label class="toggle-row">
                             <input type="checkbox" id="fMarkRead">
                             <span class="toggle-label">Mark as read after handling</span>
-                            <span class="info-tip" style="margin-left:auto;">i<span class="info-content">Mark the email as read in Outlook once the system has finished processing it. Uncheck if you want the email to stay bold so staff notice it.</span></span>
+                            <span class="info-tip" style="margin-left:auto;">i<span class="info-content">Marks the email as read in Outlook once everything else is done. Uncheck it to leave the email bold in its folder so your team still notices it.</span></span>
                         </label>
                         <label class="toggle-row">
                             <input type="checkbox" id="fSkipInternal">
                             <span class="toggle-label">Skip when sender is internal</span>
-                            <span class="info-tip" style="margin-left:auto;">i<span class="info-content">Don't apply this category when the email is from an @mlfa.org address. Prevents replying to staff forwards.</span></span>
+                            <span class="info-tip" style="margin-left:auto;">i<span class="info-content">Ignores this category when the email comes from your own staff. You list your staff domains under Inboxes → Filters → Internal domains — if that list is empty, this does nothing.</span></span>
                         </label>
                     </div>
                     <div class="sub-head">Destructive</div>
@@ -212,7 +212,7 @@
                         <label class="toggle-row danger-row">
                             <input type="checkbox" id="fDeleteImmediately">
                             <span class="toggle-label">Send these emails to Trash</span>
-                            <span class="info-tip" style="margin-left:auto;">i<span class="info-content">Emails sorted into this category go straight to Trash. Nothing else runs on them — no auto-reply, no forwarding, and they are not filed in the folder above. Use only for spam-like categories.</span></span>
+                            <span class="info-tip" style="margin-left:auto;">i<span class="info-content">Emails in this category go straight to Trash. Nothing else happens to them — no reply, no forward, and they don't go to the folder above. Only use it for junk.</span></span>
                         </label>
                     </div>
                 </div>

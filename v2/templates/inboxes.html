@@ -130,38 +130,6 @@
             white-space: normal;
         }
         .stats-hero .h-text strong { color: var(--mlfa-teal); font-weight: 700; }
-        .stats-chart {
-            background: var(--panel);
-            border: 1px solid var(--line);
-            border-radius: 8px;
-            padding: 18px 20px 12px;
-            margin-bottom: 18px;
-        }
-        .stats-chart-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            margin-bottom: 14px;
-        }
-        .stats-chart-title {
-            font-family: var(--font-display);
-            font-size: 12px;
-            font-weight: 600;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-            color: var(--mlfa-teal);
-        }
-        .stats-chart-subtitle {
-            font-size: 11px;
-            color: var(--text-muted);
-        }
-        .stats-chart-svg { width: 100%; height: 180px; display: block; }
-        .stats-chart-bar { fill: var(--mlfa-teal); transition: fill 0.15s ease; }
-        .stats-chart-bar:hover { fill: var(--mlfa-orange); }
-        .stats-chart-bar.today { fill: var(--mlfa-orange); }
-        .stats-chart-axis { stroke: var(--line); stroke-width: 1; }
-        .stats-chart-label { font-size: 10px; fill: var(--text-muted); font-family: var(--font); }
-        .stats-chart-value { font-size: 10px; fill: var(--text); font-family: var(--font-display); font-weight: 600; }
     </style>
 </head>
 <body>
@@ -240,7 +208,7 @@
                 <!-- General: which mailbox, and what to call it -->
                 <div class="tab-panel active" data-panel="general">
                     <div class="field field-top" id="cloneRow" style="display:none;">
-                        <label class="form-label" for="fCloneSource">Clone from<span class="info-tip">i<span class="info-content">Copies every category rule, recipient, and reply template from the chosen inbox into this new one. The mailbox itself is untouched, and later changes to the source inbox do not carry over.</span></span></label>
+                        <label class="form-label" for="fCloneSource">Clone from<span class="info-tip">i<span class="info-content">Copies the other inbox's categories, recipients, and reply wording into this new one, so you don't set it all up again. It doesn't copy the email address, ignored senders, or AI wording. It's a one-time copy — later changes over there won't show up here.</span></span></label>
                         <div class="field-control">
                             <select class="form-select w-sel" id="fCloneSource">
                                 <option value="">Start blank</option>
@@ -249,11 +217,11 @@
                         </div>
                     </div>
                     <div class="field">
-                        <label class="form-label" for="fEmail">Email address<span class="info-tip">i<span class="info-content">The mailbox the system signs into and watches. It must match the Microsoft 365 account exactly — a typo means nothing is ever polled.</span></span></label>
+                        <label class="form-label" for="fEmail">Email address<span class="info-tip">i<span class="info-content">The mailbox the system signs into and watches for new email. It has to be exactly the same as the Microsoft 365 account — one typo and no email is ever picked up.</span></span></label>
                         <input class="form-input w-txt" id="fEmail" placeholder="info@mlfa.org">
                     </div>
                     <div class="field">
-                        <label class="form-label" for="fDisplayName">Display name<span class="info-tip">i<span class="info-content">The label shown in the hub, the inbox list, and the category picker. Cosmetic only — renaming it changes nothing about how email is handled.</span></span></label>
+                        <label class="form-label" for="fDisplayName">Display name<span class="info-tip">i<span class="info-content">The name shown around the hub. It's only a label — changing it doesn't affect how email is handled.</span></span></label>
                         <input class="form-input w-txt" id="fDisplayName" placeholder="MLFA Info Inbox">
                     </div>
                 </div>
@@ -264,22 +232,22 @@
                         <label class="toggle-row">
                             <input type="checkbox" id="fAutomation">
                             <span class="toggle-label">Automatically process emails</span>
-                            <span class="info-tip" style="margin-left:auto;">i<span class="info-content">When on, the AI files, forwards, and replies to new email without waiting for anyone. When off, every email waits in the hub for a person to approve or reject it.</span></span>
+                            <span class="info-tip" style="margin-left:auto;">i<span class="info-content">On: the AI files, forwards, and replies to new email by itself. Off: every email waits in the hub for someone to approve, reject, or dismiss it, and nothing happens until they do.</span></span>
                         </label>
                         <label class="toggle-row">
                             <input type="checkbox" id="fUseThreadContext">
                             <span class="toggle-label">Use conversation history</span>
-                            <span class="info-tip" style="margin-left:auto;">i<span class="info-content">Lets the AI read earlier messages in the same thread before deciding. Recommended — it stops follow-ups like “any update?” from being misclassified.</span></span>
+                            <span class="info-tip" style="margin-left:auto;">i<span class="info-content">Lets the AI read the earlier emails in a conversation before it decides. Worth leaving on — a short reply like “any update?” tells you nothing on its own, so it's easy to get wrong.</span></span>
                         </label>
                         <label class="toggle-row">
                             <input type="checkbox" id="fSendToOpenAI">
                             <span class="toggle-label">Allow AI classification</span>
-                            <span class="info-tip" style="margin-left:auto;">i<span class="info-content">When off, this inbox's email content is not sent to OpenAI. New messages wait for a reviewer to choose a category manually.</span></span>
+                            <span class="info-tip" style="margin-left:auto;">i<span class="info-content">Turn this off and nothing from this inbox is sent to OpenAI. New email still shows up in the hub, just without a category — someone picks one by hand, and nothing is ever handled automatically.</span></span>
                         </label>
                     </div>
                     <hr class="divider">
                     <div class="field field-top">
-                        <label class="form-label" for="fBackfill">Import existing email<span class="info-tip">i<span class="info-content">How far back to reach when this inbox first connects. Set 0 to start clean and only handle mail that arrives from now on. Higher numbers mean a larger first run.</span></span></label>
+                        <label class="form-label" for="fBackfill">Import existing email<span class="info-tip">i<span class="info-content">How far back to go the first time this inbox connects. Use 0 to start fresh and only handle email that arrives from now on. A big number means a lot of old email gets handled at once — replies and forwards included.</span></span></label>
                         <div class="field-control">
                             <div class="inline-row">
                                 <span>Last</span>
@@ -290,7 +258,7 @@
                         </div>
                     </div>
                     <div class="field field-top">
-                        <label class="form-label" for="fRetention">Hub queue retention<span class="info-tip">i<span class="info-content">How long temporary review records may remain in the Hub database. The original email remains in Microsoft 365.</span></span></label>
+                        <label class="form-label" for="fRetention">Hub queue retention<span class="info-tip">i<span class="info-content">How long an email can sit in the hub waiting for someone to review it. After that the hub lets it go: it drops off the review list, gets a queue_expired label in Outlook so you can still find it, and is never filed, forwarded, or replied to. The email itself is never deleted.</span></span></label>
                         <div class="field-control">
                             <div class="inline-row">
                                 <input class="inline-num" type="number" id="fRetention" min="1" max="365" value="30">
@@ -304,14 +272,14 @@
                 <!-- Filters: who gets ignored, who counts as staff -->
                 <div class="tab-panel" data-panel="filters">
                     <div class="field field-top">
-                        <label class="form-label" for="fBlocked">Ignore senders<span class="info-tip">i<span class="info-content">Email from these addresses is skipped entirely — not classified, forwarded, or replied to. Use it for newsletters and no-reply robots. One address per line.</span></span></label>
+                        <label class="form-label" for="fBlocked">Ignore senders<span class="info-tip">i<span class="info-content">Email from these addresses is thrown out before anything else happens — no category, no review, no history entry. Write each address out in full; a domain on its own or a wildcard won't work. Good for newsletters and automated senders. One per line.</span></span></label>
                         <div class="field-control">
                             <textarea class="form-textarea" id="fBlocked" placeholder="person@example.com&#10;newsletter@company.com" style="min-height: 92px;"></textarea>
                             <div class="form-hint">One address per line.</div>
                         </div>
                     </div>
                     <div class="field field-top">
-                        <label class="form-label" for="fInternalDomains">Internal domains<span class="info-tip">i<span class="info-content">Senders at these domains count as staff. Categories with “Skip when sender is internal” turned on ignore their email, which stops the system replying to your own team’s forwards. One domain per line, no @.</span></span></label>
+                        <label class="form-label" for="fInternalDomains">Internal domains<span class="info-tip">i<span class="info-content">Your own staff email domains. Any category with “Skip when sender is internal” switched on will ignore email from them, so the system doesn't reply to your own team's forwards. Leave this empty and that setting does nothing. One per line, no @.</span></span></label>
                         <div class="field-control">
                             <textarea class="form-textarea" id="fInternalDomains" placeholder="mlfa.org&#10;subsidiary.org" style="min-height: 92px;"></textarea>
                             <div class="form-hint">One domain per line. Treated as staff.</div>
@@ -325,19 +293,19 @@
                         <label class="toggle-row">
                             <input type="checkbox" id="fInternalBridge">
                             <span class="toggle-label">Enable internal reply bridge</span>
-                            <span class="info-tip" style="margin-left:auto;">i<span class="info-content">Lets staff answer a forwarded email by replying to the system instead of the sender. The prefix at the start of their reply decides whether it stays internal or goes out.</span></span>
+                            <span class="info-tip" style="margin-left:auto;">i<span class="info-content">Lets your team answer a forwarded email by replying to the system instead of to the sender. What they type at the start of the reply decides whether it stays in-house or goes out.</span></span>
                         </label>
                     </div>
                     <hr class="divider">
                     <div class="field field-top">
-                        <label class="form-label" for="fInternalPrefix">Internal prefix<span class="info-tip">i<span class="info-content">A staff reply starting with this stays inside the organization — the original sender never receives it. Keep the brackets so it is hard to type by accident.</span></span></label>
+                        <label class="form-label" for="fInternalPrefix">Internal prefix<span class="info-tip">i<span class="info-content">A staff reply that starts with this stays in-house — the original sender never sees it. Keep the brackets so nobody types it by accident.</span></span></label>
                         <div class="field-control">
                             <input class="form-input w-key" id="fInternalPrefix" placeholder="[INTERNAL]">
                             <div class="form-hint">Keeps the reply internal.</div>
                         </div>
                     </div>
                     <div class="field field-top">
-                        <label class="form-label" for="fExternalPrefix">External prefix<span class="info-tip">i<span class="info-content">A staff reply starting with this is sent on to the original sender, with the prefix stripped. Treat it as “this leaves the building”.</span></span></label>
+                        <label class="form-label" for="fExternalPrefix">External prefix<span class="info-tip">i<span class="info-content">A staff reply that starts with this goes out to the original sender, with the prefix removed. Treat it as “this leaves the building”.</span></span></label>
                         <div class="field-control">
                             <input class="form-input w-key" id="fExternalPrefix" placeholder="[EXTERNAL]">
                             <div class="form-hint">Sends the reply to the original sender.</div>
@@ -348,14 +316,14 @@
                 <!-- AI prompt: the wrapper around every classification call -->
                 <div class="tab-panel" data-panel="prompt">
                     <div class="field field-top">
-                        <label class="form-label" for="fPreamble">System preamble<span class="info-tip">i<span class="info-content">The opening of the prompt GPT sees for every email in this inbox — who the organization is and what this mailbox is for. Category prompts are appended after it.</span></span></label>
+                        <label class="form-label" for="fPreamble">System preamble<span class="info-tip">i<span class="info-content">The opening of the instructions the AI reads for every email here — who you are and what this mailbox is for. Your category descriptions come after it.</span></span></label>
                         <div class="field-control">
                             <textarea class="form-textarea" id="fPreamble" style="min-height: 96px;"></textarea>
                             <div class="form-hint">Intro describing what this inbox does.</div>
                         </div>
                     </div>
                     <div class="field field-top">
-                        <label class="form-label" for="fGuidelines">Global guidelines<span class="info-tip">i<span class="info-content">The closing of the prompt: rules that apply to every category, plus the JSON output format the system expects back. Editing the format can break processing for this inbox.</span></span></label>
+                        <label class="form-label" for="fGuidelines">Global guidelines<span class="info-tip">i<span class="info-content">The closing of those instructions: rules that apply to every category, plus the format the AI has to answer in. Changing the format part can stop this inbox working.</span></span></label>
                         <div class="field-control">
                             <textarea class="form-textarea" id="fGuidelines" style="min-height: 96px;"></textarea>
                             <div class="form-hint">Closing rules and the required JSON output format.</div>
@@ -380,58 +348,6 @@
             if (!res.ok) return;
             inboxes = await res.json();
             renderTable();
-        }
-
-        function buildDailyChart(daily) {
-            // Real bar chart with dated x-axis, count y-axis labels, and today highlighted
-            if (!daily || !daily.length) {
-                return '<div style="padding: 40px 0; text-align: center; color: var(--text-muted); font-size: 12px;">Not enough data yet — chart will populate as emails are handled.</div>';
-            }
-            const W = 640;         // logical width
-            const H = 180;         // logical height
-            const P_LEFT = 30, P_RIGHT = 8, P_TOP = 10, P_BOTTOM = 32;
-            const chartW = W - P_LEFT - P_RIGHT;
-            const chartH = H - P_TOP - P_BOTTOM;
-            const maxCount = Math.max(1, ...daily.map(d => d.count));
-            // Round the y-axis top up to a nice number
-            const yMax = Math.ceil(maxCount / 5) * 5 || 5;
-            const barGap = 4;
-            const barW = (chartW / daily.length) - barGap;
-            const todayStr = daily[daily.length - 1]?.day;
-
-            const bars = daily.map((d, i) => {
-                const x = P_LEFT + i * (barW + barGap);
-                const barHeight = d.count > 0 ? Math.max(2, (d.count / yMax) * chartH) : 0;
-                const y = P_TOP + chartH - barHeight;
-                const isToday = d.day === todayStr;
-                const showLabel = i === 0 || i === daily.length - 1 || i === Math.floor(daily.length / 2);
-                const dayLabel = new Date(d.day + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                const valueLabel = d.count > 0 ? `<text class="stats-chart-value" x="${x + barW / 2}" y="${y - 4}" text-anchor="middle">${d.count}</text>` : '';
-                const dateLabel = showLabel ? `<text class="stats-chart-label" x="${x + barW / 2}" y="${H - 12}" text-anchor="middle">${dayLabel}</text>` : '';
-                return `
-                    <rect class="stats-chart-bar ${isToday ? 'today' : ''}" x="${x}" y="${y}" width="${barW}" height="${barHeight}" rx="2">
-                        <title>${dayLabel} — ${d.count} emails</title>
-                    </rect>
-                    ${valueLabel}
-                    ${dateLabel}
-                `;
-            }).join('');
-
-            // Y-axis gridlines + labels (0, half, max)
-            const yTicks = [0, yMax / 2, yMax].map(v => {
-                const y = P_TOP + chartH - (v / yMax) * chartH;
-                return `
-                    <line class="stats-chart-axis" x1="${P_LEFT}" y1="${y}" x2="${W - P_RIGHT}" y2="${y}" ${v === 0 ? '' : 'stroke-dasharray="2,3"'}/>
-                    <text class="stats-chart-label" x="${P_LEFT - 6}" y="${y + 3}" text-anchor="end">${Math.round(v)}</text>
-                `;
-            }).join('');
-
-            return `
-                <svg class="stats-chart-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
-                    ${yTicks}
-                    ${bars}
-                </svg>
-            `;
         }
 
         function formatDuration(ms) {
@@ -479,20 +395,8 @@
             const processedToday = s.today.processed || 0;
             const processedTotal = s.all_time.processed || 0;
 
-            // Build the SVG bar chart from the last 14 days of processed counts
-            const daily = Array.isArray(s.daily_processed) ? s.daily_processed : [];
-            const chartSvg = buildDailyChart(daily);
-
             document.getElementById('statsBody').innerHTML = `
                 <div class="stats-subtitle">${escapeHtml(s.email_to_watch)} &nbsp;&middot;&nbsp; Today reflects activity since midnight Central Time. Totals since Jul 17, 2026.</div>
-
-                <div class="stats-chart">
-                    <div class="stats-chart-header">
-                        <span class="stats-chart-title">Emails handled per day</span>
-                        <span class="stats-chart-subtitle">Last 14 days</span>
-                    </div>
-                    ${chartSvg}
-                </div>
 
                 <table class="stats-table">
                     <thead>

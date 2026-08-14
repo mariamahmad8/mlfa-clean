@@ -164,7 +164,7 @@
         {% include '_settings_nav.html' %}
         <main class="settings-content">
         <div class="audit-head">
-            <h1 class="page-title">Audit log<span class="info-tip wide" style="margin-left: 10px; width: 18px; height: 18px;">i<span class="info-content"><div class="tip-title">Audit log — what each action means</div><dl class="tip-legend"><dt>Auto</dt><dd>The AI handled the email on its own (classified, forwarded, replied, tagged) without human review.</dd><dt>Queued</dt><dd>The AI wasn't sure, so it added the email to the review hub for a person to look at.</dd><dt>Approved</dt><dd>A reviewer looked at the queued email and clicked Approve. The system then carried out the action plan.</dd><dt>Rejected</dt><dd>A reviewer rejected the queued email. It got moved to Trash and a note went out.</dd><dt>Dismissed</dt><dd>A reviewer decided the email needed no action (spam or irrelevant). Marked read, no reply, no forward.</dd><dt>Created / Updated / Deleted</dt><dd>A staff member added, edited, or removed something like a rule, template, recipient, or user.</dd></dl></span></span></h1>
+            <h1 class="page-title">Audit log<span class="info-tip wide" style="margin-left: 10px; width: 18px; height: 18px;">i<span class="info-content"><div class="tip-title">Audit log — what each action means</div><dl class="tip-legend"><dt>Auto</dt><dd>The AI handled the email on its own — sorted it, filed it, and sent any forward or reply — with nobody reviewing it.</dd><dt>Queued</dt><dd>The email went to the hub for someone to look at, because automation is off for this inbox or because no category fitted it.</dd><dt>Queued (AI off)</dt><dd>It went to the hub without a category, because AI sorting is off for this inbox. Someone picks the category by hand.</dd><dt>Approved</dt><dd>Someone approved it in the hub, and the system then did the filing, forwarding, and reply for its category. Your current category settings are used — not the ones from when it arrived.</dd><dt>Rejected</dt><dd>Someone rejected it and gave a reason. It went to Trash, and no reply or forward was sent.</dd><dt>Dismissed</dt><dd>Someone decided it needed nothing — junk, or not for us. Marked as read, with no reply and no forward.</dd><dt>Expired</dt><dd>Nobody reviewed it in time, so the hub let it go. It got a queue_expired label in Outlook, and was never filed, forwarded, or replied to.</dd><dt>Created / Updated / Deleted</dt><dd>Someone on your team added, edited, or removed a category, reply, recipient, user, or inbox.</dd></dl></span></span></h1>
             <div class="head-right">
                 <select class="form-select" id="inboxSelect" onchange="loadEvents()"></select>
                 <button class="icon-btn-sq" onclick="loadEvents()" title="Refresh">&#8635;</button>
@@ -184,6 +184,7 @@
                 <option value="approved">Approved</option>
                 <option value="rejected">Rejected</option>
                 <option value="dismissed">Dismissed</option>
+                <option value="queue_expired">Expired</option>
             </select>
             <div class="date-group">
                 <label for="fFrom">From</label>
@@ -227,7 +228,7 @@
 
         // Groups of raw action names — used by the chip filter
         const ACTION_GROUPS = {
-            email: ['auto_processed', 'auto_processed_on_toggle', 'queued_for_review', 'approved', 'approved_bulk', 'rejected', 'dismissed'],
+            email: ['auto_processed', 'auto_processed_on_toggle', 'queued_for_review', 'approved', 'approved_bulk', 'rejected', 'dismissed', 'queue_expired', 'queued_human_only'],
             settings: ['rule_created', 'rule_updated', 'rule_deleted', 'template_created', 'template_updated', 'template_deleted', 'recipient_created', 'recipient_updated', 'recipient_deleted', 'inbox_created', 'inbox_updated', 'inbox_deleted', 'inbox_cloned'],
             user: ['user_created', 'user_updated', 'user_deleted'],
         };
@@ -477,9 +478,11 @@
                 return cats ? `Queued for review — ${cats}` : 'Queued for review';
             }
             if (raw === 'approved' || raw === 'approved_bulk') {
-                if (cats) return `Approved and executed — ${cats}`;
-                return comment ? `Approved and executed — "${comment}"` : 'Approved and executed';
+                if (cats) return `Approved and carried out — ${cats}`;
+                return comment ? `Approved and carried out — "${comment}"` : 'Approved and carried out';
             }
+            if (raw === 'queue_expired') return 'Left the hub unreviewed — never filed, forwarded, or replied to';
+            if (raw === 'queued_human_only') return 'Queued without a category — AI sorting is off for this inbox';
             if (raw === 'rejected') return comment ? `Rejected — "${comment}"` : 'Rejected and moved to Trash';
             if (raw === 'dismissed') return cats ? `Dismissed, no action — ${cats}` : 'Dismissed, no action taken';
 
@@ -497,8 +500,8 @@
                     auto_processed: 'Handled automatically',
                     auto_processed_on_toggle: 'Handled automatically',
                     queued_for_review: 'Queued for review',
-                    approved: 'Approved and executed',
-                    approved_bulk: 'Approved and executed',
+                    approved: 'Approved and carried out',
+                    approved_bulk: 'Approved and carried out',
                     dismissed: 'Dismissed, no action taken',
                 }[raw];
                 if (lead) return escapeHtml(lead) + chips;
@@ -520,6 +523,8 @@
             if (a === 'dismissed') return '<span class="badge">Dismissed</span>';
             if (a === 'auto_processed' || a === 'auto_processed_on_toggle') return '<span class="badge warning">Auto</span>';
             if (a === 'queued_for_review') return '<span class="badge">Queued</span>';
+            if (a === 'queue_expired') return '<span class="badge warning">Expired</span>';
+            if (a === 'queued_human_only') return '<span class="badge">Queued (AI off)</span>';
             if (a && a.endsWith('_created')) return '<span class="badge success">Created</span>';
             if (a && a.endsWith('_updated')) return '<span class="badge">Updated</span>';
             if (a && a.endsWith('_deleted')) return '<span class="badge danger">Deleted</span>';
