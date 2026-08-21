@@ -3,16 +3,126 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MLFA Email Hub</title>
+    <title>MLFA Email Management</title>
     <link rel="icon" type="image/png" href="/mlfa-favicon.png?v=2">
     <meta name="csrf-token" content="{{ csrf_token }}">
     <script src="/static/security.js?v=2"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Nunito+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="/static/shared.css?v=13">
     <style>
-        .home-wrap { max-width: 960px; margin: 0 auto; padding: 32px 24px 48px; }
-        .home-greeting { font-size: 13px; color: var(--text-muted); margin: 0 0 4px; }
-        .home-wrap .page-title { margin: 0 0 8px; }
-        .home-lede { font-size: 14px; color: var(--text-muted); margin: 0 0 24px; max-width: 620px; line-height: 1.6; }
+        /* ---- Hero: centred statement over a faint dot grid -----------------
+           All motion here is switched off under prefers-reduced-motion. */
+        .hero {
+            position: relative;
+            overflow: hidden;
+            padding: 54px 24px 46px;
+            text-align: center;
+            border-bottom: 1px solid var(--line-soft);
+        }
+        /* Dot grid: a quiet nod to "this is a system", rather than a stock gradient */
+        .hero::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: radial-gradient(circle, rgba(1, 68, 56, 0.10) 1px, transparent 1px);
+            background-size: 22px 22px;
+            -webkit-mask-image: radial-gradient(ellipse 70% 70% at 50% 38%, #000 38%, transparent 100%);
+                    mask-image: radial-gradient(ellipse 70% 70% at 50% 38%, #000 38%, transparent 100%);
+            pointer-events: none;
+        }
+        .hero-inner { position: relative; max-width: 760px; margin: 0 auto; }
+        /* Swap this for a photograph whenever you have one; it just sits here. */
+        .hero-graphic { width: 100%; max-width: 250px; height: auto; margin: 0 auto 20px; display: block; }
+        .hero-eyebrow {
+            font-family: var(--font-display);
+            font-size: 11.5px; font-weight: 600;
+            letter-spacing: 0.22em; text-transform: uppercase;
+            color: var(--mlfa-orange);
+            margin: 0 0 14px;
+        }
+        .hero-title {
+            font-family: var(--font-display);
+            font-size: clamp(28px, 4.4vw, 48px);
+            font-weight: 600; line-height: 1.14; letter-spacing: 0.005em;
+            color: var(--text);
+            margin: 0 0 16px;
+        }
+        /* The three verbs are the whole point of the system, so they carry weight */
+        .hero-title .verb { color: var(--mlfa-teal); position: relative; white-space: nowrap; }
+        .hero-title .verb::after {
+            content: '';
+            position: absolute;
+            left: 0; bottom: 0.06em;
+            width: 100%; height: 0.09em;
+            background: var(--mlfa-orange);
+            opacity: 0.35;
+            transform: scaleX(0); transform-origin: left;
+            animation: sweep 0.5s ease forwards;
+        }
+        .hero-title .verb:nth-of-type(2)::after { animation-delay: 0.12s; }
+        .hero-title .verb:nth-of-type(3)::after { animation-delay: 0.24s; }
+        @keyframes sweep { to { transform: scaleX(1); } }
+        .hero-sub {
+            font-size: 15px; line-height: 1.65;
+            color: var(--text-muted);
+            max-width: 560px; margin: 0 auto;
+        }
+        .hero-signed { margin: 20px 0 0; font-size: 12px; color: var(--text-soft); }
+        .rise { opacity: 0; transform: translateY(10px); animation: rise 0.5s ease forwards; }
+        .rise:nth-child(2) { animation-delay: 0.06s; }
+        .rise:nth-child(3) { animation-delay: 0.12s; }
+        .rise:nth-child(4) { animation-delay: 0.18s; }
+        .rise:nth-child(5) { animation-delay: 0.24s; }
+        @keyframes rise { to { opacity: 1; transform: translateY(0); } }
+
+        /* ---- Live tiles ----------------------------------------------------- */
+        .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+        .tile {
+            position: relative; display: block; overflow: hidden;
+            padding: 20px 20px 18px;
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 4px;
+            text-decoration: none; color: var(--text);
+            transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+        }
+        .tile::before {
+            content: '';
+            position: absolute; top: 0; left: 0; right: 0; height: 2px;
+            background: var(--mlfa-orange);
+            transform: scaleX(0); transform-origin: left;
+            transition: transform 0.22s ease;
+        }
+        .tile:hover {
+            transform: translateY(-2px);
+            border-color: var(--mlfa-teal);
+            box-shadow: 0 6px 18px rgba(42, 40, 35, 0.10);
+            color: var(--text);
+        }
+        .tile:hover::before { transform: scaleX(1); }
+        .tile-count {
+            font-family: var(--font-display);
+            font-size: 40px; font-weight: 600; line-height: 1;
+            font-variant-numeric: tabular-nums;
+            color: var(--mlfa-teal);
+            margin-bottom: 8px;
+        }
+        .tile-count.zero { color: var(--text-soft); }
+        .tile-label { font-size: 13.5px; font-weight: 600; margin-bottom: 3px; }
+        .tile-meta { font-family: 'SF Mono', Menlo, monospace; font-size: 11.5px; color: var(--text-soft); }
+        .tile-cta {
+            margin-top: 12px; font-size: 12.5px; font-weight: 500;
+            color: var(--mlfa-teal); opacity: 0.75;
+            transition: opacity 0.18s ease;
+        }
+        .tile:hover .tile-cta { opacity: 1; }
+        .tiles-note { margin: 0; padding: 14px 2px; font-size: 13px; color: var(--text-muted); }
+
+        @media (prefers-reduced-motion: reduce) {
+            .rise, .hero-title .verb::after { animation: none; opacity: 1; transform: none; }
+            .tile, .tile::before, .tile-cta { transition: none; }
+        }
+
+        .home-wrap { max-width: 960px; margin: 0 auto; padding: 26px 24px 56px; }
 
         /* Page tabs, same underline language as the settings modals */
         .page-tabs {
@@ -45,39 +155,6 @@
             color: var(--text);
             margin: 0 0 10px;
         }
-        /* Live queue status: one row per inbox this user can reach */
-        .queue-status { border: 1px solid var(--line); border-radius: 4px; background: var(--panel); }
-        .status-loading, .status-empty {
-            margin: 0; padding: 16px 18px;
-            font-size: 13px; color: var(--text-muted);
-        }
-        .status-row {
-            display: flex; align-items: center; gap: 14px;
-            padding: 12px 18px;
-            border-bottom: 1px solid var(--line-soft);
-        }
-        .status-row:last-child { border-bottom: none; }
-        .status-name { font-size: 13.5px; font-weight: 500; color: var(--text); }
-        .status-address {
-            font-family: 'SF Mono', Menlo, monospace;
-            font-size: 11.5px; color: var(--text-soft);
-        }
-        .status-count {
-            margin-left: auto;
-            font-family: var(--font-display);
-            font-size: 20px; font-weight: 600;
-            font-variant-numeric: tabular-nums;
-            color: var(--text);
-            line-height: 1;
-        }
-        .status-count.zero { color: var(--text-soft); font-weight: 500; }
-        .status-word { font-size: 12px; color: var(--text-muted); width: 74px; line-height: 1.3; }
-        .status-open {
-            font-size: 12.5px; font-weight: 500;
-            color: var(--mlfa-teal); text-decoration: none;
-            white-space: nowrap;
-        }
-        .status-open:hover { text-decoration: underline; }
 
         /* ─────────────── Guide (How-to panel) ─────────────── */
         .guide-layout {
@@ -215,14 +292,23 @@
     {% set active_nav = 'home' %}
     {% include '_app_header.html' %}
 
-    <div class="home-wrap">
-        <p class="home-greeting">Signed in as {{ current_email }}</p>
-        <h1 class="page-title">MLFA Email Hub</h1>
-        <p class="home-lede">
-            The hub reads the mailboxes you connect, sorts each email into a category, and then files,
-            forwards, or replies according to the rules you set.
-        </p>
+    <section class="hero">
+        <div class="hero-inner">
+            <img class="hero-graphic rise" src="/mlfa-biglogo.png" alt="Muslim Legal Fund of America">
+            <p class="hero-eyebrow rise">MLFA Email Management</p>
+            <h1 class="hero-title rise">
+                Built to <span class="verb">sort</span>, <span class="verb">filter</span>,
+                and <span class="verb">forward</span> your email.
+            </h1>
+            <p class="hero-sub rise">
+                Every message that arrives is read, given a category, and sent where it belongs,
+                so your team only spends time on the ones that need a person.
+            </p>
+            <p class="hero-signed rise">Signed in as {{ current_email }}</p>
+        </div>
+    </section>
 
+    <div class="home-wrap">
         <div class="page-tabs">
             <button type="button" class="page-tab active" data-tab="overview">Overview</button>
             <button type="button" class="page-tab" data-tab="how-to">How to use the hub</button>
@@ -230,9 +316,9 @@
         </div>
 
         <div class="page-panel active" data-panel="overview">
-            <h2 class="panel-heading">Waiting for review</h2>
-            <div id="queueStatus" class="queue-status">
-                <p class="status-loading">Checking your inboxes...</p>
+            <h2 class="panel-heading">Waiting in the hub</h2>
+            <div id="queueStatus" class="tiles">
+                <p class="tiles-note">Checking your inboxes...</p>
             </div>
         </div>
 
@@ -1148,7 +1234,7 @@
                 if (!res.ok) throw new Error('inboxes');
                 const inboxes = await res.json();
                 if (!inboxes.length) {
-                    box.innerHTML = '<p class="status-empty">No inboxes are assigned to you yet.</p>';
+                    box.innerHTML = '<p class="tiles-note">No inboxes are assigned to you yet.</p>';
                     return;
                 }
                 const counts = await Promise.all(inboxes.map(async ib => {
@@ -1159,22 +1245,40 @@
                 }));
                 box.innerHTML = inboxes.map((ib, i) => {
                     const n = counts[i];
-                    const shown = n === null ? '?' : n;
-                    const word = n === 1 ? 'email waiting' : 'emails waiting';
+                    const known = n !== null;
+                    const cta = !known ? 'Count unavailable'
+                              : n === 1 ? '1 email waiting'
+                              : `${n} emails waiting`;
                     return `
-                        <div class="status-row">
-                            <div>
-                                <div class="status-name">${escapeHtml(ib.display_name)}</div>
-                                <div class="status-address">${escapeHtml(ib.email_to_watch || '')}</div>
-                            </div>
-                            <div class="status-count ${n ? '' : 'zero'}">${shown}</div>
-                            <div class="status-word">${word}</div>
-                            <a class="status-open" href="/hub">Open queue</a>
-                        </div>`;
+                        <a class="tile" href="/hub">
+                            <div class="tile-count ${n ? '' : 'zero'}" data-target="${known ? n : ''}">${known ? 0 : '?'}</div>
+                            <div class="tile-label">${escapeHtml(ib.display_name)}</div>
+                            <div class="tile-meta">${escapeHtml(ib.email_to_watch || '')}</div>
+                            <div class="tile-cta">${cta}</div>
+                        </a>`;
                 }).join('');
+                countUp();
             } catch (_) {
-                box.innerHTML = '<p class="status-empty">Could not load your inboxes just now.</p>';
+                box.innerHTML = '<p class="tiles-note">Could not load your inboxes just now.</p>';
             }
+        }
+
+        // Tick each number up from zero. Small touch, but it makes the page feel
+        // live rather than printed.
+        function countUp() {
+            const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            document.querySelectorAll('.tile-count[data-target]').forEach(el => {
+                const target = parseInt(el.dataset.target, 10);
+                if (isNaN(target)) return;
+                if (reduce || target === 0) { el.textContent = target; return; }
+                const steps = Math.min(target, 18);
+                let i = 0;
+                const timer = setInterval(() => {
+                    i += 1;
+                    el.textContent = Math.round((target / steps) * i);
+                    if (i >= steps) { el.textContent = target; clearInterval(timer); }
+                }, 900 / steps);
+            });
         }
 
         function escapeHtml(s) {
