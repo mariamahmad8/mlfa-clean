@@ -353,6 +353,22 @@ def _accessible_inboxes():
 @reviewer_bp.route('/')
 @login_required
 def index():
+    """Landing page after sign-in.
+
+    Signing straight into the review queue was disorienting, so the root now
+    serves a home page; the queue lives at /hub. Login redirects still point at
+    reviewer.index, so they arrive here.
+    """
+    return render_template(
+        'home.html',
+        current_role=session.get('role', 'reviewer'),
+        current_email=session.get('user_email', ''),
+    )
+
+
+@reviewer_bp.route('/hub')
+@login_required
+def hub():
     """Serve the review hub HTML with the current user info."""
     return render_template(
         'hub.html',

@@ -162,7 +162,12 @@
 </head>
 <body>
     {% set active_nav = 'hub' %}
-    {% set header_center %}<div class="inbox-tabs" id="inboxTabs"></div>{% endset %}
+    {% set header_center %}
+    <div class="inbox-picker">
+        <span class="picker-label">Viewing</span>
+        <select class="inbox-select" id="inboxSelect" onchange="switchInbox(this.value)"></select>
+    </div>
+    {% endset %}
     {% set header_extra %}
         {% if current_role in ['admin', 'owner'] %}
         <div class="automation-toggle">
@@ -207,14 +212,19 @@
         }
 
         function renderInboxTabs() {
-            const tabs = document.getElementById('inboxTabs');
-            tabs.innerHTML = inboxes.map(ib =>
-                `<button class="inbox-tab ${ib.id === currentInboxId ? 'active' : ''}" onclick="switchInbox(${ib.id})">${escapeHtml(ib.display_name)}</button>`
+            const sel = document.getElementById('inboxSelect');
+            if (!sel) return;
+            sel.innerHTML = inboxes.map(ib =>
+                `<option value="${ib.id}">${escapeHtml(ib.display_name)}</option>`
             ).join('');
+            if (currentInboxId !== null) sel.value = String(currentInboxId);
+            // Only worth showing when there's a choice to make.
+            const picker = sel.closest('.inbox-picker');
+            if (picker) picker.style.display = inboxes.length ? 'flex' : 'none';
         }
 
         async function switchInbox(inboxId) {
-            currentInboxId = inboxId;
+            currentInboxId = parseInt(inboxId, 10);
             currentEmail = null;
             renderInboxTabs();
             await loadReviewCategories();

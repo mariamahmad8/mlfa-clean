@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MLFA Email Hub</title>
+    <link rel="icon" type="image/png" href="/mlfa-favicon.png?v=2">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <script src="/static/security.js?v=2"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Nunito+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="/static/shared.css?v=13">
+    <style>
+        .home-wrap { max-width: 960px; margin: 0 auto; padding: 32px 24px 48px; }
+        .home-greeting { font-size: 13px; color: var(--text-muted); margin: 0 0 4px; }
+        .home-wrap .page-title { margin: 0 0 8px; }
+        .home-lede { font-size: 14px; color: var(--text-muted); margin: 0 0 24px; max-width: 620px; line-height: 1.6; }
+
+        /* Page tabs, same underline language as the settings modals */
+        .page-tabs {
+            display: flex; align-items: center; gap: 2px;
+            border-bottom: 1px solid var(--line);
+            margin-bottom: 22px;
+        }
+        .page-tab {
+            appearance: none; background: none; border: none;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+            padding: 8px 12px 9px;
+            font-family: var(--font); font-size: 13px; font-weight: 500;
+            color: var(--text-muted); cursor: pointer;
+            transition: color 0.12s ease, border-color 0.12s ease;
+        }
+        .page-tab:hover { color: var(--text); }
+        .page-tab.active {
+            color: var(--text); font-weight: 600;
+            border-bottom-color: var(--mlfa-teal);
+        }
+        .page-panel { display: none; }
+        .page-panel.active { display: block; }
+
+        /* Where-to-go cards on the overview tab */
+        .home-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+        .home-card {
+            display: block;
+            padding: 16px 18px;
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 4px;
+            text-decoration: none;
+            color: var(--text);
+            transition: border-color 0.12s ease, box-shadow 0.12s ease;
+        }
+        .home-card:hover { border-color: var(--mlfa-teal); box-shadow: var(--shadow-sm); color: var(--text); }
+        .home-card h3 {
+            margin: 0 0 5px;
+            font-family: var(--font); font-size: 14px; font-weight: 600;
+        }
+        .home-card p { margin: 0; font-size: 12.5px; color: var(--text-muted); line-height: 1.5; }
+
+        /* Placeholder blocks for the sections still to be written */
+        .home-placeholder {
+            padding: 28px 22px;
+            border: 1px dashed var(--line);
+            border-radius: 4px;
+            background: var(--panel);
+        }
+        .home-placeholder h3 {
+            margin: 0 0 8px;
+            font-family: var(--font); font-size: 14px; font-weight: 600;
+        }
+        .home-placeholder p { margin: 0 0 10px; font-size: 13px; color: var(--text-muted); line-height: 1.6; max-width: 620px; }
+        .home-placeholder ul { margin: 0; padding-left: 18px; font-size: 13px; color: var(--text-muted); line-height: 1.8; }
+        .home-placeholder .todo {
+            display: inline-block; margin-bottom: 12px;
+            padding: 2px 8px; border-radius: 999px;
+            background: var(--panel-2); color: var(--text-muted);
+            font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+    {% set active_nav = 'home' %}
+    {% include '_app_header.html' %}
+
+    <div class="home-wrap">
+        <p class="home-greeting">Signed in as {{ current_email }}</p>
+        <h1 class="page-title">MLFA Email Hub</h1>
+        <p class="home-lede">
+            The hub reads the mailboxes you connect, sorts each email into a category, and then files,
+            forwards, or replies according to the rules you set.
+        </p>
+
+        <div class="page-tabs">
+            <button type="button" class="page-tab active" data-tab="overview">Overview</button>
+            <button type="button" class="page-tab" data-tab="how-to">How to use the hub</button>
+            <button type="button" class="page-tab" data-tab="security">Security</button>
+        </div>
+
+        <div class="page-panel active" data-panel="overview">
+            <div class="home-cards">
+                <a class="home-card" href="/hub">
+                    <h3>Review queue</h3>
+                    <p>Emails waiting for someone to approve, reject, or dismiss.</p>
+                </a>
+                {% if current_role in ['admin', 'owner'] %}
+                <a class="home-card" href="/settings/categories">
+                    <h3>Categories</h3>
+                    <p>The categories email gets sorted into, and what happens to each one.</p>
+                </a>
+                <a class="home-card" href="/settings/inboxes">
+                    <h3>Inboxes</h3>
+                    <p>The mailboxes being watched, and how much the AI does on its own.</p>
+                </a>
+                <a class="home-card" href="/settings/audit">
+                    <h3>Audit log</h3>
+                    <p>Every action taken on every email: who did what, and when.</p>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="page-panel" data-panel="how-to">
+            <div class="home-placeholder">
+                <span class="todo">To be written</span>
+                <h3>How to use the hub</h3>
+                <p>A short guide for staff will go here. Worth covering:</p>
+                <ul>
+                    <li>What the review queue is, and what approve, reject, and dismiss each do</li>
+                    <li>How an email gets its category, and how to change one that is wrong</li>
+                    <li>When the AI acts on its own, and when it waits for a person</li>
+                    <li>Who to ask when something looks wrong</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="page-panel" data-panel="security">
+            <div class="home-placeholder">
+                <span class="todo">To be written</span>
+                <h3>Security</h3>
+                <p>How email is handled and protected will go here. Worth covering:</p>
+                <ul>
+                    <li>Where email content is stored, and how long the hub keeps it</li>
+                    <li>What is sent to OpenAI, and how to turn that off per inbox</li>
+                    <li>What each role can see and do</li>
+                    <li>How sign-in works</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tabs are plain page sections; nothing loads until you click one.
+        document.addEventListener('click', (e) => {
+            const tab = e.target.closest('.page-tab');
+            if (!tab) return;
+            const name = tab.dataset.tab;
+            document.querySelectorAll('.page-tab').forEach(t => t.classList.toggle('active', t === tab));
+            document.querySelectorAll('.page-panel').forEach(p => {
+                p.classList.toggle('active', p.dataset.panel === name);
+            });
+        });
+    </script>
+</body>
+</html>

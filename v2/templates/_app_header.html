@@ -22,7 +22,8 @@
     </a>
 
     <nav class="main-nav" aria-label="Primary">
-        <a href="/" class="nav-link{% if active_nav == 'hub' %} active{% endif %}">Hub</a>
+        <a href="/" class="nav-link{% if active_nav == 'home' %} active{% endif %}">Home</a>
+        <a href="/hub" class="nav-link{% if active_nav == 'hub' %} active{% endif %}">Hub</a>
         {% if current_role in ['admin', 'owner'] %}
         <a href="/settings" class="nav-link{% if active_nav == 'settings' %} active{% endif %}">Settings</a>
         {% endif %}

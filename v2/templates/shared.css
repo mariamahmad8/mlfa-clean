@@ -124,34 +124,6 @@ a:hover { color: var(--accent-hover); }
   font-family: var(--font-display);
 }
 
-.app-header .inbox-tabs {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-}
-
-.app-header .inbox-tab {
-  padding: 6px 14px;
-  border-radius: 6px;
-  background: transparent;
-  color: rgba(245, 241, 234, 0.7);
-  border: 1px solid transparent;
-  cursor: pointer;
-  font-family: var(--font-display);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  font-size: 12px;
-  font-weight: 500;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
-}
-.app-header .inbox-tab:hover { color: #F5F1EA; border-color: rgba(245, 241, 234, 0.35); }
-.app-header .inbox-tab.active {
-  color: #F5F1EA;
-  background: rgba(245, 241, 234, 0.14);
-  border-color: rgba(245, 241, 234, 0.5);
-  font-weight: 600;
-}
-
 /* Primary nav — Hub / Settings, always visible so navigation isn't a hunt */
 .app-header .main-nav { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
 .app-header .nav-link {
@@ -175,13 +147,46 @@ a:hover { color: var(--accent-hover); }
   border-color: rgba(245, 241, 234, 0.5);
   font-weight: 600;
 }
-/* Page-level controls sit behind a rule — which vanishes when there are none.
-   The hub's inbox tabs are filled in by JS, so a separate divider element would
-   hang there alone on first paint. */
-.app-header .inbox-tabs:not(:empty) {
-  border-left: 1px solid rgba(245, 241, 234, 0.25);
+/* Inbox picker — a labelled dropdown, not a tab. Reads as a control you can
+   change rather than a second row of navigation. */
+.app-header .inbox-picker {
+  display: flex;
+  align-items: center;
+  gap: 9px;
   padding-left: 16px;
-  margin-left: 0;
+  border-left: 1px solid rgba(245, 241, 234, 0.25);
+  flex: 0 0 auto;
+}
+.app-header .picker-label {
+  font-family: var(--font);
+  font-size: 12px;
+  color: rgba(245, 241, 234, 0.65);
+  white-space: nowrap;
+}
+.app-header .inbox-select {
+  height: 32px;
+  max-width: 260px;
+  padding: 0 30px 0 11px;
+  background-color: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  /* Own chevron so the control looks the same in every browser */
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%232A2823' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+.app-header .inbox-select:hover { border-color: var(--text-muted); }
+.app-header .inbox-select:focus {
+  outline: none;
+  border-color: var(--mlfa-orange);
+  box-shadow: 0 0 0 2px rgba(184, 61, 38, 0.35);
 }
 
 /* Role pills for the Users table. Red = full access, orange = scoped access,
