@@ -135,7 +135,22 @@
             .tile, .tile::before, .tile-cta { transition: none; }
         }
 
-        .home-wrap { max-width: 960px; margin: 0 auto; padding: 26px 24px 56px; }
+        /* Tiles sit on the eight-point geometric tile, drawn inline so there is
+           nothing to license. It fades out top and bottom, and is switched off
+           while a guide section is open so long text stays clean. */
+        .content-band { position: relative; }
+        .content-band::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cg fill='none' stroke='%23014438' stroke-opacity='0.14' stroke-width='1'%3E%3Cpath d='M60 6 L114 60 L60 114 L6 60 Z'/%3E%3Crect x='25' y='25' width='70' height='70'/%3E%3Cpath d='M60 25 L95 60 L60 95 L25 60 Z'/%3E%3Ccircle cx='60' cy='60' r='9'/%3E%3Cpath d='M0 0 L25 25 M120 0 L95 25 M0 120 L25 95 M120 120 L95 95'/%3E%3C/g%3E%3C/svg%3E");
+            background-size: 120px 120px;
+            -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 22%, #000 72%, transparent 100%);
+                    mask-image: linear-gradient(to bottom, transparent 0%, #000 22%, #000 72%, transparent 100%);
+            pointer-events: none;
+        }
+        .content-band.reading::before { display: none; }
+        .home-wrap { position: relative; max-width: 960px; margin: 0 auto; padding: 34px 24px 64px; }
 
         /* Page tabs, same underline language as the settings modals */
         .page-panel { display: none; }
@@ -353,6 +368,7 @@
         </div>
     </section>
 
+    <section class="content-band" id="contentBand">
     <div class="home-wrap">
         <!-- Landing tiles. Each .tile-icon is a placeholder: drop an SVG or an
              <img> in and it will sit in the same spot. -->
@@ -1281,6 +1297,7 @@
             <button type="button" class="panel-back" data-back>Back to home</button>
         </div>
     </div>
+    </section>
 
     <script>
         // Scatter monospace symbols across the hero. They stay invisible until
@@ -1328,8 +1345,10 @@
         // Tiles open a section; the back button returns to the tiles.
         (function () {
             const tiles = document.getElementById('homeTiles');
+            const band = document.getElementById('contentBand');
             function show(name) {
                 tiles.style.display = name ? 'none' : '';
+                if (band) band.classList.toggle('reading', !!name);
                 document.querySelectorAll('.page-panel').forEach(p => {
                     p.classList.toggle('active', !!name && p.dataset.panel === name);
                 });
