@@ -18,16 +18,40 @@
             text-align: center;
             border-bottom: 1px solid var(--line-soft);
         }
-        /* Dot grid: a quiet nod to "this is a system", rather than a stock gradient */
+        /* Backdrop: an eight-point geometric tile, drawn here as an inline SVG so
+           there is no third-party image and nothing to license. Swap the
+           background-image for a photograph if you'd rather have one. */
         .hero::before {
             content: '';
             position: absolute;
             inset: 0;
-            background-image: radial-gradient(circle, rgba(1, 68, 56, 0.10) 1px, transparent 1px);
-            background-size: 22px 22px;
-            -webkit-mask-image: radial-gradient(ellipse 70% 70% at 50% 38%, #000 38%, transparent 100%);
-                    mask-image: radial-gradient(ellipse 70% 70% at 50% 38%, #000 38%, transparent 100%);
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cg fill='none' stroke='%23014438' stroke-opacity='0.13' stroke-width='1'%3E%3Cpath d='M60 6 L114 60 L60 114 L6 60 Z'/%3E%3Crect x='25' y='25' width='70' height='70'/%3E%3Cpath d='M60 25 L95 60 L60 95 L25 60 Z'/%3E%3Ccircle cx='60' cy='60' r='9'/%3E%3Cpath d='M0 0 L25 25 M120 0 L95 25 M0 120 L25 95 M120 120 L95 95'/%3E%3C/g%3E%3C/svg%3E");
+            background-size: 120px 120px;
+            -webkit-mask-image: radial-gradient(ellipse 75% 75% at 50% 40%, #000 30%, transparent 100%);
+                    mask-image: radial-gradient(ellipse 75% 75% at 50% 40%, #000 30%, transparent 100%);
             pointer-events: none;
+        }
+        /* Glyph layer: invisible until the cursor passes over it, then a soft
+           circle around the pointer reveals the symbols underneath. */
+        .hero-glyphs {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.35s ease;
+            -webkit-mask-image: radial-gradient(circle 165px at var(--mx, -999px) var(--my, -999px), #000 0%, rgba(0,0,0,0.6) 50%, transparent 78%);
+                    mask-image: radial-gradient(circle 165px at var(--mx, -999px) var(--my, -999px), #000 0%, rgba(0,0,0,0.6) 50%, transparent 78%);
+        }
+        .hero:hover .hero-glyphs { opacity: 1; }
+        .hero-glyphs span {
+            position: absolute;
+            font-family: 'SF Mono', Menlo, monospace;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--mlfa-teal);
+            opacity: 0.75;
+            user-select: none;
+            white-space: nowrap;
         }
         .hero-inner { position: relative; max-width: 760px; margin: 0 auto; }
         /* Swap this for a photograph whenever you have one; it just sits here. */
@@ -99,23 +123,6 @@
             color: var(--text);
         }
         .tile:hover::before { transform: scaleX(1); }
-        .tile-count {
-            font-family: var(--font-display);
-            font-size: 40px; font-weight: 600; line-height: 1;
-            font-variant-numeric: tabular-nums;
-            color: var(--mlfa-teal);
-            margin-bottom: 8px;
-        }
-        .tile-count.zero { color: var(--text-soft); }
-        .tile-label { font-size: 13.5px; font-weight: 600; margin-bottom: 3px; }
-        .tile-meta { font-family: 'SF Mono', Menlo, monospace; font-size: 11.5px; color: var(--text-soft); }
-        .tile-cta {
-            margin-top: 12px; font-size: 12.5px; font-weight: 500;
-            color: var(--mlfa-teal); opacity: 0.75;
-            transition: opacity 0.18s ease;
-        }
-        .tile:hover .tile-cta { opacity: 1; }
-        .tiles-note { margin: 0; padding: 14px 2px; font-size: 13px; color: var(--text-muted); }
 
         @media (prefers-reduced-motion: reduce) {
             .rise, .hero-title .verb::after { animation: none; opacity: 1; transform: none; }
@@ -125,38 +132,69 @@
         .home-wrap { max-width: 960px; margin: 0 auto; padding: 26px 24px 56px; }
 
         /* Page tabs, same underline language as the settings modals */
-        .page-tabs {
-            display: flex; align-items: center; gap: 2px;
-            border-bottom: 1px solid var(--line);
-            margin-bottom: 22px;
-        }
-        .page-tab {
-            appearance: none; background: none; border: none;
-            border-bottom: 2px solid transparent;
-            margin-bottom: -1px;
-            padding: 8px 12px 9px;
-            font-family: var(--font); font-size: 13px; font-weight: 500;
-            color: var(--text-muted); cursor: pointer;
-            transition: color 0.12s ease, border-color 0.12s ease;
-        }
-        .page-tab:hover { color: var(--text); }
-        .page-tab:focus { outline: none; }
-        .page-tab:focus-visible { outline: 2px solid var(--mlfa-teal); outline-offset: 2px; }
-        .page-tab.active {
-            color: var(--text); font-weight: 600;
-            border-bottom-color: var(--mlfa-teal);
-        }
         .page-panel { display: none; }
         .page-panel.active { display: block; }
-
-        .panel-heading {
-            font-family: var(--font);
-            font-size: 13px; font-weight: 600;
-            color: var(--text);
-            margin: 0 0 10px;
+        .panel-back {
+            appearance: none; background: none;
+            border: 1px solid var(--line); border-radius: 3px;
+            padding: 5px 11px; margin-bottom: 20px;
+            font-family: var(--font); font-size: 12.5px; font-weight: 500;
+            color: var(--text-muted); cursor: pointer;
+            transition: border-color 0.15s ease, color 0.15s ease;
         }
+        .panel-back:hover { border-color: var(--mlfa-teal); color: var(--text); }
 
-        /* ─────────────── Guide (How-to panel) ─────────────── */
+        /* ---- Landing tiles --------------------------------------------------- */
+        .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; }
+        .tile {
+            position: relative;
+            display: flex; flex-direction: column;
+            overflow: hidden;
+            padding: 22px 22px 20px;
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 5px;
+            text-align: left; text-decoration: none;
+            color: var(--text);
+            font-family: var(--font);
+            cursor: pointer;
+            transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+        }
+        .tile::before {
+            content: '';
+            position: absolute; top: 0; left: 0; right: 0; height: 2px;
+            background: var(--mlfa-orange);
+            transform: scaleX(0); transform-origin: left;
+            transition: transform 0.22s ease;
+        }
+        .tile:hover {
+            transform: translateY(-3px);
+            border-color: var(--mlfa-teal);
+            box-shadow: 0 8px 22px rgba(42, 40, 35, 0.10);
+        }
+        .tile:hover::before { transform: scaleX(1); }
+        .tile:focus-visible { outline: 2px solid var(--mlfa-teal); outline-offset: 2px; }
+        /* Icon slot: sized and spaced already, just needs artwork dropped in */
+        .tile-icon {
+            width: 34px; height: 34px;
+            margin-bottom: 14px;
+            border-radius: 6px;
+            background: var(--accent-soft);
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .tile-icon img, .tile-icon svg { width: 20px; height: 20px; display: block; }
+        .tile-title { font-size: 15px; font-weight: 600; margin-bottom: 5px; }
+        .tile-desc { font-size: 12.5px; line-height: 1.55; color: var(--text-muted); }
+        .tile-stat {
+            margin-top: 14px;
+            font-size: 12.5px; font-weight: 600;
+            color: var(--mlfa-teal);
+            opacity: 0.8;
+            transition: opacity 0.18s ease;
+        }
+        .tile:hover .tile-stat { opacity: 1; }
+
         .guide-layout {
             display: grid;
             grid-template-columns: 220px 1fr;
@@ -292,7 +330,8 @@
     {% set active_nav = 'home' %}
     {% include '_app_header.html' %}
 
-    <section class="hero">
+    <section class="hero" id="hero">
+        <div class="hero-glyphs" id="heroGlyphs" aria-hidden="true"></div>
         <div class="hero-inner">
             <img class="hero-graphic rise" src="/mlfa-biglogo.png" alt="Muslim Legal Fund of America">
             <p class="hero-eyebrow rise">MLFA Email Management</p>
@@ -309,20 +348,31 @@
     </section>
 
     <div class="home-wrap">
-        <div class="page-tabs">
-            <button type="button" class="page-tab active" data-tab="overview">Overview</button>
-            <button type="button" class="page-tab" data-tab="how-to">How to use the hub</button>
-            <button type="button" class="page-tab" data-tab="security">Security</button>
-        </div>
-
-        <div class="page-panel active" data-panel="overview">
-            <h2 class="panel-heading">Waiting in the hub</h2>
-            <div id="queueStatus" class="tiles">
-                <p class="tiles-note">Checking your inboxes...</p>
-            </div>
+        <!-- Landing tiles. Each .tile-icon is a placeholder: drop an SVG or an
+             <img> in and it will sit in the same spot. -->
+        <div class="tiles" id="homeTiles">
+            <a class="tile" href="/hub">
+                <span class="tile-icon" aria-hidden="true"></span>
+                <span class="tile-title">Review queue</span>
+                <span class="tile-desc">Emails waiting for someone to approve, reject, or dismiss.</span>
+                <span class="tile-stat" id="queueStat">Checking...</span>
+            </a>
+            <button type="button" class="tile" data-open="how-to">
+                <span class="tile-icon" aria-hidden="true"></span>
+                <span class="tile-title">How to use the hub</span>
+                <span class="tile-desc">What the queue is, what each action does, and how email gets sorted.</span>
+                <span class="tile-stat">Read the guide</span>
+            </button>
+            <button type="button" class="tile" data-open="security">
+                <span class="tile-icon" aria-hidden="true"></span>
+                <span class="tile-title">Security</span>
+                <span class="tile-desc">How email is stored and protected, and what each role can see.</span>
+                <span class="tile-stat">Read more</span>
+            </button>
         </div>
 
         <div class="page-panel" data-panel="how-to">
+            <button type="button" class="panel-back" data-back>Back to home</button>
           <div class="guide-layout">
             <aside class="guide-toc" id="guideToc">
               <h4>Start here</h4>
@@ -1221,64 +1271,100 @@
           </div>
         </div>
 
-        <div class="page-panel" data-panel="security"></div>
+        <div class="page-panel" data-panel="security">
+            <button type="button" class="panel-back" data-back>Back to home</button>
+        </div>
     </div>
 
     <script>
-        // One request per inbox the user can reach, so a reviewer only ever
-        // sees the inboxes assigned to them.
+        // Scatter monospace symbols across the hero. They stay invisible until
+        // the cursor is near them, so the background rewards a look without
+        // shouting at anyone who is just reading the page.
+        (function () {
+            const layer = document.getElementById('heroGlyphs');
+            const hero = document.getElementById('hero');
+            if (!layer || !hero) return;
+            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+            if (!window.matchMedia('(hover: hover)').matches) return;   // skip touch
+
+            const GLYPHS = ['{ }', '</>', '@', '01', '#', '=>', '[ ]', ';', '/*', '$', '::', '&&', '404', 'if', 'fn'];
+            // Fixed grid with a nudge, so they read as scattered but never overlap.
+            const COLS = 16, ROWS = 7;
+            let html = '';
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    const i = r * COLS + c;
+                    const jitterX = ((i * 37) % 11) - 5;
+                    const jitterY = ((i * 53) % 9) - 4;
+                    const left = (c + 0.5) * (100 / COLS) + jitterX * 0.35;
+                    const top = (r + 0.5) * (100 / ROWS) + jitterY * 0.8;
+                    html += `<span style="left:${left}%;top:${top}%">${GLYPHS[i % GLYPHS.length]}</span>`;
+                }
+            }
+            layer.innerHTML = html;
+
+            let frame = null;
+            hero.addEventListener('mousemove', (e) => {
+                if (frame) return;                       // one update per frame
+                frame = requestAnimationFrame(() => {
+                    const box = hero.getBoundingClientRect();
+                    layer.style.setProperty('--mx', (e.clientX - box.left) + 'px');
+                    layer.style.setProperty('--my', (e.clientY - box.top) + 'px');
+                    frame = null;
+                });
+            });
+            hero.addEventListener('mouseleave', () => {
+                layer.style.setProperty('--mx', '-999px');
+                layer.style.setProperty('--my', '-999px');
+            });
+        })();
+
+        // Tiles open a section; the back button returns to the tiles.
+        (function () {
+            const tiles = document.getElementById('homeTiles');
+            function show(name) {
+                tiles.style.display = name ? 'none' : '';
+                document.querySelectorAll('.page-panel').forEach(p => {
+                    p.classList.toggle('active', !!name && p.dataset.panel === name);
+                });
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+            document.addEventListener('click', (e) => {
+                const opener = e.target.closest('[data-open]');
+                if (opener) { show(opener.dataset.open); return; }
+                if (e.target.closest('[data-back]')) show(null);
+            });
+        })();
+
+        // The Review queue tile reports how much is waiting, totalled over the
+        // inboxes this user can reach (a reviewer only sees their own).
         async function loadQueueStatus() {
-            const box = document.getElementById('queueStatus');
+            const stat = document.getElementById('queueStat');
+            if (!stat) return;
             try {
                 const res = await fetch('/api/my_inboxes');
                 if (!res.ok) throw new Error('inboxes');
                 const inboxes = await res.json();
-                if (!inboxes.length) {
-                    box.innerHTML = '<p class="tiles-note">No inboxes are assigned to you yet.</p>';
-                    return;
-                }
+                if (!inboxes.length) { stat.textContent = 'No inboxes assigned to you'; return; }
+
                 const counts = await Promise.all(inboxes.map(async ib => {
                     try {
                         const r = await fetch(`/api/emails?inbox_id=${ib.id}`);
-                        return r.ok ? (await r.json()).length : null;
-                    } catch (_) { return null; }
+                        return r.ok ? (await r.json()).length : 0;
+                    } catch (_) { return 0; }
                 }));
-                box.innerHTML = inboxes.map((ib, i) => {
-                    const n = counts[i];
-                    const known = n !== null;
-                    const cta = !known ? 'Count unavailable'
-                              : n === 1 ? '1 email waiting'
-                              : `${n} emails waiting`;
-                    return `
-                        <a class="tile" href="/hub">
-                            <div class="tile-count ${n ? '' : 'zero'}" data-target="${known ? n : ''}">${known ? 0 : '?'}</div>
-                            <div class="tile-label">${escapeHtml(ib.display_name)}</div>
-                            <div class="tile-meta">${escapeHtml(ib.email_to_watch || '')}</div>
-                            <div class="tile-cta">${cta}</div>
-                        </a>`;
-                }).join('');
-                countUp();
+                const total = counts.reduce((a, b) => a + b, 0);
+                if (total === 0) {
+                    stat.textContent = 'Nothing waiting';
+                } else if (inboxes.length === 1) {
+                    stat.textContent = total === 1 ? '1 email waiting' : `${total} emails waiting`;
+                } else {
+                    const busy = counts.filter(n => n > 0).length;
+                    stat.textContent = `${total} waiting across ${busy} inbox${busy === 1 ? '' : 'es'}`;
+                }
             } catch (_) {
-                box.innerHTML = '<p class="tiles-note">Could not load your inboxes just now.</p>';
+                stat.textContent = 'Open the hub';
             }
-        }
-
-        // Tick each number up from zero. Small touch, but it makes the page feel
-        // live rather than printed.
-        function countUp() {
-            const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-            document.querySelectorAll('.tile-count[data-target]').forEach(el => {
-                const target = parseInt(el.dataset.target, 10);
-                if (isNaN(target)) return;
-                if (reduce || target === 0) { el.textContent = target; return; }
-                const steps = Math.min(target, 18);
-                let i = 0;
-                const timer = setInterval(() => {
-                    i += 1;
-                    el.textContent = Math.round((target / steps) * i);
-                    if (i >= steps) { el.textContent = target; clearInterval(timer); }
-                }, 900 / steps);
-            });
         }
 
         function escapeHtml(s) {
