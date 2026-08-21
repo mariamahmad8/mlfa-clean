@@ -260,6 +260,24 @@
 
               <h4>Reference</h4>
               <a href="#tags">PAIRActioned tags</a>
+
+              <h4>Behind the scenes</h4>
+              <a href="#deep-poll">How the worker polls</a>
+              <a href="#deep-classifier">How the classifier works</a>
+              <a href="#deep-router">How the router decides</a>
+              <a href="#deep-internal">Internal domain handling</a>
+              <a href="#deep-thread">Thread context in detail</a>
+              <a href="#deep-safeguard">Reply safeguard</a>
+              <a href="#deep-amount">Amount threshold</a>
+              <a href="#deep-cascades">Cascade behaviors</a>
+              <a href="#deep-priority">Priority &amp; ordering</a>
+              <a href="#deep-queue">The pending queue</a>
+              <a href="#deep-audit-tech">What the audit log stores</a>
+              <a href="#deep-tags-mechanic">Tag mechanics in depth</a>
+              <a href="#deep-automation">Automation mode rules</a>
+              <a href="#deep-bridge">Internal reply bridge</a>
+
+              <h4>FAQs &amp; help</h4>
               <a href="#edge-cases">Edge cases &amp; FAQs</a>
               <a href="#troubleshooting">Troubleshooting</a>
             </aside>
@@ -578,6 +596,365 @@
                 <p>Categories in Outlook are just labels — no colors are set by us. If you want them color-coded in Outlook, you can configure that on the mailbox side.</p>
               </section>
 
+              <!-- ═══════════════ BEHIND THE SCENES ═══════════════ -->
+
+              <!-- POLL -->
+              <section id="deep-poll">
+                <h2>How the worker polls Microsoft</h2>
+                <p class="lede">The worker is a background process that runs on a timer, asks Microsoft for new emails, and hands them to the pipeline.</p>
+                <h3>The poll cycle</h3>
+                <ol>
+                  <li>Worker wakes up every ~30 seconds (configurable via <code>POLL_INTERVAL_SECONDS</code>).</li>
+                  <li>For each active inbox in the database, it asks Microsoft Graph: "any changes since the last time I asked?"</li>
+                  <li>Microsoft returns a batch of changed messages plus a new <strong>delta token</strong>.</li>
+                  <li>Worker saves the new delta token to the inbox row (columns <code>delta_token_inbox</code> and <code>delta_token_junk</code>).</li>
+                  <li>For each returned message, it checks: is it already tagged <code>PAIRActioned</code>? If yes, skip. Otherwise send it to the pipeline.</li>
+                </ol>
+                <h3>Delta token vs backfill</h3>
+                <ul>
+                  <li><strong>Delta token</strong> = a bookmark Microsoft gives us that means "you've seen everything up to this point." Next call, we hand it back and only get new stuff since then.</li>
+                  <li><strong>Backfill</strong> = the very first poll for an inbox, before any delta token exists. Uses the <em>Backfill days</em> setting to fetch every unread email received in the last N days. After the first backfill completes, subsequent polls use delta sync.</li>
+                </ul>
+                <h3>What happens when the delta token breaks</h3>
+                <p>Microsoft occasionally invalidates delta tokens (rare, but happens on mailbox reconfiguration, folder moves, or after extended periods). When the worker hits <code>SyncState</code> or 410 errors:</p>
+                <ol>
+                  <li>The current delta token is thrown away.</li>
+                  <li>Next poll falls back to backfill mode using the inbox's <em>Backfill days</em> setting.</li>
+                  <li>A new delta token is established after backfill completes.</li>
+                  <li>The event is logged as <code>o365.delta_token_invalid</code> in security logs.</li>
+                </ol>
+                <h3>What the worker fetches per message</h3>
+                <p>To minimize bandwidth and latency, the delta query only selects: <code>id</code>, <code>conversationId</code>, <code>isRead</code>, <code>receivedDateTime</code>, <code>from</code>, <code>sender</code>, <code>subject</code>, <code>categories</code>. The full body is fetched with a separate <code>msg.refresh()</code> call only if the message passes the "not tagged" filter.</p>
+                <div class="callout note"><strong>Idempotency</strong>The <code>PAIRActioned</code> tag check is the single mechanism preventing double-processing. If you manually clear a message's Outlook categories, the worker will re-process it on the next poll as if it were fresh.</div>
+              </section>
+
+              <!-- CLASSIFIER -->
+              <section id="deep-classifier">
+                <h2>How the classifier works</h2>
+                <p class="lede">The classifier assembles a prompt for GPT and interprets its response into a <code>ClassificationResult</code>.</p>
+                <h3>The prompt structure</h3>
+                <p>Every classification request sends GPT a system prompt built from:</p>
+                <ol>
+                  <li><strong>Inbox <code>system_preamble</code></strong> — the intro text from Settings → Inboxes → Edit → AI behavior. Explains what MLFA is and what this inbox does.</li>
+                  <li><strong>All active category rules</strong> — each category's key + label + rule text.</li>
+                  <li><strong>Inbox <code>global_guidelines</code></strong> — the closing rules, including the required JSON output schema.</li>
+                </ol>
+                <p>Then a user prompt containing:</p>
+                <ul>
+                  <li>The current email's from, subject, and body.</li>
+                  <li>If <em>Use conversation history</em> is on: earlier messages in the same thread.</li>
+                  <li>Existing PAIRActioned tags on this message (rare, only relevant for reprocessing edge cases).</li>
+                </ul>
+                <h3>What GPT returns</h3>
+                <p>GPT is instructed to reply as JSON with:</p>
+                <ul>
+                  <li><code>categories</code> — list of matched category keys.</li>
+                  <li><code>all_recipients</code> — email addresses the AI thinks should be involved.</li>
+                  <li><code>needs_personal_reply</code> — boolean. When true, the router picks the personal reply template if the category has one.</li>
+                  <li><code>escalation_reason</code> — string explaining why personal reply is needed.</li>
+                  <li><code>name_sender</code> — the sender's name for the greeting substitution.</li>
+                  <li><code>amount_detected</code> — extracted dollar figure or null.</li>
+                  <li><code>reason</code> — dict mapping each category to a plain-English justification. Shown in the Hub's Reason field.</li>
+                </ul>
+                <h3>Category filtering</h3>
+                <p>After GPT responds, the classifier filters the returned categories against the list of <em>active</em> rules for that inbox. Any category GPT invented that doesn't exist in your rules gets dropped. If the filtered list ends up empty, that's the "unknown category" case handled by the router.</p>
+                <h3>When classification fails</h3>
+                <p>If GPT returns invalid JSON, times out, or errors — the classifier returns an empty <code>ClassificationResult</code> (no categories, no recipients). Router treats this the same as "unknown" → forces human review.</p>
+                <div class="callout warn"><strong>Where the classifier's blind spots are</strong>The classifier does NOT see: Outlook categories set by humans, the email's attachments, prior classifications of the same conversation (only thread messages themselves), or the email's headers beyond from/subject.</div>
+              </section>
+
+              <!-- ROUTER -->
+              <section id="deep-router">
+                <h2>How the router decides</h2>
+                <p class="lede">Given a classification, the router builds a <code>MessageActionPlan</code>: which folder to move to, who to forward to, what auto-reply to send, and whether the email needs human review.</p>
+                <h3>Step by step</h3>
+                <ol>
+                  <li><strong>Find matching rules.</strong> Loop over active category rules; keep any whose <code>key</code> is in the classification's <code>categories</code> list.</li>
+                  <li><strong>Empty match check.</strong> If no rules match, force human review regardless of automation setting.</li>
+                  <li><strong>Sort by priority.</strong> Lowest priority number = highest importance (1 wins).</li>
+                  <li><strong>Skip check.</strong> If the top rule has <code>skip=true</code> (legacy field, hidden from UI), do nothing at all.</li>
+                  <li><strong>Folder decision.</strong> Take the top rule's <code>folder_path</code>. Special value <code>Deleted Items</code> or the <code>delete_immediately</code> flag means "delete instead of move."</li>
+                  <li><strong>Forwarding.</strong> Gather every recipient email from every matching rule (union). Apply amount thresholds — a rule with a threshold contributes zero recipients if <code>amount_detected</code> is below it.</li>
+                  <li><strong>Auto-reply.</strong> Walk matching rules in priority order. First one with <code>auto_reply_enabled=true</code> and a template picks the reply. Reply safeguard check happens here.</li>
+                  <li><strong>Mark-read decision.</strong> Conservative: if ANY matching rule has <code>mark_read=false</code>, leave the email unread.</li>
+                  <li><strong>Tag.</strong> Comma-joined keys of all matching rules. Used by the adapter to write <code>PAIRActioned/&lt;key&gt;</code> tags.</li>
+                  <li><strong>Human review.</strong> <code>requires_human_review = not inbox.automation_mode</code>. Unless the empty-match check already forced it to true.</li>
+                </ol>
+                <h3>Multiple categories, all fire independently</h3>
+                <p>If GPT returns <code>[donor, grant]</code> and both rules match, the email will be:</p>
+                <ul>
+                  <li>Tagged as BOTH <code>PAIRActioned/donor</code> AND <code>PAIRActioned/grant</code>.</li>
+                  <li>Forwarded to the UNION of both categories' recipients.</li>
+                  <li>Moved to the folder of whichever rule has the higher priority (lower number).</li>
+                  <li>Get the auto-reply from the highest-priority rule that has a template.</li>
+                </ul>
+              </section>
+
+              <!-- INTERNAL DOMAIN -->
+              <section id="deep-internal">
+                <h2>Internal domain handling</h2>
+                <p class="lede">The hub distinguishes "external senders" (donors, applicants, public) from "internal senders" (@mlfa.org staff). Internal senders get different treatment in multiple places.</p>
+                <h3>Where "internal" is determined</h3>
+                <p>On Settings → Inboxes → Edit → Filters, the <strong>Internal email domains</strong> field lists domains treated as staff. Typically <code>mlfa.org</code>. Any email whose sender address ends with <code>@mlfa.org</code> (or matches the domain exactly) is considered internal.</p>
+                <h3>What "sent by info@mlfa.org" means</h3>
+                <p>info@mlfa.org is the watched mailbox itself. Emails sent <em>from</em> that address are outbound — they never come back through the poller, so the worker never sees them at all. Rachel's replies from <code>rachel.smith@mlfa.org</code> (on behalf of info@) sit in the Sent Items folder, not the Inbox. The worker doesn't poll Sent Items.</p>
+                <h3>The three places internal-sender checks fire</h3>
+                <ol>
+                  <li><strong>Skip-if-internal on categories.</strong> If a category has <code>skip_if_internal=true</code> and the current email's sender is internal, that category won't be applied to that email. Prevents auto-replying to staff who forwarded an email using their own account.</li>
+                  <li><strong>Internal reply bridge.</strong> When enabled, incoming emails from internal senders whose body starts with <code>[EXTERNAL]</code> or <code>[INTERNAL]</code> get special handling. See <a href="#deep-bridge">Internal reply bridge</a>.</li>
+                  <li><strong>Outbound action suppression.</strong> Some code paths suppress auto-reply/forward for internal senders even if the category didn't explicitly opt in.</li>
+                </ol>
+                <h3>Concrete scenario</h3>
+                <p>Rachel forwards a legal email from her personal @mlfa.org account into info@mlfa.org. What happens:</p>
+                <ol>
+                  <li>Worker polls, sees the forward, sender = <code>rachel.smith@mlfa.org</code>.</li>
+                  <li>Classifier runs, likely returns <code>legal</code>.</li>
+                  <li>Router checks matching rules. If <code>legal</code> has <em>skip_if_internal</em> checked, the router drops that rule from the match set.</li>
+                  <li>If NO other rules match, router forces human review (the empty-match guardrail).</li>
+                  <li>If some other rule matches (say <code>active_communication</code> without skip_if_internal), the email flows through that instead.</li>
+                </ol>
+                <h3>Individual emails within a thread still get tagged</h3>
+                <p>Each incoming message is processed independently. If a thread has 5 messages that all arrive at info@mlfa.org over time — from Rachel, then a donor, then Rachel again, then another external person — each one gets its own classification and tagging based on its own sender. Rachel's are internal (may be skipped), the donor's are external (processed normally).</p>
+                <div class="callout note"><strong>Why sometimes it looks like the whole thread was skipped</strong>If the current message is from an internal sender and gets skipped, and the thread's earlier messages (also processed individually) happened to also be internal or match no active rule, the thread appears untouched. But each was evaluated on its own.</div>
+              </section>
+
+              <!-- THREAD -->
+              <section id="deep-thread">
+                <h2>Thread context in detail</h2>
+                <p class="lede">When <em>Use conversation history</em> is on for an inbox, the classifier gets extra context: earlier messages in the same conversation.</p>
+                <h3>How it's fetched</h3>
+                <p>When a new email arrives, the worker calls <code>get_thread_messages()</code> passing the email's <code>conversationId</code>. Microsoft returns every message in that conversation, excluding Deleted Items and the current message itself.</p>
+                <h3>What gets included in the prompt</h3>
+                <p>The classifier includes each thread message's sender, subject, and body in the user prompt. GPT sees them chronologically. This lets it recognize follow-ups ("Following up on this?") that would be ambiguous in isolation.</p>
+                <h3>Thread tags</h3>
+                <p>The worker also fetches <code>thread_tags</code> — every Outlook category currently on any message in the conversation. Used by the reply safeguard (see below) to detect "have we already replied to this thread as legal?" without needing to reclassify old messages.</p>
+                <h3>Limits</h3>
+                <ul>
+                  <li>Thread context is limited to the first N messages (~10) to keep the prompt from ballooning.</li>
+                  <li>If the earlier thread messages went to a different mailbox that the worker doesn't watch, they won't be in Microsoft's conversation view for info@mlfa.org and thus won't be included.</li>
+                  <li>If <em>Use conversation history</em> is off, none of this applies. Classifier only sees the current message.</li>
+                </ul>
+                <h3>Why it's off by default for Test &amp; Preview</h3>
+                <p>The Test &amp; preview tool passes an empty thread. This means a fake email that would classify correctly with thread context might classify differently in the tool — that's expected. Real emails get real thread data.</p>
+              </section>
+
+              <!-- SAFEGUARD -->
+              <section id="deep-safeguard">
+                <h2>Reply safeguard</h2>
+                <p class="lede">Prevents sending the same auto-reply twice on the same conversation.</p>
+                <h3>The check</h3>
+                <p>Before sending an auto-reply for category X, the router looks at thread_tags for any tag matching <code>PAIRActioned/&lt;X&gt;</code>. If found, the safeguard fires and the reply is suppressed.</p>
+                <h3>What still happens when the safeguard fires</h3>
+                <ul>
+                  <li>Auto-reply is skipped for THIS message.</li>
+                  <li>The rest of the plan still runs: forwarding, tagging, folder move, mark-read.</li>
+                  <li>The email still ends up tagged <code>PAIRActioned/&lt;X&gt;</code>.</li>
+                </ul>
+                <h3>Concrete scenario</h3>
+                <p>Applicant emails asking about their case. Legal category has an auto-reply "please submit an application at ..." with safeguard on.</p>
+                <ol>
+                  <li><strong>Email 1</strong> — new inquiry. Router sees no prior <code>PAIRActioned/legal</code> in thread. Safeguard passes. Reply sent. Message tagged <code>PAIRActioned/legal</code>.</li>
+                  <li><strong>Email 2</strong> — applicant replies "thanks, but I have another question." Router sees Email 1 is already tagged <code>PAIRActioned/legal</code>. Safeguard fires. No second reply. Email 2 still tagged with <code>PAIRActioned/legal</code>.</li>
+                </ol>
+                <p>Applicant gets exactly one auto-reply per thread, even if they email 5 times.</p>
+              </section>
+
+              <!-- AMOUNT -->
+              <section id="deep-amount">
+                <h2>Amount threshold</h2>
+                <p class="lede">A per-category rule that only forwards to recipients when GPT detected a dollar amount at or above the threshold.</p>
+                <h3>How the amount is extracted</h3>
+                <p>GPT is asked to return <code>amount_detected</code> as part of its JSON response. It reads the email body and returns the primary dollar figure (donation amount, invoice total, etc.), or null if it can't confidently identify one.</p>
+                <h3>How the router applies the threshold</h3>
+                <p>When gathering recipients for a category with <code>amount_threshold</code> set:</p>
+                <ul>
+                  <li>If <code>amount_detected</code> is null → skip this category's forwarding (defensive).</li>
+                  <li>If <code>amount_detected</code> &lt; threshold → skip this category's forwarding.</li>
+                  <li>If <code>amount_detected</code> &ge; threshold → include this category's recipients in the forward list.</li>
+                </ul>
+                <p>Only forwarding is affected — the email is still tagged, still gets the auto-reply, still gets moved to the folder. The threshold ONLY gates the forward.</p>
+                <h3>Typical use</h3>
+                <ul>
+                  <li>Donor category with threshold <code>$1000</code> → small donations don't ping the giving team, large ones do.</li>
+                  <li>Invoice category with threshold <code>$1000</code> → routine invoices skip the finance team notification.</li>
+                </ul>
+                <div class="callout warn"><strong>The AI can be wrong about amounts</strong>If an email says "we already gave $50 last year and want to donate more this year," GPT might extract $50 or might extract nothing. Always spot-check amount detection when tuning thresholds.</div>
+              </section>
+
+              <!-- CASCADES -->
+              <section id="deep-cascades">
+                <h2>Cascade behaviors</h2>
+                <p class="lede">Editing a template or recipient automatically updates every category that uses it — you never have to re-select.</p>
+                <h3>Template edit cascade</h3>
+                <p>When you save an edit to a Reply Template, the storage layer:</p>
+                <ol>
+                  <li>Reads the template's current body from the database (pre-update).</li>
+                  <li>Updates the template row with the new body.</li>
+                  <li>Finds every category rule whose stored <code>reply_template</code> body matches the pre-update body, and rewrites them with the new body. Same for <code>reply_template_personal</code>.</li>
+                </ol>
+                <p>Effect: your category rule instantly reflects the new template text without needing to re-select the template in the category editor.</p>
+                <h3>Recipient email cascade</h3>
+                <p>When you change a recipient's email address in Settings → Recipients, the storage layer:</p>
+                <ol>
+                  <li>Reads the recipient's current email.</li>
+                  <li>Updates the recipient row.</li>
+                  <li>Runs a JSONB UPDATE on every category rule's <code>emails_to_forward</code> array in the same inbox, swapping the old address for the new one.</li>
+                </ol>
+                <h3>Recipient delete cleanup</h3>
+                <p>Deleting a recipient strips their address from every category's forwarding list on the same inbox. No stale addresses linger.</p>
+                <h3>Inbox delete cleanup</h3>
+                <p>Deleting an inbox strips its ID from every user's <code>assigned_inbox_ids</code> array before the actual DELETE runs. Prevents users holding stale references to inboxes that no longer exist.</p>
+              </section>
+
+              <!-- PRIORITY -->
+              <section id="deep-priority">
+                <h2>Priority &amp; ordering</h2>
+                <p class="lede">Category priority controls what happens when multiple rules match one email.</p>
+                <h3>Where priority is set</h3>
+                <p>Each category rule has a <code>priority</code> integer. Lower numbers = higher priority. You reorder by drag-and-drop in Settings → Categories. Drag handles are the ⋮⋮ icons on the left of each row.</p>
+                <h3>When new categories are created</h3>
+                <p>A newly-created category is assigned priority <code>max(existing) + 1</code> — one more than the current highest number, meaning it lands at the bottom of the list. You can drag it up if it should be checked before some existing categories.</p>
+                <h3>What priority affects</h3>
+                <ul>
+                  <li><strong>Folder move</strong> — the highest-priority matching rule's folder wins.</li>
+                  <li><strong>Auto-reply</strong> — the first matching rule (by priority) that has a template + auto_reply_enabled sends the reply.</li>
+                  <li><strong>Forwarding</strong> — priority does NOT affect this. Every matching rule contributes its recipients to a union.</li>
+                  <li><strong>Tagging</strong> — every matching rule's key is applied.</li>
+                  <li><strong>Mark-read</strong> — conservative: if any matching rule says don't mark read, don't.</li>
+                </ul>
+                <h3>Classification is NOT priority-based</h3>
+                <p>Priority is only used by the router after GPT has already classified. GPT doesn't know about priorities — it returns whatever categories fit best. If you want to influence what GPT picks, edit the classification rule text, not the priority.</p>
+              </section>
+
+              <!-- QUEUE -->
+              <section id="deep-queue">
+                <h2>The pending queue</h2>
+                <p class="lede">Database table that stores emails waiting for human review.</p>
+                <h3>What gets stored per queue entry</h3>
+                <ul>
+                  <li><code>message_id</code> — the Microsoft Graph message ID (used to fetch the real email if needed).</li>
+                  <li><code>inbox_id</code> — which inbox the message belongs to.</li>
+                  <li><code>sender</code>, <code>subject_email</code>, <code>body_email</code> — snapshot of the email at classification time.</li>
+                  <li><code>classification</code> — JSONB with the categories, recipients, reason, amount_detected, needs_personal_reply, escalation_reason, name_sender.</li>
+                  <li><code>received_at</code>, <code>created_at</code> — timestamps.</li>
+                </ul>
+                <h3>How it's populated</h3>
+                <p>The pipeline calls <code>queue.add_to_queue()</code> when:</p>
+                <ul>
+                  <li>The inbox has automation off, AND classifier returned matching rules → queue with the plan attached.</li>
+                  <li>The classifier returned no matching rules (unknown category) — regardless of automation state.</li>
+                  <li>The inbox has <code>send_to_openai=false</code> — every email queues without classification.</li>
+                </ul>
+                <h3>How entries are cleared</h3>
+                <ul>
+                  <li><strong>Approve</strong> — the plan runs (reply, forward, tag, move), then the queue row is deleted.</li>
+                  <li><strong>Reject</strong> — the email is moved to Trash and the queue row is deleted.</li>
+                  <li><strong>Dismiss</strong> — the email is marked read and the queue row is deleted.</li>
+                  <li><strong>TTL cleanup (planned)</strong> — a scheduled job clears entries older than the inbox's <em>Retention days</em> setting.</li>
+                </ul>
+                <h3>What if the reviewer approves but the message has been deleted from Outlook?</h3>
+                <p>The Approve action tries to execute the plan against the Microsoft message. If the message no longer exists, the plan fails (log entries appear as <code>pipeline.reply_failed</code>, <code>pipeline.forward_failed</code>). The queue row is still deleted so it doesn't sit forever.</p>
+              </section>
+
+              <!-- AUDIT TECHNICAL -->
+              <section id="deep-audit-tech">
+                <h2>What the audit log stores</h2>
+                <p class="lede">Append-only table. Every action writes a row. Rows are never deleted or edited.</p>
+                <h3>Columns</h3>
+                <ul>
+                  <li><code>created_at</code> — timestamp in UTC.</li>
+                  <li><code>inbox_id</code> — which inbox the action belongs to (nullable for global actions like user_created).</li>
+                  <li><code>email</code> / <code>email_id</code> — the target of the action. For email actions, it's the Microsoft message ID. For settings actions, it's a slug like <code>rule:donor</code>.</li>
+                  <li><code>action_taken</code> — one of a fixed set: <code>auto_processed</code>, <code>queued_for_review</code>, <code>approved</code>, <code>rejected</code>, <code>dismissed</code>, <code>rule_created</code>, <code>rule_updated</code>, <code>rule_deleted</code>, <code>recipient_*</code>, <code>template_*</code>, <code>inbox_*</code>, <code>user_*</code>, <code>inbox_cloned</code>.</li>
+                  <li><code>actor</code> — email address of the user who did it, or the string <code>system</code> for worker actions.</li>
+                  <li><code>comment</code> — free-text. For email actions, usually the classification comma-list. For settings actions, a summary like "Label: Donor Inquiry".</li>
+                  <li><code>duration_ms</code> — how long the pipeline took (for email actions).</li>
+                </ul>
+                <h3>What the audit log does NOT store</h3>
+                <ul>
+                  <li>The email body. Only <code>email_id</code> — you'd have to look up the message in Outlook to see the content.</li>
+                  <li>The specific fields that changed on an Update. Only that an update happened.</li>
+                  <li>The full classification JSON. Only the categories as a comma string.</li>
+                </ul>
+              </section>
+
+              <!-- TAG MECHANICS -->
+              <section id="deep-tags-mechanic">
+                <h2>Tag mechanics in depth</h2>
+                <p class="lede">Every action of consequence writes an Outlook category tag. The tag is the source of truth for "has this been handled?"</p>
+                <h3>The three tag forms</h3>
+                <table>
+                  <thead><tr><th>Tag</th><th>When written</th><th>When removed</th></tr></thead>
+                  <tbody>
+                    <tr><td><code>PAIRActioned</code></td><td>Always, whenever the pipeline touches a message.</td><td>Never automatically. Only if a human clears it manually in Outlook.</td></tr>
+                    <tr><td><code>PAIRActioned/&lt;key&gt;</code></td><td>When a category matches. One tag per matching category (multiple possible).</td><td>Never automatically.</td></tr>
+                    <tr><td><code>PAIRActioned/queued</code></td><td>When an email goes into the review queue.</td><td>When Approve, Reject, or Dismiss is clicked (before the final action tags are written).</td></tr>
+                  </tbody>
+                </table>
+                <h3>The poller's tag check</h3>
+                <p>Every message returned by <code>fetch_messages_delta</code> and <code>fetch_unread_since</code> is checked with:</p>
+                <pre style="background: var(--panel-2); padding: 10px; border-radius: 4px; font-size: 12px; line-height: 1.4;">if any((t or "").startswith("PAIRActioned") for t in msg.categories):
+    continue</pre>
+                <p>If any category on the message starts with <code>PAIRActioned</code>, the worker treats it as already-handled and skips it entirely. No re-classification, no reprocessing.</p>
+                <h3>What happens if you manually add PAIRActioned to a message in Outlook?</h3>
+                <p>The worker skips it forever. This is a legit way to tell the hub "leave this specific email alone" — just apply the PAIRActioned category to it manually.</p>
+                <h3>What happens if you manually remove PAIRActioned from a processed message?</h3>
+                <p>The worker will reprocess it on the next delta sync. If automation is on and the classification result is stable, the actions will run again (potentially sending a duplicate auto-reply unless the reply safeguard catches it).</p>
+              </section>
+
+              <!-- AUTOMATION -->
+              <section id="deep-automation">
+                <h2>Automation mode rules</h2>
+                <p class="lede">The full decision matrix for whether an email gets auto-processed or goes to the review queue.</p>
+                <table>
+                  <thead><tr><th>Automation</th><th>Send to OpenAI</th><th>Matching rules</th><th>Outcome</th></tr></thead>
+                  <tbody>
+                    <tr><td>OFF</td><td>ON</td><td>any</td><td>Queue for review, tag <code>PAIRActioned/queued</code>. Reviewer approves or rejects.</td></tr>
+                    <tr><td>OFF</td><td>OFF</td><td>—</td><td>Queue with special "AI disabled" flag, tag <code>PAIRActioned/queued</code>. Reviewer manually assigns category.</td></tr>
+                    <tr><td>ON</td><td>ON</td><td>1+ match</td><td>Auto-process. Plan executes, tags written, no queue entry.</td></tr>
+                    <tr><td>ON</td><td>ON</td><td>0 match (empty)</td><td>Force-queued as safety guardrail. Same as OFF with matches.</td></tr>
+                    <tr><td>ON</td><td>OFF</td><td>—</td><td>Queue with "AI disabled" flag. Automation setting is ignored when AI is off — human review is always required for unclassified email.</td></tr>
+                  </tbody>
+                </table>
+                <h3>Why the guardrail exists</h3>
+                <p>Auto-processing an email with an unknown category would mean running an empty action plan — no forward, no reply, no folder move, just a tag. That's effectively "silently drop this email." Never desirable. The guardrail ensures human eyes see anything the AI couldn't confidently place.</p>
+              </section>
+
+              <!-- BRIDGE -->
+              <section id="deep-bridge">
+                <h2>Internal reply bridge</h2>
+                <p class="lede">Optional feature that lets staff reply to a forwarded email using their own account, and have the hub relay their reply back to the original external sender.</p>
+                <h3>Setup</h3>
+                <ul>
+                  <li>Turn on <em>Enable internal reply bridge</em> in Settings → Inboxes → Edit → Advanced.</li>
+                  <li>Set the internal and external prefixes (defaults: <code>[INTERNAL]</code> and <code>[EXTERNAL]</code>).</li>
+                </ul>
+                <h3>Forward-with-bridge mechanics</h3>
+                <p>When a category matches and forwards to a staff person, and the bridge is enabled:</p>
+                <ol>
+                  <li>Instead of a plain forward, the system uses <code>forward_with_reply_bridge()</code>.</li>
+                  <li>The forwarded email includes visible instructions ("Start your message with [EXTERNAL]...") at the top.</li>
+                  <li>A hidden <code>REPLY_ID_TAG</code> is embedded in the body, tying the forwarded copy back to the original message ID.</li>
+                </ol>
+                <h3>How staff replies are detected</h3>
+                <p>When any incoming email hits info@mlfa.org, the worker runs <code>detect_internal_reply()</code>:</p>
+                <ol>
+                  <li>Must have bridge enabled on this inbox.</li>
+                  <li>Sender must be internal (matches Internal domains).</li>
+                  <li>Body must contain the hidden REPLY_ID_TAG (means it came from a bridge-forwarded email).</li>
+                  <li>Must not already be <code>PAIRActioned</code>.</li>
+                  <li>Body content is scanned for the prefix.</li>
+                </ol>
+                <h3>The prefix behaviors</h3>
+                <ul>
+                  <li><code>[EXTERNAL]</code> — strip the prefix, send the reply back to the original external sender using info@mlfa.org as the from address.</li>
+                  <li><code>[INTERNAL]</code> — keep it internal, tag and file, don't relay.</li>
+                  <li><strong>No prefix</strong> — treat as normal internal email, no relay. The bridge only activates on the explicit prefix.</li>
+                </ul>
+                <h3>Why the bridge exists</h3>
+                <p>Some MLFA workflows require staff to be able to answer forwarded questions personally (adding their own tone or case-specific details) while keeping the outbound thread on info@ so subsequent responses come back through the hub. Without the bridge, staff either have to blind-CC info@ every time or write from info@ directly, both of which are cumbersome.</p>
+              </section>
+
               <!-- EDGE CASES -->
               <section id="edge-cases">
                 <h2>Edge cases &amp; FAQs</h2>
@@ -592,7 +969,12 @@
                 </ul>
 
                 <h3>Why do some emails have <code>PAIRActioned/&lt;key&gt;</code> but stay in the Inbox?</h3>
-                <p>Because that category has no <strong>destination folder</strong> configured. The email got classified and tagged, but there's nowhere to move it. Common for categories like <code>active_communication</code> that are meant for humans to handle in-place. Fix: set a destination folder on the category if you want it moved.</p>
+                <p>Three possibilities:</p>
+                <ul>
+                  <li><strong>The category has no destination folder</strong> — email was classified and tagged, but has nowhere to move.</li>
+                  <li><strong>The folder path has a typo or invalid syntax</strong> — the move failed silently. Test by moving the folder manually and check the path matches exactly (case-sensitive, forward slashes for nesting).</li>
+                  <li><strong>Someone in the thread replied from the same mailbox</strong> — Outlook's threading UI may show the original email "in the inbox" even though it was actually moved. Check the message's real folder location, not the conversation view.</li>
+                </ul>
 
                 <h3>Why does the AI classify a follow-up email differently than the original?</h3>
                 <p>Because the AI sees the current message and (optionally) thread context — not always the full history. If the earlier messages in the thread went to a different address (not info@mlfa.org), the hub never saw them, so the classifier only has the current short follow-up to go on. This is expected behavior; tune the classification prompts to catch short follow-ups that reference the subject line.</p>
@@ -614,6 +996,54 @@
 
                 <h3>Do rejected emails come back?</h3>
                 <p>Rejected emails are moved to Outlook's Deleted Items folder and tagged so the worker skips them on future polls. They won't be re-processed unless someone manually removes the tag and moves them back.</p>
+
+                <h3>Does the worker poll the Junk / Spam folder?</h3>
+                <p>Yes, if you've configured it to. Both the Inbox and JunkEmail folders have their own delta tokens (<code>delta_token_inbox</code> and <code>delta_token_junk</code>). Set up per inbox. Junk polling is optional — the majority of MLFA inboxes only poll Inbox.</p>
+
+                <h3>Does the hub see attachments?</h3>
+                <p>No. The classifier ignores attachments entirely — it only reads the sender, subject, and text body. Auto-replies and forwards preserve any attachments through Microsoft's forward/reply mechanism, but GPT never sees the file contents.</p>
+
+                <h3>What language does the classifier work in?</h3>
+                <p>GPT can classify emails in any language it understands — English, Arabic, Spanish, etc. The classification prompts you write are in English but describe the concepts; GPT applies them to whatever language the email is in.</p>
+
+                <h3>Why did my auto-reply arrive with "Dear Sender," instead of the person's actual name?</h3>
+                <p>Because GPT's <code>name_sender</code> came back null — the email didn't have a clearly identifiable name in the From header or signature. The <code>{{greeting}}</code> variable falls back to a generic time-of-day greeting like "Good afternoon,". Not a bug — it's the fallback.</p>
+
+                <h3>What if the same email is sent twice by mistake?</h3>
+                <p>Microsoft treats them as separate messages with different message IDs. The hub processes both independently. If the sender's second attempt has the same content, GPT will classify it the same way. The reply safeguard prevents duplicate auto-replies since both emails share a <code>conversationId</code>, but the forward and tag actions run for both.</p>
+
+                <h3>How does the hub handle bounced / undeliverable notifications?</h3>
+                <p>They're just emails with weird From addresses. The classifier reads them and tries to categorize. Typically these hit the <code>auto_reply</code> category (out-of-office and bounce messages) which sends them to Trash immediately.</p>
+
+                <h3>What happens if two admins edit the same category at the same time?</h3>
+                <p>Last-write-wins. Whichever admin saves last overwrites the other's changes. There's no locking, no conflict detection. In practice: coordinate before major category edits.</p>
+
+                <h3>Is anything encrypted at rest?</h3>
+                <p>Railway's managed Postgres provides at-rest encryption by default. However, the classification snapshots (reasoning + name_sender fields) sit in plaintext in the pending_queue column. Encryption of those specific fields is on the roadmap.</p>
+
+                <h3>Does the hub retain email data after a queue entry is deleted?</h3>
+                <p>The queue row is deleted immediately on Approve/Reject/Dismiss. But Postgres backups managed by Railway may retain a copy for the backup retention window. If you need to guarantee no lingering copies, MLFA should coordinate backup retention with Railway directly.</p>
+
+                <h3>Can I see which categories a specific email hit before it was actioned?</h3>
+                <p>Yes — the audit log's <code>comment</code> field on <code>auto_processed</code> or <code>queued_for_review</code> entries lists the categories comma-separated. Filter the audit log for that email's message_id in the Target column.</p>
+
+                <h3>What happens when a session token expires mid-approval?</h3>
+                <p>The frontend gets a 401 from the API call and redirects to /login. Any in-flight approve/reject action is not executed. Re-sign-in and try again — the email is still in the queue.</p>
+
+                <h3>Why did an email get classified as "active_communication" when it looks like a donor question?</h3>
+                <p>Two possibilities. Either the message body is very short (like a follow-up "any update?") and GPT weighted the body more than the subject; or your donor category prompt doesn't cover this specific variant. Fix by tightening the donor category prompt with example situations that include short follow-ups, or make active_communication's prompt more restrictive (only for truly ambiguous ongoing threads).</p>
+
+                <h3>Does the hub understand when someone at MLFA answers an email that came through the hub?</h3>
+                <p>Partially. If Rachel replies from her @mlfa.org account, her reply doesn't come back through info@mlfa.org, so the worker never sees it. But if the reply-all includes info@ or if the original external sender responds again to a thread that includes info@, the hub sees the follow-up and can apply the reply safeguard based on thread_tags.</p>
+
+                <h3>Can I disable a specific category temporarily?</h3>
+                <p>Yes — open the category and uncheck the "Active" toggle. GPT stops applying that label until you re-enable it. Existing tagged emails are unaffected.</p>
+
+                <h3>What if I want an inbox to only queue everything for review, never auto-process?</h3>
+                <p>Turn off the automation toggle on that inbox. Every incoming email will queue. Reviewers see them all in the Hub.</p>
+
+                <h3>What if I want to disable AI classification entirely for one inbox?</h3>
+                <p>Turn off <em>send_to_openai</em> in that inbox's settings. Emails will queue with an "AI disabled" flag and no categories, waiting for a human to route them manually.</p>
               </section>
 
               <!-- TROUBLESHOOTING -->
@@ -655,6 +1085,51 @@
 
                 <h3>I can't see one of my inboxes</h3>
                 <p>You're either not assigned to it (ask an admin) or your role is Reviewer with restricted access. Admins see all inboxes automatically; owners and reviewers see only their assigned ones.</p>
+
+                <h3>An email arrived but isn't showing up in the queue OR the Inbox tagged folder</h3>
+                <ul>
+                  <li>Check the sender against the inbox's Blocked senders list.</li>
+                  <li>Check if it's tagged <code>PAIRActioned/queued</code> but not appearing — could be a queue vs. inbox display mismatch.</li>
+                  <li>Look at the audit log for that message_id — it may have been actioned and moved to a folder you didn't expect.</li>
+                </ul>
+
+                <h3>The classifier gave a category that shouldn't exist</h3>
+                <p>GPT sometimes invents category names. The router filters unknown categories out — if GPT returned <code>[legal, urgent]</code> and there's no <code>urgent</code> rule, only <code>legal</code> is kept. If NO categories survive filtering, the email queues for human review. Fix by adjusting the classification prompts to only reference valid keys, or by adding the missing category.</p>
+
+                <h3>An auto-reply sent to the wrong person</h3>
+                <ul>
+                  <li>Check the reply template — is it hard-coding a name or address? Should only use <code>{{greeting}}</code> for personalization.</li>
+                  <li>Check the reply is going TO the original sender, not to a recipient in the forward list. Auto-replies always go to the message's From, not to forwards.</li>
+                </ul>
+
+                <h3>A category is not appearing in the reply-template dropdown</h3>
+                <p>The template must be marked <em>Active</em> to appear in dropdowns. Check Settings → Reply templates.</p>
+
+                <h3>The pending queue is growing and nobody's acting on it</h3>
+                <p>Common if MLFA staff is out or if too many emails are getting queued. Options:</p>
+                <ul>
+                  <li>Enable Automation on the inbox so classifications with matching rules run automatically.</li>
+                  <li>Use the "Approve all pending" button in the Hub to bulk-approve after a quick scan.</li>
+                  <li>Reduce false-queue rate by tightening categories — the router forces queue when no rules match, so if lots of emails have no match, add categories to cover them.</li>
+                </ul>
+
+                <h3>Delta sync appears stuck / no new emails coming through</h3>
+                <ul>
+                  <li>Check Railway logs for <code>o365.delta_token_invalid</code> — the token may have been invalidated. The worker will fall back to backfill on the next poll.</li>
+                  <li>Check if the worker process is actually running. On Railway, look at the service's status.</li>
+                  <li>Check Microsoft Graph is healthy — very rare, but Microsoft has outages.</li>
+                </ul>
+
+                <h3>Two staff replied to the same email from different accounts</h3>
+                <p>This is an Outlook/human coordination issue, not a hub issue. The hub sees each reply as it comes back through info@ (if it does) and treats them independently. Consider using the Automation toggle to fully automate replies for common categories so staff don't duplicate.</p>
+
+                <h3>Rachel says a category isn't forwarding but it should be</h3>
+                <ol>
+                  <li>Open the category → confirm recipients are checked.</li>
+                  <li>Check recipients' Active flag in Settings → Recipients.</li>
+                  <li>Check the amount threshold — if set, GPT must have detected an amount at or above.</li>
+                  <li>Test the exact email in Test &amp; preview and read the Forward to field in the result. If it's empty there, tighten the classification or fix the recipient linking.</li>
+                </ol>
               </section>
             </div>
           </div>
