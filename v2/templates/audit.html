@@ -100,6 +100,16 @@
             white-space: nowrap;
         }
         table.data-table.audit-table th { font-size: 10.5px; }
+        /* The action legend lives in this header cell. The icon is sized down and
+           both are centred, so this cell's text stays level with the others. */
+        table.data-table.audit-table th { vertical-align: middle; }
+        table.data-table.audit-table th .info-tip {
+            width: 13px; height: 13px;
+            margin-left: 5px;
+            vertical-align: middle;
+            -webkit-mask-size: 13px 13px;
+                    mask-size: 13px 13px;
+        }
         table.data-table.audit-table .col-when {
             width: 96px;
             font-variant-numeric: tabular-nums;
@@ -164,7 +174,7 @@
         {% include '_settings_nav.html' %}
         <main class="settings-content">
         <div class="audit-head">
-            <h1 class="page-title">Audit log<span class="info-tip wide" style="margin-left: 10px; width: 18px; height: 18px;">i<span class="info-content"><div class="tip-title">Audit log: what each action means</div><dl class="tip-legend"><dt>Auto</dt><dd>The AI handled the email on its own. It sorted it, filed it, and sent any forward or reply, with nobody reviewing it.</dd><dt>Queued</dt><dd>The email went to the hub for someone to look at, because automation is off for this inbox or because no category fitted it.</dd><dt>Queued (AI off)</dt><dd>It went to the hub without a category, because AI sorting is off for this inbox. Someone picks the category by hand.</dd><dt>Approved</dt><dd>Someone approved it in the hub, and the system then did the filing, forwarding, and reply for its category. Your current category settings are used, not the ones from when it arrived.</dd><dt>Rejected</dt><dd>Someone rejected it and gave a reason. It went to Trash, and no reply or forward was sent.</dd><dt>Dismissed</dt><dd>Someone decided it needed nothing, like junk or something not meant for you. Marked as read, with no reply and no forward.</dd><dt>Expired</dt><dd>Nobody reviewed it in time, so the hub let it go. It got a queue_expired label in Outlook, and was never filed, forwarded, or replied to.</dd><dt>Created / Updated / Deleted</dt><dd>Someone on your team added, edited, or removed a category, reply, recipient, user, or inbox.</dd></dl></span></span></h1>
+            <h1 class="page-title">Audit log<span class="info-tip">i<span class="info-content">A running record of everything this inbox has done: every email the system handled, and every change your team made to categories, recipients, replies, and users. Entries are written automatically and cannot be edited or removed from here.</span></span></h1>
             <div class="head-right">
                 <select class="form-select" id="inboxSelect" onchange="loadEvents()"></select>
                 <button class="icon-btn-sq" onclick="loadEvents()" title="Refresh">&#8635;</button>
@@ -207,7 +217,7 @@
             <thead>
                 <tr>
                     <th class="col-when">Time</th>
-                    <th class="col-action">Action</th>
+                    <th class="col-action">Action<span class="info-tip wide">i<span class="info-content"><div class="tip-title">What each action means</div><dl class="tip-legend"><dt>Auto</dt><dd>The AI handled the email on its own. It sorted it, filed it, and sent any forward or reply, with nobody reviewing it.</dd><dt>Queued</dt><dd>The email went to the hub for someone to look at, because automation is off for this inbox or because no category fitted it.</dd><dt>Queued (AI off)</dt><dd>It went to the hub without a category, because AI sorting is off for this inbox. Someone picks the category by hand.</dd><dt>Approved</dt><dd>Someone approved it in the hub, and the system then did the filing, forwarding, and reply for its category. Your current category settings are used, not the ones from when it arrived.</dd><dt>Rejected</dt><dd>Someone rejected it and gave a reason. It went to Trash, and no reply or forward was sent.</dd><dt>Dismissed</dt><dd>Someone decided it needed nothing, like junk or something not meant for you. Marked as read, with no reply and no forward.</dd><dt>Expired</dt><dd>Nobody reviewed it in time, so the hub let it go. It got a queue_expired label in Outlook, and was never filed, forwarded, or replied to.</dd><dt>Created / Updated / Deleted</dt><dd>Someone on your team added, edited, or removed a category, reply, recipient, user, or inbox.</dd></dl></span></span></th>
                     <th class="col-actor">Actor</th>
                     <th class="col-target">Target</th>
                     <th class="col-detail">Detail</th>
