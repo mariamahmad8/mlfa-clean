@@ -132,6 +132,7 @@ def configure_security(app) -> dict:
             "reviewer.favicon",
             "reviewer.mlfa_logo",
             "reviewer.mlfa_biglogo",
+            "reviewer.hero_background",
             "reviewer.info_icon",
             "static",
         }:

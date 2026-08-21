@@ -18,17 +18,23 @@
             text-align: center;
             border-bottom: 1px solid var(--line-soft);
         }
-        /* Backdrop: an eight-point geometric tile, drawn here as an inline SVG so
-           there is no third-party image and nothing to license. Swap the
-           background-image for a photograph if you'd rather have one. */
+        /* Backdrop: courthouse facade (Tugce Turan, Pexels; free for commercial
+           use). Tinted to brand teal and held at low opacity so it reads as
+           texture, and masked so it fades out before it reaches the edges. */
         .hero::before {
             content: '';
             position: absolute;
             inset: 0;
-            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cg fill='none' stroke='%23014438' stroke-opacity='0.13' stroke-width='1'%3E%3Cpath d='M60 6 L114 60 L60 114 L6 60 Z'/%3E%3Crect x='25' y='25' width='70' height='70'/%3E%3Cpath d='M60 25 L95 60 L60 95 L25 60 Z'/%3E%3Ccircle cx='60' cy='60' r='9'/%3E%3Cpath d='M0 0 L25 25 M120 0 L95 25 M0 120 L25 95 M120 120 L95 95'/%3E%3C/g%3E%3C/svg%3E");
-            background-size: 120px 120px;
-            -webkit-mask-image: radial-gradient(ellipse 75% 75% at 50% 40%, #000 30%, transparent 100%);
-                    mask-image: radial-gradient(ellipse 75% 75% at 50% 40%, #000 30%, transparent 100%);
+            background-image:
+                linear-gradient(rgba(1, 68, 56, 0.55), rgba(1, 68, 56, 0.55)),
+                url('/hero-courthouse.jpg');
+            background-size: cover;
+            background-position: center 58%;
+            background-blend-mode: color;
+            filter: grayscale(0.25) contrast(1.04);
+            opacity: 0.20;
+            -webkit-mask-image: radial-gradient(ellipse 85% 80% at 50% 45%, #000 25%, transparent 100%);
+                    mask-image: radial-gradient(ellipse 85% 80% at 50% 45%, #000 25%, transparent 100%);
             pointer-events: none;
         }
         /* Glyph layer: invisible until the cursor passes over it, then a soft

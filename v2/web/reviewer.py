@@ -417,6 +417,22 @@ def mlfa_biglogo():
     )
 
 
+@reviewer_bp.route('/hero-courthouse.jpg')
+def hero_background():
+    """Home page hero backdrop.
+
+    Courthouse facade by Tugce Turan, from Pexels (free for commercial use,
+    attribution not required). Cropped to a wide band and compressed for the
+    web; the untouched original is in the repository root.
+    """
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    return send_from_directory(
+        os.path.join(base_dir, '..'),
+        'hero-courthouse.jpg',
+        mimetype='image/jpeg',
+    )
+
+
 @reviewer_bp.route('/info-icon.svg')
 def info_icon():
     """Serve the Material-style info icon (SVG) used by tooltips."""
