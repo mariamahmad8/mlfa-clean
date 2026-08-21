@@ -110,7 +110,7 @@
 
         @media (prefers-reduced-motion: reduce) {
             .rise, .hero-title .verb::after { animation: none; opacity: 1; transform: none; }
-            .tile, .tile::before, .tile-cta { transition: none; }
+            .tile, .tile::before, .tile-icon, .tile-stat, .tile-stat::after { transition: none; }
         }
 
         /* Tiles sit on the eight-point geometric tile, drawn inline so there is
@@ -157,21 +157,20 @@
             color: var(--text);
             font-family: var(--font);
             cursor: pointer;
-            transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+            transition: border-color 0.18s ease, background 0.18s ease;
         }
+        /* No lift and no drop shadow. The card stays put; a teal rail draws down
+           the left edge instead, which is quieter and less generic. */
         .tile::before {
             content: '';
-            position: absolute; top: 0; left: 0; right: 0; height: 2px;
-            background: var(--mlfa-orange);
-            transform: scaleX(0); transform-origin: left;
-            transition: transform 0.22s ease;
+            position: absolute; top: -1px; bottom: -1px; left: -1px;
+            width: 3px;
+            background: var(--mlfa-teal);
+            transform: scaleY(0); transform-origin: top;
+            transition: transform 0.2s ease;
         }
-        .tile:hover {
-            transform: translateY(-3px);
-            border-color: var(--mlfa-teal);
-            box-shadow: 0 8px 22px rgba(42, 40, 35, 0.10);
-        }
-        .tile:hover::before { transform: scaleX(1); }
+        .tile:hover { border-color: var(--mlfa-teal); background: #FDFCFA; }
+        .tile:hover::before { transform: scaleY(1); }
         .tile:focus-visible { outline: 2px solid var(--mlfa-teal); outline-offset: 2px; }
         /* Icon slot: sized and spaced already, just needs artwork dropped in */
         .tile-icon {
@@ -189,13 +188,25 @@
         .tile-title { font-size: 15px; font-weight: 600; margin-bottom: 5px; }
         .tile-desc { font-size: 12.5px; line-height: 1.55; color: var(--text-muted); }
         .tile-stat {
+            position: relative;
+            align-self: flex-start;
             margin-top: 14px;
+            padding-bottom: 2px;
             font-size: 12.5px; font-weight: 600;
             color: var(--mlfa-teal);
             opacity: 0.8;
             transition: opacity 0.18s ease;
         }
+        .tile-stat::after {
+            content: '';
+            position: absolute; left: 0; right: 0; bottom: 0;
+            height: 1.5px;
+            background: currentColor;
+            transform: scaleX(0); transform-origin: left;
+            transition: transform 0.22s ease 0.04s;
+        }
         .tile:hover .tile-stat { opacity: 1; }
+        .tile:hover .tile-stat::after { transform: scaleX(1); }
 
         .guide-layout {
             display: grid;
