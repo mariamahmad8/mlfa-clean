@@ -197,14 +197,17 @@
         .tile:focus-visible { outline: 2px solid var(--mlfa-teal); outline-offset: 2px; }
         /* Icon slot: sized and spaced already, just needs artwork dropped in */
         .tile-icon {
-            width: 34px; height: 34px;
-            margin-bottom: 14px;
-            border-radius: 6px;
+            width: 40px; height: 40px;
+            margin-bottom: 15px;
+            border-radius: 8px;
             background: var(--accent-soft);
+            color: var(--mlfa-teal);
             display: flex; align-items: center; justify-content: center;
             flex-shrink: 0;
+            transition: background 0.18s ease, color 0.18s ease;
         }
-        .tile-icon img, .tile-icon svg { width: 20px; height: 20px; display: block; }
+        .tile-icon img, .tile-icon svg { width: 21px; height: 21px; display: block; }
+        .tile:hover .tile-icon { background: var(--mlfa-teal); color: #F5F1EA; }
         .tile-title { font-size: 15px; font-weight: 600; margin-bottom: 5px; }
         .tile-desc { font-size: 12.5px; line-height: 1.55; color: var(--text-muted); }
         .tile-stat {
@@ -357,12 +360,15 @@
             <img class="hero-graphic rise" src="/mlfa-biglogo.png" alt="Muslim Legal Fund of America">
             <p class="hero-eyebrow rise">MLFA Email Management</p>
             <h1 class="hero-title rise">
-                Built to <span class="verb">sort</span>, <span class="verb">filter</span>,
-                and <span class="verb">forward</span> your email.
+                Email <span class="verb">read</span>, <span class="verb">sorted</span>,
+                and <span class="verb">routed</span>.
             </h1>
             <p class="hero-sub rise">
-                Every message that arrives is read, given a category, and sent where it belongs,
-                so your team only spends time on the ones that need a person.
+                MLFA Email Management watches your Microsoft 365 mailboxes. It reads each new
+                message, works out which category it belongs to, then files it, forwards it to
+                the right people, and sends any reply you have set up. Anything it should not
+                decide on its own waits in the hub for a person, and every action it takes is
+                written to the audit log.
             </p>
             <p class="hero-signed rise">Signed in as {{ current_email }}</p>
         </div>
@@ -374,19 +380,19 @@
              <img> in and it will sit in the same spot. -->
         <div class="tiles" id="homeTiles">
             <a class="tile" href="/hub">
-                <span class="tile-icon" aria-hidden="true"></span>
+                <span class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 13.5h4.2l1.4 2.6h6.8l1.4-2.6H21"/><path d="M3 13.5 5.6 5.2A1.6 1.6 0 0 1 7.1 4h9.8a1.6 1.6 0 0 1 1.5 1.2L21 13.5V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg></span>
                 <span class="tile-title">Review queue</span>
                 <span class="tile-desc">Emails waiting for someone to approve, reject, or dismiss.</span>
                 <span class="tile-stat" id="queueStat">Checking...</span>
             </a>
             <button type="button" class="tile" data-open="how-to">
-                <span class="tile-icon" aria-hidden="true"></span>
+                <span class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.6A2.6 2.6 0 0 1 6.6 3H20v14.2H6.6A2.6 2.6 0 0 0 4 19.8Z"/><path d="M4 19.8A2.6 2.6 0 0 1 6.6 17.2H20V21H6.6A2.6 2.6 0 0 1 4 19.8Z"/><path d="M8 7.4h7.4M8 10.8h5.4"/></svg></span>
                 <span class="tile-title">How to use the hub</span>
                 <span class="tile-desc">What the queue is, what each action does, and how email gets sorted.</span>
                 <span class="tile-stat">Read the guide</span>
             </button>
             <button type="button" class="tile" data-open="security">
-                <span class="tile-icon" aria-hidden="true"></span>
+                <span class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 19 5.9v5.3c0 4.2-2.8 7.9-7 9.8-4.2-1.9-7-5.6-7-9.8V5.9Z"/><path d="m9.2 12.2 2 2 3.6-3.9"/></svg></span>
                 <span class="tile-title">Security</span>
                 <span class="tile-desc">How email is stored and protected, and what each role can see.</span>
                 <span class="tile-stat">Read more</span>
