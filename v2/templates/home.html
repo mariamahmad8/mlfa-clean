@@ -62,13 +62,6 @@
         .hero-inner { position: relative; max-width: 760px; margin: 0 auto; }
         /* Swap this for a photograph whenever you have one; it just sits here. */
         .hero-graphic { width: 100%; max-width: 250px; height: auto; margin: 0 auto 20px; display: block; }
-        .hero-eyebrow {
-            font-family: var(--font-display);
-            font-size: 11.5px; font-weight: 600;
-            letter-spacing: 0.22em; text-transform: uppercase;
-            color: var(--mlfa-orange);
-            margin: 0 0 14px;
-        }
         .hero-title {
             font-family: var(--font-display);
             font-size: clamp(28px, 4.4vw, 48px);
@@ -76,21 +69,6 @@
             color: var(--text);
             margin: 0 0 16px;
         }
-        /* The three verbs are the whole point of the system, so they carry weight */
-        .hero-title .verb { color: var(--mlfa-teal); position: relative; white-space: nowrap; }
-        .hero-title .verb::after {
-            content: '';
-            position: absolute;
-            left: 0; bottom: 0.06em;
-            width: 100%; height: 0.09em;
-            background: var(--mlfa-orange);
-            opacity: 0.35;
-            transform: scaleX(0); transform-origin: left;
-            animation: sweep 0.5s ease forwards;
-        }
-        .hero-title .verb:nth-of-type(2)::after { animation-delay: 0.12s; }
-        .hero-title .verb:nth-of-type(3)::after { animation-delay: 0.24s; }
-        @keyframes sweep { to { transform: scaleX(1); } }
         .hero-sub {
             font-size: 15px; line-height: 1.65;
             color: var(--text-muted);
@@ -358,17 +336,11 @@
         <div class="hero-glyphs" id="heroGlyphs" aria-hidden="true"></div>
         <div class="hero-inner">
             <img class="hero-graphic rise" src="/mlfa-biglogo.png" alt="Muslim Legal Fund of America">
-            <p class="hero-eyebrow rise">MLFA Email Management</p>
-            <h1 class="hero-title rise">
-                Email <span class="verb">read</span>, <span class="verb">sorted</span>,
-                and <span class="verb">routed</span>.
-            </h1>
+            <h1 class="hero-title rise">MLFA Email Management</h1>
             <p class="hero-sub rise">
-                MLFA Email Management watches your Microsoft 365 mailboxes. It reads each new
-                message, works out which category it belongs to, then files it, forwards it to
-                the right people, and sends any reply you have set up. Anything it should not
-                decide on its own waits in the hub for a person, and every action it takes is
-                written to the audit log.
+                It watches your Microsoft 365 inboxes and sorts each new email into a category,
+                then files it, forwards it, or sends a reply based on your rules. Emails that
+                need a person wait in the hub for review, and every action is logged.
             </p>
             <p class="hero-signed rise">Signed in as {{ current_email }}</p>
         </div>
@@ -376,23 +348,23 @@
 
     <section class="content-band" id="contentBand">
     <div class="home-wrap">
-        <!-- Landing tiles. Each .tile-icon is a placeholder: drop an SVG or an
-             <img> in and it will sit in the same spot. -->
+        <!-- Landing tiles. Icons are inline SVG so there is no icon font or
+             third-party dependency to load. -->
         <div class="tiles" id="homeTiles">
             <a class="tile" href="/hub">
-                <span class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 13.5h4.2l1.4 2.6h6.8l1.4-2.6H21"/><path d="M3 13.5 5.6 5.2A1.6 1.6 0 0 1 7.1 4h9.8a1.6 1.6 0 0 1 1.5 1.2L21 13.5V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg></span>
+                <span class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.1"/><circle cx="12" cy="3.7" r="1.9"/><circle cx="12" cy="20.3" r="1.9"/><circle cx="3.7" cy="12" r="1.9"/><circle cx="20.3" cy="12" r="1.9"/><path d="M12 5.6v3.3M12 15.1v3.3M5.6 12h3.3M15.1 12h3.3"/></svg></span>
                 <span class="tile-title">Review queue</span>
                 <span class="tile-desc">Emails waiting for someone to approve, reject, or dismiss.</span>
                 <span class="tile-stat" id="queueStat">Checking...</span>
             </a>
             <button type="button" class="tile" data-open="how-to">
-                <span class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.6A2.6 2.6 0 0 1 6.6 3H20v14.2H6.6A2.6 2.6 0 0 0 4 19.8Z"/><path d="M4 19.8A2.6 2.6 0 0 1 6.6 17.2H20V21H6.6A2.6 2.6 0 0 1 4 19.8Z"/><path d="M8 7.4h7.4M8 10.8h5.4"/></svg></span>
+                <span class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.9S10.1 5 6.5 5c-1 0-1.8.1-2.3.2v13.3c.5-.1 1.3-.2 2.3-.2 3.6 0 5.5 1.9 5.5 1.9Z"/><path d="M12 6.9S13.9 5 17.5 5c1 0 1.8.1 2.3.2v13.3c-.5-.1-1.3-.2-2.3-.2-3.6 0-5.5 1.9-5.5 1.9Z"/></svg></span>
                 <span class="tile-title">How to use the hub</span>
                 <span class="tile-desc">What the queue is, what each action does, and how email gets sorted.</span>
                 <span class="tile-stat">Read the guide</span>
             </button>
             <button type="button" class="tile" data-open="security">
-                <span class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 19 5.9v5.3c0 4.2-2.8 7.9-7 9.8-4.2-1.9-7-5.6-7-9.8V5.9Z"/><path d="m9.2 12.2 2 2 3.6-3.9"/></svg></span>
+                <span class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.6" y="10.3" width="14.8" height="10.1" rx="2.3"/><path d="M8.3 10.3V7.5a3.7 3.7 0 0 1 7.4 0v2.8"/><path d="M12 14.2v2.6"/></svg></span>
                 <span class="tile-title">Security</span>
                 <span class="tile-desc">How email is stored and protected, and what each role can see.</span>
                 <span class="tile-stat">Read more</span>
