@@ -1241,6 +1241,478 @@
 
         <div class="page-panel" data-panel="security">
             <button type="button" class="panel-back" data-back>Back to home</button>
+          <div class="guide-layout">
+            <aside class="guide-toc" id="securityToc">
+              <h4>Overview</h4>
+              <a href="#sec-intro">About this page</a>
+
+              <h4>Architecture</h4>
+              <a href="#sec-components">System components</a>
+
+              <h4>How it works</h4>
+              <a href="#sec-flow">Email processing flow</a>
+              <a href="#sec-example">Example flow</a>
+
+              <h4>Data &amp; AI</h4>
+              <a href="#sec-openai">OpenAI data handling</a>
+              <a href="#sec-storage">Where data is stored</a>
+
+              <h4>Access &amp; hardening</h4>
+              <a href="#sec-auth">Authentication &amp; access</a>
+              <a href="#sec-web">Web application security</a>
+              <a href="#sec-secrets">Secret management</a>
+
+              <h4>Integrity</h4>
+              <a href="#sec-audit">Audit &amp; duplicate protection</a>
+              <a href="#sec-encryption">Database encryption</a>
+              <a href="#sec-posture">Current security posture</a>
+            </aside>
+
+            <div class="guide-body">
+              <!-- INTRO BLURB -->
+              <section id="sec-intro">
+                <h2>About this page</h2>
+                <p class="lede">This document explains, in plain English, exactly how the MLFA Email Hub protects the emails and organizational data it handles.</p>
+                <p>It covers what data lives where, who can see it, how it moves between Microsoft 365, the Hub, and OpenAI, and every safeguard applied along the way. If you are reviewing this for MLFA's board, IT, or a compliance conversation, read the <a href="#sec-flow">Email processing flow</a> first for the big picture, then dive into individual sections as needed.</p>
+              </section>
+
+              <!-- 1. COMPONENTS -->
+              <section id="sec-components">
+                <h2>1. System components</h2>
+
+                <h3>Microsoft 365 and Microsoft Graph</h3>
+                <p>Original emails are received and stored in Microsoft 365.</p>
+                <p>The Hub connects to Microsoft 365 using the Microsoft Graph API. Graph allows the backend to:</p>
+                <ul>
+                  <li>Retrieve messages</li>
+                  <li>Read subjects, senders, bodies, and conversation information</li>
+                  <li>Apply Outlook categories</li>
+                  <li>Move messages into folders</li>
+                  <li>Mark messages as read or unread</li>
+                  <li>Forward messages</li>
+                  <li>Send approved replies</li>
+                  <li>Locate messages when a reviewer opens them</li>
+                </ul>
+                <p>Microsoft Graph credentials are stored as sealed Railway environment variables. They are not included in GitHub, frontend code, browser responses, or OpenAI requests.</p>
+
+                <h3>Python and Flask</h3>
+                <p>The backend is written in Python using Flask.</p>
+                <p>Flask provides:</p>
+                <ul>
+                  <li>Microsoft authentication routes</li>
+                  <li>Reviewer and administrator pages</li>
+                  <li>API endpoints</li>
+                  <li>Session management</li>
+                  <li>Authorization checks</li>
+                  <li>Approval actions</li>
+                  <li>Security headers and request protection</li>
+                </ul>
+
+                <h3>PostgreSQL</h3>
+                <p>PostgreSQL stores the Hub's workflow and configuration information, including:</p>
+                <ul>
+                  <li>Hub users and roles</li>
+                  <li>Inbox settings</li>
+                  <li>Category rules</li>
+                  <li>Recipients</li>
+                  <li>Reply templates</li>
+                  <li>Pending approval records</li>
+                  <li>Classification results</li>
+                  <li>Audit events</li>
+                  <li>Message identifiers</li>
+                  <li>Retention information</li>
+                </ul>
+
+                <h3>Railway</h3>
+                <p>Railway hosts:</p>
+                <ul>
+                  <li>The Python application</li>
+                  <li>The background email worker</li>
+                  <li>PostgreSQL</li>
+                  <li>Production environment variables</li>
+                  <li>Application and deployment logs</li>
+                </ul>
+                <p>Sensitive credentials are stored as sealed Railway variables rather than committed to GitHub.</p>
+
+                <h3>OpenAI API</h3>
+                <p>The Hub uses the backend OpenAI API for email classification.</p>
+                <p>It does not use:</p>
+                <ul>
+                  <li>A personal ChatGPT account</li>
+                  <li>The consumer ChatGPT website</li>
+                  <li>A visible ChatGPT conversation</li>
+                  <li>A browser-based ChatGPT session</li>
+                </ul>
+                <p>The current classifier requests the <code>gpt-5.4</code> model and expects structured JSON output.</p>
+              </section>
+
+              <!-- 2. FLOW -->
+              <section id="sec-flow">
+                <h2>2. Complete email processing flow</h2>
+
+                <h3>Step 1: An email arrives</h3>
+                <p>An email arrives in an approved MLFA Microsoft 365 mailbox.</p>
+                <p>The full original email remains stored in Microsoft 365.</p>
+
+                <h3>Step 2: The Hub retrieves the message</h3>
+                <p>The Hub's worker retrieves the email through Microsoft Graph.</p>
+                <p>The worker normalizes relevant information, including:</p>
+                <ul>
+                  <li>Microsoft message ID</li>
+                  <li>Conversation ID</li>
+                  <li>Sender</li>
+                  <li>Subject</li>
+                  <li>Relevant body text</li>
+                  <li>Received time</li>
+                  <li>Existing Outlook categories</li>
+                  <li>Limited earlier messages from the conversation, when thread context is enabled</li>
+                </ul>
+
+                <h3>Step 3: AI classification is selected</h3>
+                <p>Each inbox contains a <code>send_to_openai</code> setting.</p>
+                <p>If AI is enabled, the Hub prepares a classification request.</p>
+                <p>If AI is disabled:</p>
+                <ul>
+                  <li>No email content from that inbox is sent to OpenAI.</li>
+                  <li>The email enters the manual-review queue.</li>
+                  <li>An authorized reviewer selects the appropriate categories.</li>
+                </ul>
+
+                <h3>Step 4: OpenAI classifies the email</h3>
+                <p>When AI is enabled, the Hub sends:</p>
+                <ul>
+                  <li>MLFA's classification instructions</li>
+                  <li>Active category definitions and rules</li>
+                  <li>The email subject</li>
+                  <li>Relevant email body text</li>
+                  <li>Limited earlier messages from the same conversation, when enabled</li>
+                </ul>
+                <p>The Hub does not send OpenAI:</p>
+                <ul>
+                  <li>Microsoft passwords</li>
+                  <li>Microsoft Graph access tokens</li>
+                  <li>Database credentials</li>
+                  <li>Railway credentials</li>
+                  <li>Encryption keys</li>
+                  <li>Browser session cookies</li>
+                  <li>Hub user passwords</li>
+                  <li>Microsoft client secrets</li>
+                </ul>
+                <p>Attachments are not currently uploaded to OpenAI as files. Text already included in the email body may still be part of the classification request.</p>
+
+                <h3>Step 5: OpenAI returns structured facts</h3>
+                <p>A typical response may resemble:</p>
+                <pre style="background: var(--panel-2); padding: 12px; border-radius: 4px; font-size: 12px; line-height: 1.5; font-family: 'SF Mono', Menlo, monospace; overflow-x: auto;">{
+  "categories": ["legal"],
+  "needs_personal_reply": false,
+  "name_sender": "Example Sender",
+  "amount_detected": null,
+  "reason": {
+    "legal": "The sender is requesting assistance with a legal matter."
+  }
+}</pre>
+                <p>The Hub validates the response and removes unsupported categories or invalid data types.</p>
+
+                <h3>Step 6: The Hub creates an action plan</h3>
+                <p>OpenAI does not directly operate the mailbox.</p>
+                <p>The Hub's deterministic rule engine uses the classification and MLFA's configured rules to determine:</p>
+                <ul>
+                  <li>Final categories</li>
+                  <li>Outlook tags</li>
+                  <li>Destination folder</li>
+                  <li>Forwarding recipients</li>
+                  <li>Automatic reply template</li>
+                  <li>Duplicate-reply safeguards</li>
+                  <li>Read or unread behavior</li>
+                  <li>Whether human review is required</li>
+                  <li>Whether the message may be processed automatically</li>
+                </ul>
+
+                <h3>Step 7: The message follows the manual or automatic path</h3>
+                <p>In manual-review mode:</p>
+                <ul>
+                  <li>The email enters the approval queue.</li>
+                  <li>An authorized reviewer views the classification and proposed action.</li>
+                  <li>The reviewer approves, rejects, dismisses, or corrects the categories.</li>
+                  <li>The Hub executes the approved action.</li>
+                </ul>
+                <p>In full-automation mode:</p>
+                <ul>
+                  <li>The Hub creates the same deterministic action plan.</li>
+                  <li>The action is executed immediately.</li>
+                  <li>The result is recorded in the audit log.</li>
+                </ul>
+
+                <h3>Step 8: Microsoft Graph performs the action</h3>
+                <p>Microsoft Graph applies the authorized mailbox changes, such as:</p>
+                <ul>
+                  <li>Adding categories</li>
+                  <li>Moving the message</li>
+                  <li>Forwarding it</li>
+                  <li>Sending an approved reply</li>
+                  <li>Marking it read or unread</li>
+                </ul>
+
+                <h3>Step 9: The Hub records the result</h3>
+                <p>The audit log records information such as:</p>
+                <ul>
+                  <li>Action type</li>
+                  <li>Actor</li>
+                  <li>Inbox</li>
+                  <li>Message identifier</li>
+                  <li>Timestamp</li>
+                  <li>Processing duration</li>
+                  <li>Result or error</li>
+                </ul>
+              </section>
+
+              <!-- 3. EXAMPLE -->
+              <section id="sec-example">
+                <h2>3. Example processing flow</h2>
+                <p>Consider an email:</p>
+                <p><strong>Subject:</strong> Request for legal assistance<br>
+                <strong>Body:</strong> I am looking for help with a legal matter and would like to know whether MLFA can review my situation.</p>
+                <p>The processing flow is:</p>
+                <ol>
+                  <li>Microsoft 365 receives and stores the original email.</li>
+                  <li>The Hub retrieves it through Microsoft Graph.</li>
+                  <li>The subject, relevant body, classification instructions, and limited thread context are sent to OpenAI if AI is enabled.</li>
+                  <li>OpenAI returns the <code>legal</code> category and a short reason.</li>
+                  <li>The Hub verifies that <code>legal</code> is an allowed category.</li>
+                  <li>The rule engine determines the configured action, which may include:
+                    <ul>
+                      <li>Applying the <code>legal</code> tag</li>
+                      <li>Moving the message to <code>Apply for help</code></li>
+                      <li>Leaving it unread</li>
+                      <li>Sending an approved legal-assistance response</li>
+                      <li>Preventing another automatic reply in the same conversation</li>
+                    </ul>
+                  </li>
+                  <li>In manual mode, a reviewer approves the action.</li>
+                  <li>In automatic mode, the action is executed immediately.</li>
+                  <li>Microsoft Graph applies the changes in Outlook.</li>
+                  <li>The Hub records the result in the audit log.</li>
+                </ol>
+                <p>OpenAI identifies the type of message. The Hub's code and configured rules determine what happens to it.</p>
+              </section>
+
+              <!-- 4. OPENAI -->
+              <section id="sec-openai">
+                <h2>4. OpenAI data handling</h2>
+
+                <h3>Connection security</h3>
+                <p>The Hub communicates with OpenAI through HTTPS. This encrypts information while it travels between Railway and OpenAI.</p>
+                <p>The OpenAI API key is stored as a sealed Railway environment variable and is never sent to the frontend.</p>
+
+                <h3>Model training</h3>
+                <p>OpenAI states that information submitted through its API is not used to train or improve its models by default unless the organization explicitly opts into data sharing.</p>
+                <p>The Hub's active API request also specifies:</p>
+                <ul>
+                  <li><code>store=False</code></li>
+                </ul>
+                <p>This instructs the API not to create stored application state for the classification request.</p>
+
+                <h3>Retention limitation</h3>
+                <p><code>store=False</code> does not necessarily mean that customer content is absent from every OpenAI system immediately.</p>
+                <p>OpenAI states that standard abuse-monitoring logs may contain customer content and may be retained for up to 30 days unless additional controls are approved.</p>
+                <p>Eligible organizations may request:</p>
+                <ul>
+                  <li>Zero Data Retention</li>
+                  <li>Modified Abuse Monitoring</li>
+                </ul>
+                <p>These controls require approval from OpenAI and may have additional conditions.</p>
+
+                <h3>Per-inbox AI control</h3>
+                <p>AI use can be disabled independently for any inbox.</p>
+                <p>When disabled:</p>
+                <ul>
+                  <li>Email content is not submitted to OpenAI.</li>
+                  <li>The email remains available for human review.</li>
+                  <li>The reviewer manually selects its categories.</li>
+                  <li>Deterministic routing rules continue to control the resulting action.</li>
+                </ul>
+                <p>This provides a human-only option for inboxes or correspondence that should not be processed by a third-party AI service.</p>
+                <p>OpenAI's official API data-control documentation is available at:<br>
+                <a href="https://platform.openai.com/docs/models/default-usage-policies-by-endpoint" target="_blank" rel="noopener">https://platform.openai.com/docs/models/default-usage-policies-by-endpoint</a></p>
+              </section>
+
+              <!-- 5. STORAGE -->
+              <section id="sec-storage">
+                <h2>5. Where data is stored</h2>
+
+                <h3>Microsoft 365</h3>
+                <p>Microsoft 365 stores the complete original email and remains the authoritative email source.</p>
+                <p>Existing Microsoft retention, compliance, or legal-hold policies continue to apply independently of the Hub.</p>
+
+                <h3>Railway application memory</h3>
+                <p>The application temporarily holds message information in memory while processing an email or serving an authorized request.</p>
+                <p>Application memory is not intended to be a permanent email archive.</p>
+
+                <h3>OpenAI</h3>
+                <p>When enabled, OpenAI receives the classification prompt and relevant email text. OpenAI does not receive Microsoft mailbox credentials or permission to operate the mailbox.</p>
+
+                <h3>PostgreSQL</h3>
+                <p>PostgreSQL currently stores temporary approval-queue snapshots and classification information in addition to configuration and audit information.</p>
+                <p>This supports reviewer access and temporary resilience if Microsoft Graph is unavailable, but it creates a second location containing email information.</p>
+                <p>The Hub is therefore being migrated toward:</p>
+                <ul>
+                  <li>Encrypted temporary queue records</li>
+                  <li>Automatic expiration</li>
+                  <li>Minimal stored metadata</li>
+                  <li>Live Microsoft 365 body retrieval</li>
+                  <li>No new full email-body duplication in the final mode</li>
+                </ul>
+
+                <h3>Reviewer browser</h3>
+                <p>After Microsoft authentication, MFA, Hub authorization, and inbox-access checks, the reviewer receives permitted email content through HTTPS.</p>
+                <p>The browser does not receive database credentials, Graph tokens, OpenAI keys, or encryption keys.</p>
+              </section>
+
+              <!-- 6. AUTH -->
+              <section id="sec-auth">
+                <h2>6. Authentication and access control</h2>
+
+                <h3>Microsoft Entra sign-in</h3>
+                <p>Users authenticate through Microsoft Entra ID using OAuth 2.0.</p>
+                <p>The application validates information including:</p>
+                <ul>
+                  <li>Microsoft tenant</li>
+                  <li>Microsoft identity</li>
+                  <li>Immutable Microsoft user object ID</li>
+                  <li>Approved redirect flow</li>
+                  <li>Authentication state</li>
+                </ul>
+
+                <h3>Multifactor authentication</h3>
+                <p>MLFA's Microsoft Conditional Access policy requires MFA when users access the Hub. This reduces the likelihood that a stolen password alone can provide access.</p>
+
+                <h3>Hub authorization</h3>
+                <p>Microsoft proves the user's identity. The Hub separately determines what that user may access.</p>
+                <p>The Hub verifies:</p>
+                <ul>
+                  <li>The user exists in the Hub database</li>
+                  <li>The account is active</li>
+                  <li>The Microsoft identity is linked correctly</li>
+                  <li>The role is valid</li>
+                  <li>The user may access the requested inbox</li>
+                </ul>
+                <p>Supported roles include:</p>
+                <ul>
+                  <li>Owner</li>
+                  <li>Admin</li>
+                  <li>Reviewer</li>
+                </ul>
+                <p>Administrative settings require Owner or Admin authorization.</p>
+              </section>
+
+              <!-- 7. WEB -->
+              <section id="sec-web">
+                <h2>7. Web application security</h2>
+                <p>The application currently includes:</p>
+                <ul>
+                  <li>Secure HTTP-only session cookies</li>
+                  <li>SameSite cookie restrictions</li>
+                  <li>HTTPS-only production cookies</li>
+                  <li>CSRF protection for state-changing requests</li>
+                  <li>Trusted-host validation</li>
+                  <li>Login rate limiting</li>
+                  <li>Session-user revalidation</li>
+                  <li>Role checks</li>
+                  <li>Per-inbox access checks</li>
+                  <li>Request validation</li>
+                  <li>Content Security Policy</li>
+                  <li>HSTS</li>
+                  <li>Clickjacking protection</li>
+                  <li>MIME-sniffing protection</li>
+                  <li>Referrer restrictions</li>
+                  <li>Restricted browser permissions</li>
+                </ul>
+                <p>These controls reduce the risk of:</p>
+                <ul>
+                  <li>Session theft</li>
+                  <li>Forged requests</li>
+                  <li>Malicious cross-site actions</li>
+                  <li>Automated login abuse</li>
+                  <li>Host-header attacks</li>
+                  <li>Unauthorized administrative access</li>
+                  <li>Common browser-based attacks</li>
+                </ul>
+              </section>
+
+              <!-- 8. SECRETS -->
+              <section id="sec-secrets">
+                <h2>8. Secret management</h2>
+                <p>The following sensitive values are stored outside GitHub as sealed Railway environment variables:</p>
+                <ul>
+                  <li>OpenAI API key</li>
+                  <li>Microsoft tenant and application credentials</li>
+                  <li>Microsoft client secret</li>
+                  <li>PostgreSQL connection credentials</li>
+                  <li>Flask session secret</li>
+                  <li>Queue encryption keys</li>
+                </ul>
+                <p>The frontend does not receive these values. Real secrets are excluded from source control through <code>.gitignore</code>.</p>
+              </section>
+
+              <!-- 9. AUDIT -->
+              <section id="sec-audit">
+                <h2>9. Audit and duplicate-processing protection</h2>
+                <p>The Hub records important reviewer, administrator, and automated actions.</p>
+                <p>Audit information supports:</p>
+                <ul>
+                  <li>Accountability</li>
+                  <li>Troubleshooting</li>
+                  <li>Incident investigation</li>
+                  <li>Processing-time measurement</li>
+                  <li>Verification of automated behavior</li>
+                </ul>
+                <p>The Hub also uses:</p>
+                <ul>
+                  <li>Microsoft message identifiers</li>
+                  <li>Conversation identifiers</li>
+                  <li>Outlook processing tags</li>
+                  <li>Queue state</li>
+                  <li>Duplicate-reply safeguards</li>
+                  <li>Delta synchronization state</li>
+                </ul>
+                <p>These controls reduce repeated classification, forwarding, moves, and automatic responses.</p>
+              </section>
+
+              <!-- 10. ENCRYPTION -->
+              <section id="sec-encryption">
+                <h2>10. Database encryption</h2>
+                <p>The Hub is updated to encrypt temporary email information stored in PostgreSQL while messages wait for review. The encryption key is stored separately as a sealed Railway variable.</p>
+                <p>For example, if someone obtained only the database or a database backup, they would see unreadable ciphertext instead of a legal email's sender, subject, body, and classification. An authorized reviewer can still read the email because the Hub verifies their Microsoft login, MFA, role, and inbox access before decrypting the information.</p>
+                <p>The encryption foundation has been deployed and is currently undergoing final production verification before existing plaintext queue records are converted and removed.</p>
+              </section>
+
+              <!-- 11. POSTURE -->
+              <section id="sec-posture">
+                <h2>11. Current security posture</h2>
+                <ul>
+                  <li>Microsoft Entra SSO</li>
+                  <li>Microsoft MFA</li>
+                  <li>Hub-level active-user validation</li>
+                  <li>Role-based authorization</li>
+                  <li>Per-inbox access controls</li>
+                  <li>Secure sessions</li>
+                  <li>CSRF protection</li>
+                  <li>Login rate limiting</li>
+                  <li>Trusted-host validation</li>
+                  <li>HTTPS</li>
+                  <li>Sealed credentials</li>
+                  <li>Audit logging</li>
+                  <li>Duplicate-processing safeguards</li>
+                  <li>Deterministic mailbox actions</li>
+                  <li><code>store=False</code> on OpenAI classification requests</li>
+                  <li>Per-inbox AI opt-out</li>
+                  <li>Encrypted database backup</li>
+                  <li>Versioned encryption-key support</li>
+                  <li>Tested staged migration design</li>
+                </ul>
+              </section>
+            </div>
+          </div>
         </div>
     </div>
     </section>
@@ -1357,11 +1829,13 @@
             });
         });
 
-        // Guide TOC: highlight the section the user is currently reading
-        (function() {
-            const toc = document.getElementById('guideToc');
+        // Guide/Security TOCs: highlight the section the user is currently reading
+        function initTocScroller(tocId, panelName) {
+            const toc = document.getElementById(tocId);
             if (!toc) return;
-            const sections = Array.from(document.querySelectorAll('.guide-body section[id]'));
+            const panel = document.querySelector('.page-panel[data-panel="' + panelName + '"]');
+            if (!panel) return;
+            const sections = Array.from(panel.querySelectorAll('.guide-body section[id]'));
             const links = Array.from(toc.querySelectorAll('a[href^="#"]'));
 
             function setActive(id) {
@@ -1376,7 +1850,6 @@
 
             sections.forEach(s => io.observe(s));
 
-            // Smooth-scroll on click, and always jump to the how-to tab first
             toc.addEventListener('click', (e) => {
                 const a = e.target.closest('a[href^="#"]');
                 if (!a) return;
@@ -1384,13 +1857,15 @@
                 const id = a.getAttribute('href').slice(1);
                 const target = document.getElementById(id);
                 if (!target) return;
-                // Ensure the how-to tab is active before scrolling
-                document.querySelectorAll('.page-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'how-to'));
-                document.querySelectorAll('.page-panel').forEach(p => p.classList.toggle('active', p.dataset.panel === 'how-to'));
+                document.querySelectorAll('.page-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === panelName));
+                document.querySelectorAll('.page-panel').forEach(p => p.classList.toggle('active', p.dataset.panel === panelName));
                 target.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 setActive(id);
             });
-        })();
+        }
+
+        initTocScroller('guideToc', 'how-to');
+        initTocScroller('securityToc', 'security');
     </script>
 </body>
 </html>
