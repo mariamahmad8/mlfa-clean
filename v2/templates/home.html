@@ -117,52 +117,81 @@
         }
         .panel-back:hover { border-color: var(--mlfa-teal); color: var(--text); }
 
-        /* ---- Landing tiles --------------------------------------------------- */
-        .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; }
+        /* ---- Landing tiles ----------------------------------------------------
+           Two tiers on purpose: The Hub is the primary action and gets the
+           width, the artwork and the rust accent; the other two are quieter
+           cards with no fill. */
+        .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
         .tile {
             position: relative;
-            display: flex; flex-direction: column;
-            overflow: hidden;
-            padding: 22px 22px 20px;
-            background: var(--panel);
-            border: 1px solid var(--line);
-            border-radius: 5px;
             text-align: left; text-decoration: none;
             color: var(--text);
             font-family: var(--font);
             cursor: pointer;
-            transition: border-color 0.18s ease, background 0.18s ease;
+            transition: border-color 0.15s ease, background 0.15s ease;
         }
-        /* Nothing moves, nothing draws itself in: the border and the icon simply
-           change colour. */
-        .tile:hover { border-color: var(--mlfa-teal); background: #FDFCFA; }
         .tile:focus-visible { outline: 2px solid var(--mlfa-teal); outline-offset: 2px; }
-        /* Icon slot: sized and spaced already, just needs artwork dropped in */
-        .tile-icon {
-            width: 40px; height: 40px;
-            margin-bottom: 15px;
-            border-radius: 8px;
-            background: var(--accent-soft);
-            color: var(--mlfa-teal);
-            display: flex; align-items: center; justify-content: center;
-            flex-shrink: 0;
-            transition: background 0.18s ease, color 0.18s ease;
+        .tile-title { display: block; font-weight: 600; }
+        .tile-desc { display: block; color: var(--text-muted); }
+        .tile-cta { display: block; font-weight: 600; color: var(--mlfa-teal); }
+
+        /* Primary: full width, artwork left, live count right */
+        .tile-primary {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            align-items: center;
+            gap: 24px;
+            padding: 24px 26px;
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-left: 3px solid var(--mlfa-orange);
+            border-radius: 5px;
         }
-        .tile-icon img, .tile-icon svg { width: 21px; height: 21px; display: block; }
-        .tile:hover .tile-icon { background: var(--mlfa-teal); color: #F5F1EA; }
-        .tile-title { font-size: 15px; font-weight: 600; margin-bottom: 5px; }
-        .tile-desc { font-size: 12.5px; line-height: 1.55; color: var(--text-muted); }
-        .tile-stat {
-            position: relative;
-            align-self: flex-start;
-            margin-top: 14px;
-            padding-bottom: 2px;
-            font-size: 12.5px; font-weight: 600;
-            color: var(--mlfa-teal);
-            opacity: 0.8;
-            transition: opacity 0.18s ease;
+        .tile-primary:hover { border-color: var(--mlfa-teal); border-left-color: var(--mlfa-orange); background: #FDFCFA; }
+        .tile-primary .art { width: 62px; height: 62px; }
+        .tile-primary .tile-title { font-size: 19px; margin-bottom: 4px; }
+        .tile-primary .tile-desc { font-size: 13px; line-height: 1.5; }
+        .tile-primary .tile-cta { margin-top: 10px; font-size: 13px; }
+        /* Live count, in the rust that ties back to the header stripe */
+        .tile-badge {
+            justify-self: end;
+            padding: 6px 14px;
+            border-radius: 999px;
+            background: var(--mlfa-orange);
+            color: #FFFFFF;
+            font-size: 13px; font-weight: 600;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
         }
-        .tile:hover .tile-stat { opacity: 1; }
+        .tile-badge.zero {
+            background: transparent;
+            border: 1px solid var(--line);
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        /* Secondary: no fill, hairline only, smaller artwork */
+        .tile-quiet {
+            display: block;
+            padding: 20px 22px 18px;
+            background: transparent;
+            border: 1px solid var(--line-soft);
+            border-radius: 5px;
+        }
+        .tile-quiet:hover { border-color: var(--mlfa-orange); background: rgba(255, 255, 255, 0.5); }
+        .tile-quiet .art { width: 40px; height: 40px; margin-bottom: 12px; }
+        .tile-quiet .tile-title { font-size: 14.5px; margin-bottom: 4px; }
+        .tile-quiet .tile-desc { font-size: 12.5px; line-height: 1.5; }
+        .tile-quiet .tile-cta { margin-top: 12px; font-size: 12.5px; opacity: 0.85; }
+        .tile-quiet:hover .tile-cta { opacity: 1; }
+
+        @media (max-width: 720px) {
+            .tiles { grid-template-columns: 1fr; }
+            .tile-primary { grid-template-columns: auto 1fr; }
+            .tile-badge { grid-column: 2; justify-self: start; margin-top: 10px; }
+        }
 
         .guide-layout {
             display: grid;
@@ -316,26 +345,32 @@
 
     <section class="content-band" id="contentBand">
     <div class="home-wrap">
-        <!-- Landing tiles. Icons are inline SVG so there is no icon font or
-             third-party dependency to load. -->
+        <!-- Landing tiles. The artwork is the MLFA shield redrawn three ways,
+             hand-authored SVG rather than an icon set. The Hub is the primary
+             action and is deliberately weightier than the other two. -->
         <div class="tiles" id="homeTiles">
-            <a class="tile" href="/hub">
-                <span class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.1"/><circle cx="12" cy="3.7" r="1.9"/><circle cx="12" cy="20.3" r="1.9"/><circle cx="3.7" cy="12" r="1.9"/><circle cx="20.3" cy="12" r="1.9"/><path d="M12 5.6v3.3M12 15.1v3.3M5.6 12h3.3M15.1 12h3.3"/></svg></span>
-                <span class="tile-title">The Hub</span>
-                <span class="tile-desc">Emails waiting for someone to approve, reject, or dismiss.</span>
-                <span class="tile-stat" id="queueStat">Checking...</span>
+            <a class="tile tile-primary" href="/hub">
+                <svg class="art" viewBox="0 0 48 48" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M24 5 41 10.6V25c0 9.4-6.8 16.7-17 19.6C13.8 41.7 7 34.4 7 25V10.6Z" stroke="var(--mlfa-orange)" stroke-width="1.6"/><g stroke="var(--mlfa-teal)" stroke-width="1.5"><path d="M17.5 18.5h13"/><path d="M20.2 21.4v10.2M24 21.4v10.2M27.8 21.4v10.2"/><path d="M16.5 34.5h15"/><path d="M11.5 24h3M33.5 24h3M12.6 29h2.4M33 29h2.4"/></g></svg>
+                <span class="tile-body">
+                    <span class="tile-title">The Hub</span>
+                    <span class="tile-desc">Email waiting for someone to approve, reject, or dismiss.</span>
+                    <span class="tile-cta">Open The Hub</span>
+                </span>
+                <span class="tile-badge" id="queueStat">Checking</span>
             </a>
-            <button type="button" class="tile" data-open="how-to">
-                <span class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.9S10.1 5 6.5 5c-1 0-1.8.1-2.3.2v13.3c.5-.1 1.3-.2 2.3-.2 3.6 0 5.5 1.9 5.5 1.9Z"/><path d="M12 6.9S13.9 5 17.5 5c1 0 1.8.1 2.3.2v13.3c-.5-.1-1.3-.2-2.3-.2-3.6 0-5.5 1.9-5.5 1.9Z"/></svg></span>
+
+            <button type="button" class="tile tile-quiet" data-open="how-to">
+                <svg class="art" viewBox="0 0 48 48" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M24 5 41 10.6V25c0 9.4-6.8 16.7-17 19.6C13.8 41.7 7 34.4 7 25V10.6Z" stroke="var(--mlfa-orange)" stroke-width="1.6"/><g stroke="var(--mlfa-teal)" stroke-width="1.5"><path d="M24 21.4c-2.1-1.6-4.8-2.3-7.3-2.2v12.4c2.5-.1 5.2.6 7.3 2.2"/><path d="M24 21.4c2.1-1.6 4.8-2.3 7.3-2.2v12.4c-2.5-.1-5.2.6-7.3 2.2"/><path d="M24 21.4v12.4"/></g></svg>
                 <span class="tile-title">How to use The Hub</span>
-                <span class="tile-desc">What The Hub is, what each action does, and how email gets sorted.</span>
-                <span class="tile-stat">Read the guide</span>
+                <span class="tile-desc">What happens to an email from the moment it arrives.</span>
+                <span class="tile-cta">See how sorting works</span>
             </button>
-            <button type="button" class="tile" data-open="security">
-                <span class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.6" y="10.3" width="14.8" height="10.1" rx="2.3"/><path d="M8.3 10.3V7.5a3.7 3.7 0 0 1 7.4 0v2.8"/><path d="M12 14.2v2.6"/></svg></span>
+
+            <button type="button" class="tile tile-quiet" data-open="security">
+                <svg class="art" viewBox="0 0 48 48" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M24 5 41 10.6V25c0 9.4-6.8 16.7-17 19.6C13.8 41.7 7 34.4 7 25V10.6Z" stroke="var(--mlfa-orange)" stroke-width="1.6"/><g stroke="var(--mlfa-teal)" stroke-width="1.5"><path d="M17.5 18.5h13M16.5 34.5h15"/><circle cx="24" cy="24.6" r="3"/><path d="M22.7 28.2h2.6l.8 4.6h-4.2Z"/></g></svg>
                 <span class="tile-title">Security</span>
-                <span class="tile-desc">How email is stored and protected, and what each role can see.</span>
-                <span class="tile-stat">Read more</span>
+                <span class="tile-desc">Where email is stored, and who is able to see it.</span>
+                <span class="tile-cta">See how email is protected</span>
             </button>
         </div>
 
@@ -1779,16 +1814,20 @@
             });
         })();
 
-        // The Review queue tile reports how much is waiting, totalled over the
-        // inboxes this user can reach (a reviewer only sees their own).
+        // The Hub tile carries a live count, totalled over the inboxes this user
+        // can reach (a reviewer only sees their own).
         async function loadQueueStatus() {
-            const stat = document.getElementById('queueStat');
-            if (!stat) return;
+            const badge = document.getElementById('queueStat');
+            if (!badge) return;
+            const show = (text, zero) => {
+                badge.textContent = text;
+                badge.classList.toggle('zero', !!zero);
+            };
             try {
                 const res = await fetch('/api/my_inboxes');
                 if (!res.ok) throw new Error('inboxes');
                 const inboxes = await res.json();
-                if (!inboxes.length) { stat.textContent = 'No inboxes assigned to you'; return; }
+                if (!inboxes.length) { show('No inboxes', true); return; }
 
                 const counts = await Promise.all(inboxes.map(async ib => {
                     try {
@@ -1797,16 +1836,10 @@
                     } catch (_) { return 0; }
                 }));
                 const total = counts.reduce((a, b) => a + b, 0);
-                if (total === 0) {
-                    stat.textContent = 'Nothing waiting';
-                } else if (inboxes.length === 1) {
-                    stat.textContent = total === 1 ? '1 email waiting' : `${total} emails waiting`;
-                } else {
-                    const busy = counts.filter(n => n > 0).length;
-                    stat.textContent = `${total} waiting across ${busy} inbox${busy === 1 ? '' : 'es'}`;
-                }
+                if (total === 0) show('Nothing waiting', true);
+                else show(total === 1 ? '1 waiting' : `${total} waiting`, false);
             } catch (_) {
-                stat.textContent = 'Open the hub';
+                show('Open The Hub', true);
             }
         }
 
