@@ -13,6 +13,24 @@ def _get_client() -> OpenAI:
     return OpenAI(api_key=api_key, timeout=30.0, max_retries=2)
 
 
+def embed_texts(texts: list[str]) -> list[list[float]]:
+    """Return embedding vectors in the same order as the supplied texts."""
+    cleaned = [str(text).strip() for text in texts]
+    if not cleaned or any(not text for text in cleaned):
+        raise ValueError("Embedding inputs must be non-empty strings.")
+
+    model = os.getenv("GUIDE_EMBEDDING_MODEL", "text-embedding-3-small").strip()
+    response = _get_client().embeddings.create(
+        model=model,
+        input=cleaned,
+        encoding_format="float",
+    )
+    ordered = sorted(response.data, key=lambda item: item.index)
+    if len(ordered) != len(cleaned):
+        raise RuntimeError("Embedding response did not contain every input.")
+    return [item.embedding for item in ordered]
+
+
 def classify_email(system_prompt: str, email_prompt: str) -> ClassificationResult:
     """Send a prompt to GPT and parse the response into a ClassificationResult."""
     try:

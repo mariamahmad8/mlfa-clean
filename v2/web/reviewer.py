@@ -34,6 +34,7 @@ from storage import login_tokens as tokens_storage
 from storage import login_rate_limits as rate_limits_storage
 from adapters import o365
 from engine import router, pipeline
+from engine.guide_search import guide_search
 from auth import microsoft as microsoft_auth
 from security_logging import log_event
 from security_encryption import queue_security_mode
@@ -453,6 +454,33 @@ def my_inboxes():
         {"id": ib.id, "display_name": ib.display_name, "email_to_watch": ib.email_to_watch}
         for ib in inboxes
     ])
+
+
+@reviewer_bp.route('/api/guide/search', methods=['POST'])
+@login_required
+def search_guide():
+    """Find the authored guide answer closest in meaning to a question."""
+    data = request.get_json(silent=True) or {}
+    query = str(data.get('query') or '').strip()
+    panel = str(data.get('panel') or '').strip()
+
+    if not query:
+        return jsonify({"error": "Enter a question."}), 400
+    if len(query) > 300:
+        return jsonify({"error": "Keep the question under 300 characters."}), 400
+    if panel not in {"how-to", "security"}:
+        return jsonify({"error": "Choose a valid guide."}), 400
+
+    try:
+        results = guide_search.search(query, panel)
+        if not results:
+            return jsonify({"error": "No matching guide section was found."}), 404
+        return jsonify({"results": results})
+    except Exception as e:
+        # Never log the question itself; it may contain information a user
+        # should not have pasted into the guide search box.
+        log_event("guide_search.request_failed", level="ERROR", error=e)
+        return jsonify({"error": "Guide search is temporarily unavailable."}), 503
 
 
 @reviewer_bp.route('/api/emails')

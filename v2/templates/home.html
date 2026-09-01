@@ -111,13 +111,32 @@
             display: flex; align-items: center; gap: 14px;
             margin-bottom: 22px;
         }
-        .panel-search { position: relative; margin-left: auto; width: 300px; max-width: 100%; }
+        .panel-search {
+            position: relative;
+            display: flex; align-items: center; gap: 8px;
+            margin-left: auto;
+            width: 380px; max-width: 100%;
+        }
         .panel-search .form-input {
-            height: 34px;
-            padding: 0 12px 0 34px;
+            flex: 1;
+            height: 36px;
+            padding: 0 12px 0 36px;
             font-size: 13px;
             border-radius: 4px;
         }
+        .panel-ask {
+            height: 36px;
+            padding: 0 16px;
+            border: 1px solid var(--mlfa-teal);
+            border-radius: 4px;
+            background: var(--mlfa-teal);
+            color: #F5F1EA;
+            font-family: var(--font);
+            font-size: 13px; font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+        .panel-ask:hover { background: var(--mlfa-teal-hover); }
         .panel-search .form-input:focus {
             outline: none;
             border-color: var(--mlfa-teal);
@@ -126,10 +145,55 @@
         .panel-search-icon {
             position: absolute;
             left: 11px; top: 50%;
-            width: 15px; height: 15px;
-            margin-top: -7.5px;
+            width: 16px; height: 16px;
+            margin-top: -8px;
             color: var(--text-soft);
             pointer-events: none;
+        }
+        .search-answer {
+            display: none;
+            margin: -10px 0 24px;
+            padding: 14px 16px;
+            border: 1px solid var(--line);
+            border-left: 3px solid var(--mlfa-teal);
+            border-radius: 4px;
+            background: var(--panel);
+        }
+        .search-answer.visible { display: block; }
+        .search-answer-label {
+            margin-bottom: 4px;
+            color: var(--mlfa-teal);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        .search-answer-title {
+            margin: 0 0 5px;
+            color: var(--text);
+            font-size: 15px;
+            font-weight: 650;
+        }
+        .search-answer-copy {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 13px;
+            line-height: 1.55;
+        }
+        .search-answer-empty { border-left-color: var(--text-soft); }
+        .search-note {
+            margin: -14px 0 22px;
+            color: var(--text-soft);
+            font-size: 11.5px;
+            text-align: right;
+        }
+        .panel-ask:disabled { cursor: wait; opacity: 0.72; }
+        .guide-search-target {
+            animation: guide-search-highlight 1.8s ease-out;
+        }
+        @keyframes guide-search-highlight {
+            0%, 35% { background: var(--accent-soft); box-shadow: 0 0 0 7px var(--accent-soft); }
+            100% { background: transparent; box-shadow: 0 0 0 0 transparent; }
         }
         .panel-back {
             appearance: none; background: none;
@@ -226,7 +290,10 @@
             border-left-color: var(--mlfa-teal);
         }
         .guide-body { max-width: 720px; }
-        .guide-body section { margin-bottom: 40px; scroll-margin-top: 84px; }
+        .guide-body section,
+        .guide-body h2,
+        .guide-body h3 { scroll-margin-top: 84px; }
+        .guide-body section { margin-bottom: 40px; }
         .guide-body h2 {
             font-family: var(--font);
             font-size: 22px;
@@ -366,13 +433,14 @@
         <div class="page-panel" data-panel="how-to">
             <div class="panel-toolbar">
                 <button type="button" class="panel-back" data-back>Back to home</button>
-                <!-- Placeholder for now: the field is here so the layout is settled,
-                     but nothing is wired up to it yet. -->
-                <div class="panel-search">
-                    <svg class="panel-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
-                    <input class="form-input" type="search" placeholder="Search the guide" aria-label="Search the guide">
-                </div>
+                <form class="panel-search" onsubmit="return false;">
+                    <svg class="panel-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 12.4a8 8 0 0 1-8 8H8l-3.6 2.4a.4.4 0 0 1-.6-.35V12.4a8 8 0 0 1 16 0Z"/><path d="M9.9 10a2.6 2.6 0 0 1 5 .9c0 1.7-2.5 2.2-2.5 3.6"/><path d="M12.4 17.1h.01"/></svg>
+                    <input class="form-input" type="text" placeholder="Ask a question about The Hub" aria-label="Ask a question about The Hub">
+                    <button type="submit" class="panel-ask">Ask</button>
+                </form>
             </div>
+            <p class="search-note">Search guide questions only. Do not paste email contents or private information.</p>
+            <div class="search-answer" role="status" aria-live="polite"></div>
           <div class="guide-layout">
             <aside class="guide-toc" id="guideToc">
               <h4>Start here</h4>
@@ -576,6 +644,17 @@
               <section id="s-categories">
                 <h2>Settings → Categories</h2>
                 <p class="lede">Category rules define what GPT can classify emails as, and what happens when it does. Everything the hub does routes through categories.</p>
+                <h3>Adding a new category</h3>
+                <ol>
+                  <li>Open <strong>Settings → Categories</strong>.</li>
+                  <li>Use the inbox dropdown at the top to choose the mailbox this category belongs to.</li>
+                  <li>Click <strong>+ Add category</strong>.</li>
+                  <li>Enter a clear display name and a permanent internal key. Use lowercase letters and underscores in the key, such as <code>donor_question</code>.</li>
+                  <li>In <strong>AI classification</strong>, describe in plain language which emails belong in the category. Include examples and explain confusing cases that do not belong.</li>
+                  <li>Choose what should happen: destination folder, forwarding recipients, reply template, amount threshold, and behavior toggles.</li>
+                  <li>Review every tab, then click <strong>Create category</strong>. The new category becomes available to the selected inbox immediately.</li>
+                  <li>Open <strong>Test &amp; preview</strong>, paste a made-up example, and confirm that the category and actions are correct before relying on it for real email.</li>
+                </ol>
                 <h3>The list</h3>
                 <ul>
                   <li><strong>Priority number</strong> — 1 is highest. When multiple categories match, the highest-priority one wins for actions like folder-move and reply.</li>
@@ -1274,13 +1353,14 @@
         <div class="page-panel" data-panel="security">
             <div class="panel-toolbar">
                 <button type="button" class="panel-back" data-back>Back to home</button>
-                <!-- Placeholder for now: the field is here so the layout is settled,
-                     but nothing is wired up to it yet. -->
-                <div class="panel-search">
-                    <svg class="panel-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
-                    <input class="form-input" type="search" placeholder="Search security topics" aria-label="Search security topics">
-                </div>
+                <form class="panel-search" onsubmit="return false;">
+                    <svg class="panel-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 12.4a8 8 0 0 1-8 8H8l-3.6 2.4a.4.4 0 0 1-.6-.35V12.4a8 8 0 0 1 16 0Z"/><path d="M9.9 10a2.6 2.6 0 0 1 5 .9c0 1.7-2.5 2.2-2.5 3.6"/><path d="M12.4 17.1h.01"/></svg>
+                    <input class="form-input" type="text" placeholder="Ask a question about security" aria-label="Ask a question about security">
+                    <button type="submit" class="panel-ask">Ask</button>
+                </form>
             </div>
+            <p class="search-note">Search security questions only. Do not paste email contents or private information.</p>
+            <div class="search-answer" role="status" aria-live="polite"></div>
           <div class="guide-layout">
             <aside class="guide-toc" id="securityToc">
               <h4>Overview</h4>
@@ -1855,6 +1935,78 @@
             return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
                             .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
+
+        // Semantic guide search. The server embeds the authored guide and this
+        // question, then compares their vectors to find the closest meaning.
+        (function initGuideSemanticSearch() {
+            function showAnswer(answer, title, copy, empty = false) {
+                answer.className = 'search-answer visible' + (empty ? ' search-answer-empty' : '');
+                answer.innerHTML = `${empty ? '' : '<div class="search-answer-label">Best answer</div>'}<div class="search-answer-title">${escapeHtml(title)}</div><p class="search-answer-copy">${escapeHtml(copy)}</p>`;
+            }
+
+            function findTarget(panel, result) {
+                const section = panel.querySelector(`#${CSS.escape(result.anchor)}`);
+                if (!section) return null;
+                const headings = Array.from(section.children).filter(node => /^H[23]$/.test(node.tagName));
+                return headings[result.heading_index] || section;
+            }
+
+            function scrollToResult(panel, result) {
+                const target = findTarget(panel, result);
+                if (!target) return;
+                document.querySelectorAll('.guide-search-target').forEach(node => node.classList.remove('guide-search-target'));
+                target.classList.add('guide-search-target');
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+                const toc = panel.querySelector('.guide-toc');
+                if (toc) {
+                    toc.querySelectorAll('a[href^="#"]').forEach(link => {
+                        link.classList.toggle('active', link.getAttribute('href') === '#' + result.anchor);
+                    });
+                }
+                window.setTimeout(() => target.classList.remove('guide-search-target'), 1900);
+            }
+
+            document.querySelectorAll('.page-panel[data-panel]').forEach(panel => {
+                const form = panel.querySelector('.panel-search');
+                const answer = panel.querySelector('.search-answer');
+                const input = form?.querySelector('input');
+                if (!form || !answer || !input) return;
+
+                form.addEventListener('submit', async () => {
+                    const query = input.value.trim();
+                    if (!query) {
+                        showAnswer(answer, 'Ask a question first', 'For example: “How do I add a new category?”', true);
+                        input.focus();
+                        return;
+                    }
+
+                    const button = form.querySelector('.panel-ask');
+                    button.disabled = true;
+                    button.textContent = 'Searching...';
+                    showAnswer(answer, 'Finding the best section', 'Comparing your question with the approved guide instructions.');
+                    try {
+                        const response = await fetch('/api/guide/search', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ query, panel: panel.dataset.panel }),
+                        });
+                        const data = await response.json();
+                        if (!response.ok) throw new Error(data.error || 'Search failed.');
+                        const best = data.results?.[0];
+                        if (!best) throw new Error('No matching guide section was found.');
+
+                        showAnswer(answer, best.title, best.answer);
+                        window.setTimeout(() => scrollToResult(panel, best), 180);
+                    } catch (error) {
+                        showAnswer(answer, 'Search unavailable', error.message || 'Please try again.', true);
+                    } finally {
+                        button.disabled = false;
+                        button.textContent = 'Ask';
+                    }
+                });
+            });
+        })();
 
         loadQueueStatus();
 
