@@ -10,8 +10,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Nunito+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="/static/shared.css?v=13">
     <style>
         /* Page head: title, inbox picker, refresh, export */
-        .audit-head { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; }
-        .audit-head .page-title { margin: 0; flex: 0 1 auto; white-space: nowrap; }
+        .audit-head { display: flex; align-items: flex-start; gap: 10px; margin: 0 0 18px; }
+        .audit-head .page-title { margin: 0 0 4px; white-space: nowrap; }
+        .audit-head .page-subtitle { margin: 0; }
         .audit-head .head-right {
             margin-left: auto; flex: 0 0 auto;
             display: flex; align-items: center; gap: 6px;
@@ -174,7 +175,10 @@
         {% include '_settings_nav.html' %}
         <main class="settings-content">
         <div class="audit-head">
-            <h1 class="page-title">Audit log<span class="info-tip">i<span class="info-content">A running record of everything this inbox has done: every email the system handled, and every change your team made to categories, recipients, replies, and users. Entries are written automatically and cannot be edited or removed from here.</span></span></h1>
+            <div>
+                <h1 class="page-title">Audit log</h1>
+                <p class="page-subtitle">A read-only record of emails the system handled and settings changes made by your team.</p>
+            </div>
             <div class="head-right">
                 <select class="form-select" id="inboxSelect" onchange="loadEvents()"></select>
                 <button class="icon-btn-sq" onclick="loadEvents()" title="Refresh">&#8635;</button>

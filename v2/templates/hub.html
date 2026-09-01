@@ -76,6 +76,24 @@
             overflow-y: auto;
         }
 
+        .hub-intro {
+            max-width: 520px;
+            margin: 92px auto 0;
+            text-align: center;
+        }
+        .hub-intro-title {
+            margin: 0 0 8px;
+            color: var(--text);
+            font-size: 15px;
+            font-weight: 600;
+        }
+        .hub-intro-copy {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 13px;
+            line-height: 1.55;
+        }
+
         .detail-header {
             padding-bottom: 20px;
             border-bottom: 1px solid var(--line);
@@ -188,7 +206,10 @@
         </aside>
 
         <main class="detail-panel" id="detailPanel">
-            <div class="empty-state">Select an email to review</div>
+            <div class="hub-intro">
+                <p class="hub-intro-title">Select an email to review</p>
+                <p class="hub-intro-copy">The Hub is where reviewers manually approve or reject email classifications made by the system. Select a pending email to review its classification and details.</p>
+            </div>
         </main>
     </div>
 
@@ -305,7 +326,10 @@
         function renderDetail() {
             const panel = document.getElementById('detailPanel');
             if (!currentEmail) {
-                panel.innerHTML = '<div class="empty-state">Select an email to review</div>';
+                panel.innerHTML = `<div class="hub-intro">
+                    <p class="hub-intro-title">Select an email to review</p>
+                    <p class="hub-intro-copy">The Hub is where reviewers manually approve or reject email classifications made by the system. Select a pending email to review its classification and details.</p>
+                </div>`;
                 return;
             }
             const e = currentEmail;
