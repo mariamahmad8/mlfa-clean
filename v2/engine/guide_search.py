@@ -5,6 +5,7 @@ from __future__ import annotations
 import math
 import re
 import threading
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
@@ -211,12 +212,14 @@ class SemanticGuideSearch:
 
         self._ensure_index()
         query_vector = self._embedder([clean_query])[0]
+        retrieval_started = time.perf_counter()
         ranked = rank_sentences(
             self._sentences,
             self._vectors,
             query_vector,
             panel,
         )
+        retrieval_ms = (time.perf_counter() - retrieval_started) * 1000
         selected = ranked[:max(1, min(limit, 12))]
         if not selected:
             return []
@@ -236,6 +239,7 @@ class SemanticGuideSearch:
             "section_title": source.section_title,
             "answer": answer,
             "score": round(score, 4),
+            "retrieval_ms": round(retrieval_ms, 3),
         }]
 
 

@@ -152,36 +152,83 @@
         }
         .search-answer {
             display: none;
-            margin: -10px 0 24px;
-            padding: 14px 16px;
-            border: 1px solid var(--line);
-            border-left: 3px solid var(--mlfa-teal);
-            border-radius: 4px;
-            background: var(--panel);
+            width: min(760px, 100%);
+            margin: -8px 0 26px;
+            padding: 4px 0;
         }
         .search-answer.visible { display: block; }
+        .search-question-row {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 12px;
+        }
+        .search-question-bubble {
+            max-width: 78%;
+            padding: 9px 13px;
+            border-radius: 14px 14px 4px 14px;
+            background: var(--mlfa-teal);
+            color: #fff;
+            font-size: 13px;
+            line-height: 1.45;
+            box-shadow: 0 4px 12px rgba(9, 73, 59, 0.12);
+        }
+        .search-assistant-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        .search-answer-mark {
+            display: grid;
+            place-items: center;
+            width: 30px;
+            height: 30px;
+            flex: 0 0 30px;
+            margin-top: 2px;
+            border-radius: 9px;
+            background: var(--mlfa-teal);
+            color: #fff;
+        }
+        .search-answer-mark svg { width: 15px; height: 15px; }
+        .search-assistant-stack { min-width: 0; max-width: calc(100% - 40px); }
+        .search-assistant-bubble {
+            padding: 13px 15px;
+            border: 1px solid #d8ddd7;
+            border-radius: 4px 14px 14px 14px;
+            background: linear-gradient(135deg, #ffffff 0%, #f8faf8 100%);
+            box-shadow: 0 6px 18px rgba(20, 55, 46, 0.06);
+        }
         .search-answer-label {
-            margin-bottom: 4px;
+            margin-bottom: 6px;
             color: var(--mlfa-teal);
-            font-size: 11px;
+            font-size: 10.5px;
             font-weight: 700;
             letter-spacing: 0.08em;
             text-transform: uppercase;
         }
-        .search-answer-title {
-            margin: 0 0 5px;
-            color: var(--text);
-            font-size: 15px;
+        .search-answer-speed {
+            color: #35665a;
+            font-size: 10.5px;
             font-weight: 650;
+            white-space: nowrap;
         }
         .search-answer-copy {
             margin: 0;
-            color: var(--text-muted);
-            font-size: 13px;
-            line-height: 1.55;
+            color: var(--text);
+            font-size: 13.5px;
+            line-height: 1.62;
             white-space: pre-line;
         }
-        .search-answer-empty { border-left-color: var(--text-soft); }
+        .search-answer-source {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px 9px;
+            margin-top: 6px;
+            padding-left: 3px;
+            color: var(--text-soft);
+            font-size: 10.5px;
+        }
+        .search-answer-source strong { color: var(--text-muted); font-weight: 650; }
+        .search-answer-empty .search-answer-mark { background: var(--text-soft); }
         .search-note {
             margin: -14px 0 22px;
             color: var(--text-soft);
@@ -1940,9 +1987,18 @@
         // The server retrieves individual guide sentences by embedding similarity,
         // then asks the model for a short answer grounded only in those sentences.
         (function initGuideSemanticSearch() {
-            function showAnswer(answer, title, copy, empty = false) {
+            function showAnswer(answer, title, copy, empty = false, retrievalMs = null, question = '') {
                 answer.className = 'search-answer visible' + (empty ? ' search-answer-empty' : '');
-                answer.innerHTML = `${empty ? '' : '<div class="search-answer-label">Guide answer</div>'}<div class="search-answer-title">${escapeHtml(title)}</div><p class="search-answer-copy">${escapeHtml(copy)}</p>`;
+                const speed = Number.isFinite(retrievalMs)
+                    ? `<span class="search-answer-speed">Vector match: ${retrievalMs < 1 ? retrievalMs.toFixed(1) : retrievalMs.toFixed(0)} ms</span>`
+                    : '';
+                const source = !empty && title
+                    ? `<div class="search-answer-source"><span>Source: <strong>${escapeHtml(title)}</strong></span>${speed}</div>`
+                    : '';
+                const questionBubble = question
+                    ? `<div class="search-question-row"><div class="search-question-bubble">${escapeHtml(question)}</div></div>`
+                    : '';
+                answer.innerHTML = `${questionBubble}<div class="search-assistant-row"><span class="search-answer-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><path d="m5.6 5.6 2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8"/></svg></span><div class="search-assistant-stack"><div class="search-assistant-bubble"><div class="search-answer-label">${empty ? 'Guide search' : 'MLFA guide assistant'}</div><p class="search-answer-copy">${escapeHtml(copy)}</p></div>${source}</div></div>`;
             }
 
             function findTarget(panel, result) {
@@ -1985,7 +2041,7 @@
                     const button = form.querySelector('.panel-ask');
                     button.disabled = true;
                     button.textContent = 'Searching...';
-                    showAnswer(answer, 'Searching the guide', 'Finding the most relevant sentences and preparing an answer.');
+                    showAnswer(answer, '', 'Finding the most relevant sentences and preparing an answer.', false, null, query);
                     try {
                         const response = await fetch('/api/guide/search', {
                             method: 'POST',
@@ -1997,10 +2053,10 @@
                         const best = data.results?.[0];
                         if (!best) throw new Error('No matching guide section was found.');
 
-                        showAnswer(answer, best.title, best.answer);
+                        showAnswer(answer, best.title, best.answer, false, Number(best.retrieval_ms), query);
                         window.setTimeout(() => scrollToResult(panel, best), 180);
                     } catch (error) {
-                        showAnswer(answer, 'Search unavailable', error.message || 'Please try again.', true);
+                        showAnswer(answer, 'Search unavailable', error.message || 'Please try again.', true, null, query);
                     } finally {
                         button.disabled = false;
                         button.textContent = 'Ask';

@@ -93,6 +93,7 @@ class GuideSearchTests(unittest.TestCase):
         self.assertGreater(len(calls[0]), 1)
         self.assertEqual(len(calls[1]), 1)
         self.assertEqual(first[0]["title"], "Add category")
+        self.assertGreaterEqual(first[0]["retrieval_ms"], 0)
         self.assertEqual(answer_calls[0][0], "How do I add a category?")
         self.assertIn("Click Add category.", answer_calls[0][1])
 
