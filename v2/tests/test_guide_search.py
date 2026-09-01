@@ -7,6 +7,7 @@ from engine.guide_search import (
     SemanticGuideSearch,
     dot_product,
     load_guide_sentences,
+    load_interface_sentences,
     normalized,
     rank_sentences,
     split_sentences,
@@ -33,6 +34,25 @@ class GuideSearchTests(unittest.TestCase):
         self.assertTrue(any("+ Add category" in sentence.text for sentence in matches))
         self.assertTrue(any("Test & preview" in sentence.text for sentence in matches))
         self.assertTrue(all(sentence.anchor == "s-categories" for sentence in matches))
+
+    def test_interface_controls_are_automatically_searchable(self):
+        with tempfile.TemporaryDirectory() as directory:
+            template = Path(directory) / "categories.html"
+            template.write_text("""
+                <main><h1 class="page-title">Category rules</h1>
+                <button>Add category</button>
+                <script>
+                  const row = `<button onclick="deleteRule(1)">Delete</button>`;
+                  confirm(`Delete "${label}"? Future emails will no longer use it.`);
+                </script></main>
+            """, encoding="utf-8")
+
+            sentences = load_interface_sentences(Path(directory))
+
+        text = " ".join(sentence.text for sentence in sentences)
+        self.assertIn('control labeled "Delete"', text)
+        self.assertIn("Future emails will no longer use it", text)
+        self.assertTrue(all(sentence.anchor == "s-categories" for sentence in sentences))
 
     def test_normalized_dot_product_is_cosine_similarity(self):
         left = normalized([3.0, 0.0])

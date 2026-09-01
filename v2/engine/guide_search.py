@@ -1,4 +1,4 @@
-"""Sentence-based semantic search over the authored Hub guides."""
+"""Sentence-based semantic search over the Hub guides and interface text."""
 
 from __future__ import annotations
 
@@ -19,6 +19,14 @@ GUIDE_TEMPLATE = Path(__file__).resolve().parents[1] / "templates" / "home.html"
 ALLOWED_PANELS = {"how-to", "security"}
 _SENTENCE_BREAK = re.compile(r"(?<=[.!?])\s+")
 _ABBREVIATION = re.compile(r"\b(?:e\.g|i\.e|Mr|Mrs|Ms|Dr|vs|etc|U\.S)\.", re.IGNORECASE)
+_UI_ANCHORS = {
+    "audit": "s-audit",
+    "categories": "s-categories",
+    "inboxes": "s-inboxes",
+    "recipients": "s-recipients",
+    "templates": "s-templates",
+    "users": "s-users",
+}
 
 
 @dataclass(frozen=True)
@@ -136,6 +144,82 @@ def load_guide_sentences(template_path: Path = GUIDE_TEMPLATE) -> list[GuideSent
     return chunks
 
 
+def _visible_fragment_text(fragment: str) -> str:
+    text = BeautifulSoup(fragment, "html.parser").get_text(" ", strip=True)
+    text = re.sub(r"\$\{[^}]+\}", "", text)
+    return _clean_text(text).lstrip("+ ")
+
+
+def load_interface_sentences(
+    template_dir: Path,
+    source_order: int = 0,
+) -> list[GuideSentence]:
+    """Create searchable facts from user-facing controls and help text."""
+    chunks: list[GuideSentence] = []
+
+    for path in sorted(template_dir.glob("*.html")):
+        if path.name == "home.html" or path.name.startswith("_"):
+            continue
+
+        raw = path.read_text(encoding="utf-8")
+        soup = BeautifulSoup(raw, "html.parser")
+        heading = soup.select_one("h1.page-title, main h1, h1")
+        if not heading:
+            continue
+
+        page_title = _clean_text(heading.get_text(" ", strip=True))
+        if not page_title:
+            continue
+
+        anchor = _UI_ANCHORS.get(path.stem, "overview")
+        title = f"{page_title} controls"
+        facts: list[str] = []
+
+        # Regex also sees controls rendered later from JavaScript template strings.
+        for fragment in re.findall(r"<button\b[^>]*>(.*?)</button>", raw, re.I | re.S):
+            label = _visible_fragment_text(fragment)
+            if label and len(label) <= 100:
+                facts.append(
+                    f'On the {page_title} page, a control labeled "{label}" is available.'
+                )
+
+        for node in soup.select(".page-subtitle, .info-content"):
+            facts.extend(split_sentences(node.get_text(" ", strip=True)))
+
+        # Confirmation text explains the consequence of destructive UI actions.
+        confirmation_text = re.findall(r"confirm\(\s*`([^`]*)`\s*\)", raw, re.S)
+        confirmation_text += re.findall(r"confirm\(\s*'([^']*)'\s*\)", raw, re.S)
+        for message in confirmation_text:
+            message = re.sub(r"\$\{[^}]+\}", "selected", message)
+            message = _clean_text(message)
+            if message:
+                facts.append(f"The {page_title} page may ask for confirmation: {message}")
+
+        for fact in dict.fromkeys(facts):
+            chunks.append(GuideSentence(
+                panel="how-to",
+                anchor=anchor,
+                heading_index=0,
+                title=title,
+                section_title=page_title,
+                text=fact,
+                source_order=source_order,
+            ))
+            source_order += 1
+
+    return chunks
+
+
+def load_search_sentences(template_path: Path = GUIDE_TEMPLATE) -> list[GuideSentence]:
+    """Combine authored instructions with automatically discovered UI facts."""
+    sentences = load_guide_sentences(template_path)
+    sentences.extend(load_interface_sentences(
+        template_path.parent,
+        source_order=len(sentences),
+    ))
+    return sentences
+
+
 def normalized(vector: list[float]) -> list[float]:
     """L2-normalize a vector so its dot product is cosine similarity."""
     magnitude = math.sqrt(sum(value * value for value in vector))
@@ -179,20 +263,20 @@ class SemanticGuideSearch:
         self._answerer = answerer
         self._template_path = template_path
         self._lock = threading.Lock()
-        self._template_mtime: float | None = None
+        self._source_version: tuple[tuple[str, int], ...] | None = None
         self._sentences: list[GuideSentence] = []
         self._vectors: list[list[float]] = []
 
     def _ensure_index(self) -> None:
-        template_mtime = self._template_path.stat().st_mtime
-        if self._vectors and self._template_mtime == template_mtime:
+        source_version = self._current_source_version()
+        if self._vectors and self._source_version == source_version:
             return
 
         with self._lock:
-            template_mtime = self._template_path.stat().st_mtime
-            if self._vectors and self._template_mtime == template_mtime:
+            source_version = self._current_source_version()
+            if self._vectors and self._source_version == source_version:
                 return
-            sentences = load_guide_sentences(self._template_path)
+            sentences = load_search_sentences(self._template_path)
             vectors: list[list[float]] = []
             for start in range(0, len(sentences), 128):
                 batch = sentences[start:start + 128]
@@ -201,7 +285,13 @@ class SemanticGuideSearch:
                 raise RuntimeError("Guide embedding count did not match the sentence index.")
             self._sentences = sentences
             self._vectors = [normalized(vector) for vector in vectors]
-            self._template_mtime = template_mtime
+            self._source_version = source_version
+
+    def _current_source_version(self) -> tuple[tuple[str, int], ...]:
+        paths = sorted(self._template_path.parent.glob("*.html"))
+        if self._template_path not in paths:
+            paths.append(self._template_path)
+        return tuple((str(path), path.stat().st_mtime_ns) for path in paths)
 
     def search(self, query: str, panel: str, limit: int = 8) -> list[dict]:
         clean_query = _clean_text(query)
