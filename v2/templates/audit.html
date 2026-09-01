@@ -253,6 +253,7 @@
         let allEvents = [];
         let currentPage = 1;
         let totalEvents = 0;
+        let savedEvents = 0;
         let totalPages = 1;
         let activeGroup = 'all';
         let activeAction = null;
@@ -276,12 +277,15 @@
         async function loadEvents(page = currentPage) {
             currentInboxId = document.getElementById('inboxSelect').value;
             if (!currentInboxId) return;
-            const res = await fetch(`/api/inboxes/${currentInboxId}/audit?page=${page}&page_size=100`);
+            const params = new URLSearchParams({ page, page_size: 100, group: activeGroup });
+            if (activeAction) params.set('action', activeAction);
+            const res = await fetch(`/api/inboxes/${currentInboxId}/audit?${params}`);
             if (!res.ok) return;
             const data = await res.json();
             allEvents = data.events;
             currentPage = data.page;
             totalEvents = data.total;
+            savedEvents = data.saved_total;
             totalPages = data.total_pages;
             populateActorDropdown();
             renderEvents();
@@ -333,7 +337,7 @@
             const f = currentFilter();
             const filtered = allEvents.filter(e => matches(e, f));
             document.getElementById('fCountLine').textContent =
-                `Showing ${filtered.length.toLocaleString()} on this page · ${totalEvents.toLocaleString()} saved`;
+                `Showing ${filtered.length.toLocaleString()} on this page · ${totalEvents.toLocaleString()} matching · ${savedEvents.toLocaleString()} saved`;
             document.getElementById('pageStatus').textContent = `Page ${currentPage} of ${totalPages}`;
             document.getElementById('prevPage').disabled = currentPage <= 1;
             document.getElementById('nextPage').disabled = currentPage >= totalPages;
@@ -417,7 +421,7 @@
             activeGroup = 'all';
             activeAction = null;
             syncTabUI();
-            renderEvents();
+            loadEvents(1);
         }
 
         function syncTabUI() {
@@ -431,7 +435,7 @@
         function onStatusChange() {
             activeAction = document.getElementById('fStatus').value || null;
             if (activeAction) { activeGroup = 'all'; syncTabUI(); }
-            renderEvents();
+            loadEvents(1);
         }
 
         document.addEventListener('click', (e) => {
@@ -439,7 +443,7 @@
             if (!tab) return;
             activeGroup = tab.dataset.group;
             syncTabUI();
-            renderEvents();
+            loadEvents(1);
         });
 
         function exportCsv() {

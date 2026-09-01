@@ -37,35 +37,42 @@ def log_event(
         session.close()
 
 
-def get_events(inbox_id: int, limit: int = 200, offset: int = 0) -> List[dict]:
+def get_events(
+    inbox_id: int,
+    limit: int = 200,
+    offset: int = 0,
+    actions: Optional[List[str]] = None,
+) -> List[dict]:
     """Return one page of audit entries for an inbox plus global actions."""
     session = get_db_session()
     try:
+        action_clause = " AND action_taken = ANY(:actions)" if actions else ""
         result = session.execute(
-            text("""
+            text(f"""
                 SELECT * FROM audit_log
-                WHERE inbox_id = :inbox_id OR inbox_id IS NULL
+                WHERE (inbox_id = :inbox_id OR inbox_id IS NULL){action_clause}
                 ORDER BY created_at DESC, id DESC
                 LIMIT :limit
                 OFFSET :offset
             """),
-            {"inbox_id": inbox_id, "limit": limit, "offset": offset},
+            {"inbox_id": inbox_id, "limit": limit, "offset": offset, "actions": actions},
         )
         return [dict(row) for row in result.mappings().all()]
     finally:
         session.close()
 
 
-def count_events(inbox_id: int) -> int:
+def count_events(inbox_id: int, actions: Optional[List[str]] = None) -> int:
     """Return the number of saved entries visible for an inbox."""
     session = get_db_session()
     try:
+        action_clause = " AND action_taken = ANY(:actions)" if actions else ""
         result = session.execute(
-            text("""
+            text(f"""
                 SELECT COUNT(*) FROM audit_log
-                WHERE inbox_id = :inbox_id OR inbox_id IS NULL
+                WHERE (inbox_id = :inbox_id OR inbox_id IS NULL){action_clause}
             """),
-            {"inbox_id": inbox_id},
+            {"inbox_id": inbox_id, "actions": actions},
         )
         return int(result.scalar_one())
     finally:

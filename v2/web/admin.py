@@ -814,13 +814,31 @@ def list_audit(inbox_id):
     except (TypeError, ValueError):
         return jsonify({"error": "page and page_size must be integers"}), 400
 
-    total = audit_storage.count_events(inbox_id)
+    action_groups = {
+        "email": ["auto_processed", "auto_processed_on_toggle", "queued_for_review", "approved", "approved_bulk", "rejected", "dismissed", "queue_expired", "queued_human_only"],
+        "settings": ["rule_created", "rule_updated", "rule_deleted", "template_created", "template_updated", "template_deleted", "recipient_created", "recipient_updated", "recipient_deleted", "inbox_created", "inbox_updated", "inbox_deleted", "inbox_cloned"],
+        "user": ["user_created", "user_updated", "user_deleted"],
+    }
+    group = request.args.get("group", "all")
+    action = request.args.get("action", "").strip()
+    if action == "approved":
+        actions = ["approved", "approved_bulk"]
+    elif action == "auto_processed":
+        actions = ["auto_processed", "auto_processed_on_toggle"]
+    elif action:
+        actions = [action]
+    else:
+        actions = action_groups.get(group)
+
+    saved_total = audit_storage.count_events(inbox_id)
+    total = audit_storage.count_events(inbox_id, actions=actions)
     total_pages = max(1, (total + page_size - 1) // page_size)
     page = min(page, total_pages)
     events = audit_storage.get_events(
         inbox_id,
         limit=page_size,
         offset=(page - 1) * page_size,
+        actions=actions,
     )
     serialized = [
         {
@@ -839,6 +857,7 @@ def list_audit(inbox_id):
         "page": page,
         "page_size": page_size,
         "total": total,
+        "saved_total": saved_total,
         "total_pages": total_pages,
     })
 
