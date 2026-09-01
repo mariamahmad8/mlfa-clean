@@ -796,9 +796,10 @@ def handle_internal_reply(inbox: InboxConfig, msg) -> bool:
 
     clean = get_clean_message_text(msg).strip()
 
-    # [INTERNAL] means keep it internal, just tag+file, don't relay
+    # [INTERNAL] means keep it internal and don't relay. Use only the umbrella
+    # processed marker; internal bridge states are not classification categories.
     if mode == "internal":
-        tag_email(msg, ["internal_note"])
+        tag_email(msg, [])
         mark_as_read(msg)
         return True
 
@@ -806,7 +807,7 @@ def handle_internal_reply(inbox: InboxConfig, msg) -> bool:
     external_prefix = (inbox.internal_reply_external_prefix or "[EXTERNAL]").strip()
     outbound = clean[len(external_prefix):].strip() if external_prefix else clean
     if not outbound:
-        tag_email(msg, ["internal_note"])
+        tag_email(msg, [])
         mark_as_read(msg)
         return True
 
@@ -821,7 +822,7 @@ def handle_internal_reply(inbox: InboxConfig, msg) -> bool:
         reply.body_type = "HTML"
         reply.body = f"<div>{safe_html}</div>"
         reply.send()
-        tag_email(msg, ["internal_reply_sent"])
+        tag_email(msg, [])
         mark_as_read(msg)
         return True
     except Exception as e:

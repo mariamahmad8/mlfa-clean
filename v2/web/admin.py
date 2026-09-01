@@ -808,8 +808,21 @@ def inbox_stats(inbox_id):
 @settings_access_required
 @inbox_scoped
 def list_audit(inbox_id):
-    events = audit_storage.get_events(inbox_id, limit=200)
-    return jsonify([
+    try:
+        page = max(1, int(request.args.get("page", 1)))
+        page_size = min(100, max(25, int(request.args.get("page_size", 100))))
+    except (TypeError, ValueError):
+        return jsonify({"error": "page and page_size must be integers"}), 400
+
+    total = audit_storage.count_events(inbox_id)
+    total_pages = max(1, (total + page_size - 1) // page_size)
+    page = min(page, total_pages)
+    events = audit_storage.get_events(
+        inbox_id,
+        limit=page_size,
+        offset=(page - 1) * page_size,
+    )
+    serialized = [
         {
             "id": e.get("id"),
             "email_id": e.get("email"),
@@ -820,7 +833,14 @@ def list_audit(inbox_id):
             "created_at": e["created_at"].isoformat() if e.get("created_at") else None,
         }
         for e in events
-    ])
+    ]
+    return jsonify({
+        "events": serialized,
+        "page": page,
+        "page_size": page_size,
+        "total": total,
+        "total_pages": total_pages,
+    })
 
 
 @admin_bp.route("/api/users/<int:user_id>", methods=["PATCH"])

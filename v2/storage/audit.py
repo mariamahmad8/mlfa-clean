@@ -37,20 +37,37 @@ def log_event(
         session.close()
 
 
-def get_events(inbox_id: int, limit: int = 200) -> List[dict]:
-    """Return recent audit log entries for an inbox plus global (no-inbox) actions."""
+def get_events(inbox_id: int, limit: int = 200, offset: int = 0) -> List[dict]:
+    """Return one page of audit entries for an inbox plus global actions."""
     session = get_db_session()
     try:
         result = session.execute(
             text("""
                 SELECT * FROM audit_log
                 WHERE inbox_id = :inbox_id OR inbox_id IS NULL
-                ORDER BY created_at DESC
+                ORDER BY created_at DESC, id DESC
                 LIMIT :limit
+                OFFSET :offset
             """),
-            {"inbox_id": inbox_id, "limit": limit},
+            {"inbox_id": inbox_id, "limit": limit, "offset": offset},
         )
         return [dict(row) for row in result.mappings().all()]
+    finally:
+        session.close()
+
+
+def count_events(inbox_id: int) -> int:
+    """Return the number of saved entries visible for an inbox."""
+    session = get_db_session()
+    try:
+        result = session.execute(
+            text("""
+                SELECT COUNT(*) FROM audit_log
+                WHERE inbox_id = :inbox_id OR inbox_id IS NULL
+            """),
+            {"inbox_id": inbox_id},
+        )
+        return int(result.scalar_one())
     finally:
         session.close()
 

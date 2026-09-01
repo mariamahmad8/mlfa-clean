@@ -97,6 +97,24 @@ class QueueEncryptionTests(unittest.TestCase):
 
         self.assertIs(client.chat.completions.create.call_args.kwargs["store"], False)
 
+    def test_guide_answer_explicitly_disables_storage(self):
+        response = MagicMock()
+        response.choices[0].message.content = "Open Settings, then Categories."
+        client = MagicMock()
+        client.chat.completions.create.return_value = response
+
+        with patch("adapters.openai_client._get_client", return_value=client):
+            answer = openai_client.answer_guide_question(
+                "How do I add a category?",
+                ["Open Settings.", "Choose Categories."],
+            )
+
+        request = client.chat.completions.create.call_args.kwargs
+        self.assertIs(request["store"], False)
+        self.assertIn("nontechnical MLFA staff member", request["messages"][0]["content"])
+        self.assertIn("database columns", request["messages"][0]["content"])
+        self.assertIn("Choose Categories", request["messages"][1]["content"])
+        self.assertEqual(answer, "Open Settings, then Categories.")
 
 if __name__ == "__main__":
     unittest.main()
