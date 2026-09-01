@@ -48,7 +48,7 @@ def answer_guide_question(question: str, retrieved_sentences: list[str]) -> str:
             {
                 "role": "system",
                 "content": (
-                    "Answer questions about the MLFA Email Hub using only the supplied "
+                    "Answer questions about the MLFA Email Classifier using only the supplied "
                     "guide and interface facts. Write for a nontechnical MLFA staff member. Translate "
                     "function names, database columns, configuration keys, and other code-like "
                     "terms into normal workplace language. Do not include identifiers such as "

@@ -196,37 +196,13 @@
         .guide-body .search-answer-copy ol,
         .guide-body .search-answer-copy ul {
             margin: 5px 0 10px;
-            padding: 0;
+            padding-left: 20px;
             font-size: inherit;
             line-height: inherit;
         }
-        .guide-body .search-answer-copy ol {
-            list-style: none;
-            counter-reset: guide-answer-step;
-        }
-        .guide-body .search-answer-copy ul { padding-left: 18px; }
+        .guide-body .search-answer-copy ol { list-style: decimal; }
+        .guide-body .search-answer-copy ul { list-style: disc; }
         .guide-body .search-answer-copy li { margin: 6px 0; }
-        .guide-body .search-answer-copy ol li {
-            position: relative;
-            min-height: 20px;
-            padding-left: 28px;
-            counter-increment: guide-answer-step;
-        }
-        .guide-body .search-answer-copy ol li::before {
-            content: counter(guide-answer-step);
-            position: absolute;
-            top: 1px;
-            left: 0;
-            display: grid;
-            place-items: center;
-            width: 19px;
-            height: 19px;
-            border-radius: 50%;
-            background: rgba(9, 73, 59, 0.08);
-            color: var(--mlfa-teal);
-            font-size: 10px;
-            font-weight: 700;
-        }
         .search-answer-source {
             display: flex;
             flex-wrap: wrap;
@@ -476,9 +452,9 @@
         <div class="hero-glyphs" id="heroGlyphs" aria-hidden="true"></div>
         <div class="hero-inner">
             <img class="hero-graphic rise" src="/mlfa-biglogo.png" alt="Muslim Legal Fund of America">
-            <h1 class="hero-title rise">MLFA Email Management</h1>
+            <h1 class="hero-title rise">MLFA Email Classifier</h1>
             <p class="hero-sub rise">
-                MLFA Email Management connects to your Microsoft 365 inboxes and sorts each
+                The MLFA Email Classifier connects to your Microsoft 365 inboxes and sorts each
                 incoming message into a category, then files, forwards, or replies to it
                 according to the rules you set. Messages that require a person wait in the Hub
                 for review, and every action is recorded in the audit log.
@@ -500,8 +476,8 @@
             </a>
             <button type="button" class="tile" data-open="how-to">
                 <span class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.9S10.1 5 6.5 5c-1 0-1.8.1-2.3.2v13.3c.5-.1 1.3-.2 2.3-.2 3.6 0 5.5 1.9 5.5 1.9Z"/><path d="M12 6.9S13.9 5 17.5 5c1 0 1.8.1 2.3.2v13.3c-.5-.1-1.3-.2-2.3-.2-3.6 0-5.5 1.9-5.5 1.9Z"/></svg></span>
-                <span class="tile-title">How to use The Hub</span>
-                <span class="tile-desc">What The Hub is, what each action does, and how email gets sorted.</span>
+                <span class="tile-title">How the Email Classifier works</span>
+                <span class="tile-desc">How email gets sorted and how reviewers use the Hub when manual review is needed.</span>
                 <span class="tile-stat">Read the guide</span>
             </button>
             <button type="button" class="tile" data-open="security">
@@ -517,18 +493,18 @@
                 <button type="button" class="panel-back" data-back>Back to home</button>
                 <form class="panel-search" onsubmit="return false;">
                     <svg class="panel-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 12.4a8 8 0 0 1-8 8H8l-3.6 2.4a.4.4 0 0 1-.6-.35V12.4a8 8 0 0 1 16 0Z"/><path d="M9.9 10a2.6 2.6 0 0 1 5 .9c0 1.7-2.5 2.2-2.5 3.6"/><path d="M12.4 17.1h.01"/></svg>
-                    <input class="form-input" type="text" placeholder="Ask a question about The Hub" aria-label="Ask a question about The Hub">
+                    <input class="form-input" type="text" placeholder="Ask about the Email Classifier" aria-label="Ask about the Email Classifier">
                     <button type="submit" class="panel-ask">Ask</button>
                 </form>
             </div>
           <div class="guide-layout">
             <aside class="guide-toc" id="guideToc">
               <h4>Start here</h4>
-              <a href="#overview">How the hub works</a>
+              <a href="#overview">How the Email Classifier works</a>
               <a href="#lifecycle">The life of an email</a>
               <a href="#roles">Roles &amp; permissions</a>
 
-              <h4>The hub</h4>
+              <h4>The review Hub</h4>
               <a href="#hub-page">Review queue</a>
               <a href="#hub-detail">Reviewing an email</a>
               <a href="#hub-automation">Automation toggle</a>
@@ -570,14 +546,14 @@
               <div class="search-answer" role="status" aria-live="polite"></div>
               <!-- OVERVIEW -->
               <section id="overview">
-                <h2>How the hub works</h2>
-                <p class="lede">The MLFA Email Hub watches your info@ inbox, uses GPT to sort each incoming email into a category, then either handles it automatically or hands it to a person to review.</p>
-                <p>Everything is configurable. You control which categories exist, what happens when an email matches each one, who gets forwarded what, and what auto-reply gets sent. The hub is designed so that a non-technical staff member can adjust behavior without touching code.</p>
+                <h2>How the Email Classifier works</h2>
+                <p class="lede">The MLFA Email Classifier is this website and its complete email-processing system. It watches connected inboxes, uses GPT to sort each incoming email into a category, and follows the rules configured for that category.</p>
+                <p>Everything is configurable. You control which categories exist, what happens when an email matches each one, who receives forwarded messages, and which automatic reply is sent. Non-technical staff can adjust this behavior through the Email Classifier website without changing code.</p>
                 <h3>The three pieces</h3>
                 <ol>
+                  <li><strong>The Email Classifier</strong> — the overall website and system. It contains the settings, classification rules, audit history, and automated email-processing features.</li>
                   <li><strong>The worker</strong> — a background program that polls Microsoft every ~30 seconds for new emails. You never see it.</li>
-                  <li><strong>The Hub</strong> — this website. Staff review emails, edit settings, view audit history.</li>
-                  <li><strong>The classifier</strong> — GPT reads each new email and decides which category it belongs to.</li>
+                  <li><strong>The Hub</strong> — the manual review page. When automation is off, reviewers see incoming emails in its queue and can approve, reject, or dismiss them. As a safety measure, unrecognized emails can also enter the queue when automation is on.</li>
                 </ol>
               </section>
 
@@ -588,7 +564,7 @@
                 <ol>
                   <li><strong>Arrives</strong> at info@mlfa.org in Outlook.</li>
                   <li><strong>Worker picks it up</strong> within ~30 seconds on the next poll.</li>
-                  <li><strong>Classifier reads it</strong> — GPT decides which category (donor, legal, jail_mail, volunteer, etc.).</li>
+                  <li><strong>GPT classifies it</strong> — GPT decides which category (donor, legal, jail_mail, volunteer, etc.).</li>
                   <li><strong>Router builds a plan</strong> — based on the category's rules: which folder to move to, who to forward to, what auto-reply to send, what tag to apply.</li>
                   <li><strong>Automation mode splits the path:</strong>
                     <ul>
@@ -631,7 +607,7 @@
               <!-- HUB PAGE -->
               <section id="hub-page">
                 <h2>Review queue (the Hub)</h2>
-                <p class="lede">This is where a person reviews emails the AI wasn't sure about. If automation is off for an inbox, every incoming email lands here.</p>
+                <p class="lede">The Hub is the Email Classifier's manual review page. If automation is off for an inbox, every incoming email enters this queue so a reviewer can approve, reject, or dismiss it. If automation is on, only emails that cannot be matched safely are queued.</p>
                 <h3>Layout</h3>
                 <ul>
                   <li><strong>Left panel</strong> — list of pending emails. Newest at top. Each row shows sender name, subject snippet, category tag.</li>
@@ -685,7 +661,7 @@
               <!-- INBOXES -->
               <section id="s-inboxes">
                 <h2>Settings → Inboxes</h2>
-                <p class="lede">The mailboxes the hub watches. Adding an inbox here means the worker will start polling it on the next cycle.</p>
+                <p class="lede">The mailboxes the Email Classifier watches. Adding an inbox here means the worker will start polling it on the next cycle.</p>
                 <h3>The table</h3>
                 <ul>
                   <li><strong>Display name</strong> — what staff see. Editable.</li>
@@ -724,7 +700,7 @@
               <!-- CATEGORIES -->
               <section id="s-categories">
                 <h2>Settings → Categories</h2>
-                <p class="lede">Category rules define what GPT can classify emails as, and what happens when it does. Everything the hub does routes through categories.</p>
+                <p class="lede">Category rules define what GPT can classify emails as and what happens afterward. The Email Classifier routes its email actions through these categories.</p>
                 <h3>Adding a new category</h3>
                 <ol>
                   <li>Open <strong>Settings → Categories</strong>.</li>
@@ -858,7 +834,7 @@
               <!-- PREVIEW -->
               <section id="s-preview">
                 <h2>Settings → Test &amp; preview</h2>
-                <p class="lede">Paste a fake email and watch how the hub would classify and route it — without touching Outlook.</p>
+                <p class="lede">Paste a fake email and watch how the Email Classifier would classify and route it — without touching Outlook.</p>
                 <h3>Fields</h3>
                 <ul>
                   <li><strong>Subject / Sender / Body</strong> — the fake email you want to test.</li>
@@ -880,7 +856,7 @@
               <!-- TAGS -->
               <section id="tags">
                 <h2>PAIRActioned tags</h2>
-                <p class="lede">Every email the hub touches gets an Outlook category (visible as a chip on the message in Outlook). This is how the worker knows what it already handled.</p>
+                <p class="lede">Every email the Email Classifier processes gets an Outlook category (visible as a chip on the message in Outlook). This is how the worker knows what it already handled.</p>
                 <table>
                   <thead><tr><th>Tag</th><th>Meaning</th></tr></thead>
                   <tbody>
