@@ -121,7 +121,7 @@
         .panel-search .form-input {
             flex: 1;
             height: 36px;
-            padding: 0 12px 0 36px;
+            padding: 0 12px;
             font-size: 13px;
             border-radius: 4px;
         }
@@ -142,14 +142,6 @@
             outline: none;
             border-color: var(--mlfa-teal);
             box-shadow: 0 0 0 2px var(--accent-soft);
-        }
-        .panel-search-icon {
-            position: absolute;
-            left: 11px; top: 50%;
-            width: 16px; height: 16px;
-            margin-top: -8px;
-            color: var(--text-soft);
-            pointer-events: none;
         }
         .search-answer {
             display: none;
@@ -492,7 +484,6 @@
             <div class="panel-toolbar">
                 <button type="button" class="panel-back" data-back>Back to home</button>
                 <form class="panel-search" onsubmit="return false;">
-                    <svg class="panel-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 12.4a8 8 0 0 1-8 8H8l-3.6 2.4a.4.4 0 0 1-.6-.35V12.4a8 8 0 0 1 16 0Z"/><path d="M9.9 10a2.6 2.6 0 0 1 5 .9c0 1.7-2.5 2.2-2.5 3.6"/><path d="M12.4 17.1h.01"/></svg>
                     <input class="form-input" type="text" placeholder="Ask about the Email Classifier" aria-label="Ask about the Email Classifier">
                     <button type="submit" class="panel-ask">Ask</button>
                 </form>
@@ -1411,7 +1402,6 @@
             <div class="panel-toolbar">
                 <button type="button" class="panel-back" data-back>Back to home</button>
                 <form class="panel-search" onsubmit="return false;">
-                    <svg class="panel-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 12.4a8 8 0 0 1-8 8H8l-3.6 2.4a.4.4 0 0 1-.6-.35V12.4a8 8 0 0 1 16 0Z"/><path d="M9.9 10a2.6 2.6 0 0 1 5 .9c0 1.7-2.5 2.2-2.5 3.6"/><path d="M12.4 17.1h.01"/></svg>
                     <input class="form-input" type="text" placeholder="Ask a question about security" aria-label="Ask a question about security">
                     <button type="submit" class="panel-ask">Ask</button>
                 </form>
