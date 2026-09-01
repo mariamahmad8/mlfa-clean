@@ -152,30 +152,15 @@
         }
         .search-answer {
             display: none;
-            width: min(760px, 100%);
-            margin: -8px 0 26px;
-            padding: 4px 0;
+            width: min(700px, 100%);
+            margin: -8px auto 28px;
         }
         .search-answer.visible { display: block; }
-        .search-question-row {
+        .search-answer-top {
             display: flex;
-            justify-content: flex-end;
-            margin-bottom: 12px;
-        }
-        .search-question-bubble {
-            max-width: 78%;
-            padding: 9px 13px;
-            border-radius: 14px 14px 4px 14px;
-            background: var(--mlfa-teal);
-            color: #fff;
-            font-size: 13px;
-            line-height: 1.45;
-            box-shadow: 0 4px 12px rgba(9, 73, 59, 0.12);
-        }
-        .search-assistant-row {
-            display: flex;
-            align-items: flex-start;
+            align-items: center;
             gap: 10px;
+            margin-bottom: 11px;
         }
         .search-answer-mark {
             display: grid;
@@ -183,22 +168,19 @@
             width: 30px;
             height: 30px;
             flex: 0 0 30px;
-            margin-top: 2px;
             border-radius: 9px;
             background: var(--mlfa-teal);
             color: #fff;
         }
         .search-answer-mark svg { width: 15px; height: 15px; }
-        .search-assistant-stack { min-width: 0; max-width: calc(100% - 40px); }
         .search-assistant-bubble {
-            padding: 13px 15px;
+            padding: 17px 19px 14px;
             border: 1px solid #d8ddd7;
-            border-radius: 4px 14px 14px 14px;
+            border-radius: 12px;
             background: linear-gradient(135deg, #ffffff 0%, #f8faf8 100%);
-            box-shadow: 0 6px 18px rgba(20, 55, 46, 0.06);
+            box-shadow: 0 8px 24px rgba(20, 55, 46, 0.07);
         }
         .search-answer-label {
-            margin-bottom: 6px;
             color: var(--mlfa-teal);
             font-size: 10.5px;
             font-weight: 700;
@@ -221,13 +203,26 @@
         .search-answer-source {
             display: flex;
             flex-wrap: wrap;
-            gap: 5px 9px;
-            margin-top: 6px;
-            padding-left: 3px;
+            align-items: center;
+            gap: 6px 10px;
+            margin-top: 13px;
+            padding-top: 10px;
+            border-top: 1px solid #e3e8e4;
             color: var(--text-soft);
             font-size: 10.5px;
         }
         .search-answer-source strong { color: var(--text-muted); font-weight: 650; }
+        .search-answer-link {
+            margin-left: auto;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            color: var(--mlfa-teal);
+            font: inherit;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .search-answer-link:hover { text-decoration: underline; }
         .search-answer-empty .search-answer-mark { background: var(--text-soft); }
         .search-note {
             margin: -14px 0 22px;
@@ -1987,18 +1982,15 @@
         // The server retrieves individual guide sentences by embedding similarity,
         // then asks the model for a short answer grounded only in those sentences.
         (function initGuideSemanticSearch() {
-            function showAnswer(answer, title, copy, empty = false, retrievalMs = null, question = '') {
+            function showAnswer(answer, title, copy, empty = false, retrievalMs = null) {
                 answer.className = 'search-answer visible' + (empty ? ' search-answer-empty' : '');
                 const speed = Number.isFinite(retrievalMs)
                     ? `<span class="search-answer-speed">Vector match: ${retrievalMs < 1 ? retrievalMs.toFixed(1) : retrievalMs.toFixed(0)} ms</span>`
                     : '';
                 const source = !empty && title
-                    ? `<div class="search-answer-source"><span>Source: <strong>${escapeHtml(title)}</strong></span>${speed}</div>`
+                    ? `<div class="search-answer-source"><span>Source: <strong>${escapeHtml(title)}</strong></span>${speed}<button type="button" class="search-answer-link">View in guide →</button></div>`
                     : '';
-                const questionBubble = question
-                    ? `<div class="search-question-row"><div class="search-question-bubble">${escapeHtml(question)}</div></div>`
-                    : '';
-                answer.innerHTML = `${questionBubble}<div class="search-assistant-row"><span class="search-answer-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><path d="m5.6 5.6 2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8"/></svg></span><div class="search-assistant-stack"><div class="search-assistant-bubble"><div class="search-answer-label">${empty ? 'Guide search' : 'MLFA guide assistant'}</div><p class="search-answer-copy">${escapeHtml(copy)}</p></div>${source}</div></div>`;
+                answer.innerHTML = `<div class="search-assistant-bubble"><div class="search-answer-top"><span class="search-answer-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><path d="m5.6 5.6 2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8"/></svg></span><div class="search-answer-label">${empty ? 'Guide search' : 'MLFA guide assistant'}</div></div><p class="search-answer-copy">${escapeHtml(copy)}</p>${source}</div>`;
             }
 
             function findTarget(panel, result) {
@@ -2041,7 +2033,7 @@
                     const button = form.querySelector('.panel-ask');
                     button.disabled = true;
                     button.textContent = 'Searching...';
-                    showAnswer(answer, '', 'Finding the most relevant sentences and preparing an answer.', false, null, query);
+                    showAnswer(answer, '', 'Finding the most relevant sentences and preparing an answer.');
                     try {
                         const response = await fetch('/api/guide/search', {
                             method: 'POST',
@@ -2053,10 +2045,14 @@
                         const best = data.results?.[0];
                         if (!best) throw new Error('No matching guide section was found.');
 
-                        showAnswer(answer, best.title, best.answer, false, Number(best.retrieval_ms), query);
-                        window.setTimeout(() => scrollToResult(panel, best), 180);
+                        showAnswer(answer, best.title, best.answer, false, Number(best.retrieval_ms));
+                        answer.querySelector('.search-answer-link')?.addEventListener(
+                            'click',
+                            () => scrollToResult(panel, best),
+                            { once: true },
+                        );
                     } catch (error) {
-                        showAnswer(answer, 'Search unavailable', error.message || 'Please try again.', true, null, query);
+                        showAnswer(answer, 'Search unavailable', error.message || 'Please try again.', true);
                     } finally {
                         button.disabled = false;
                         button.textContent = 'Ask';
