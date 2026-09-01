@@ -85,6 +85,7 @@
         @media (prefers-reduced-motion: reduce) {
             .rise, .hero-title .verb::after { animation: none; opacity: 1; transform: none; }
             .tile, .tile-icon, .tile-stat { transition: none; }
+            .search-loading-dots span { animation: none; opacity: 0.8; }
         }
 
         /* Tiles sit on the eight-point geometric tile, drawn inline so there is
@@ -224,6 +225,51 @@
         }
         .search-answer-link:hover { text-decoration: underline; }
         .search-answer-empty .search-answer-mark { background: var(--text-soft); }
+        .search-answer.search-answer-loading {
+            width: 180px;
+        }
+        .search-loading-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 11px;
+            padding: 18px 22px;
+            border: 1px solid #d8ddd7;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.88);
+            box-shadow: 0 8px 24px rgba(20, 55, 46, 0.07);
+        }
+        .search-loading-dots {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            height: 18px;
+        }
+        .search-loading-dots span {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--mlfa-teal);
+            animation: guide-dot 1.05s ease-in-out infinite;
+        }
+        .search-loading-dots span:nth-child(2) {
+            background: #8aa197;
+            animation-delay: 0.14s;
+        }
+        .search-loading-dots span:nth-child(3) {
+            background: #c7a65a;
+            animation-delay: 0.28s;
+        }
+        .search-loading-label {
+            color: var(--text-muted);
+            font-size: 11px;
+            font-weight: 650;
+            letter-spacing: 0.04em;
+        }
+        @keyframes guide-dot {
+            0%, 60%, 100% { transform: translateY(0); opacity: 0.45; }
+            30% { transform: translateY(-6px); opacity: 1; }
+        }
         .search-note {
             margin: -14px 0 22px;
             color: var(--text-soft);
@@ -1982,6 +2028,11 @@
         // The server retrieves individual guide sentences by embedding similarity,
         // then asks the model for a short answer grounded only in those sentences.
         (function initGuideSemanticSearch() {
+            function showLoading(answer) {
+                answer.className = 'search-answer visible search-answer-loading';
+                answer.innerHTML = '<div class="search-loading-card"><div class="search-loading-dots" aria-hidden="true"><span></span><span></span><span></span></div><div class="search-loading-label">Searching the guide</div></div>';
+            }
+
             function showAnswer(answer, title, copy, empty = false, retrievalMs = null) {
                 answer.className = 'search-answer visible' + (empty ? ' search-answer-empty' : '');
                 const speed = Number.isFinite(retrievalMs)
@@ -2033,7 +2084,7 @@
                     const button = form.querySelector('.panel-ask');
                     button.disabled = true;
                     button.textContent = 'Searching...';
-                    showAnswer(answer, '', 'Finding the most relevant sentences and preparing an answer.');
+                    showLoading(answer);
                     try {
                         const response = await fetch('/api/guide/search', {
                             method: 'POST',
