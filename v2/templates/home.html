@@ -179,6 +179,7 @@
             color: var(--text-muted);
             font-size: 13px;
             line-height: 1.55;
+            white-space: pre-line;
         }
         .search-answer-empty { border-left-color: var(--text-soft); }
         .search-note {
@@ -1936,12 +1937,12 @@
                             .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
 
-        // Semantic guide search. The server embeds the authored guide and this
-        // question, then compares their vectors to find the closest meaning.
+        // The server retrieves individual guide sentences by embedding similarity,
+        // then asks the model for a short answer grounded only in those sentences.
         (function initGuideSemanticSearch() {
             function showAnswer(answer, title, copy, empty = false) {
                 answer.className = 'search-answer visible' + (empty ? ' search-answer-empty' : '');
-                answer.innerHTML = `${empty ? '' : '<div class="search-answer-label">Best answer</div>'}<div class="search-answer-title">${escapeHtml(title)}</div><p class="search-answer-copy">${escapeHtml(copy)}</p>`;
+                answer.innerHTML = `${empty ? '' : '<div class="search-answer-label">Guide answer</div>'}<div class="search-answer-title">${escapeHtml(title)}</div><p class="search-answer-copy">${escapeHtml(copy)}</p>`;
             }
 
             function findTarget(panel, result) {
@@ -1984,7 +1985,7 @@
                     const button = form.querySelector('.panel-ask');
                     button.disabled = true;
                     button.textContent = 'Searching...';
-                    showAnswer(answer, 'Finding the best section', 'Comparing your question with the approved guide instructions.');
+                    showAnswer(answer, 'Searching the guide', 'Finding the most relevant sentences and preparing an answer.');
                     try {
                         const response = await fetch('/api/guide/search', {
                             method: 'POST',

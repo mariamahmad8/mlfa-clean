@@ -459,7 +459,7 @@ def my_inboxes():
 @reviewer_bp.route('/api/guide/search', methods=['POST'])
 @login_required
 def search_guide():
-    """Find the authored guide answer closest in meaning to a question."""
+    """Retrieve relevant guide sentences and return a grounded AI answer."""
     data = request.get_json(silent=True) or {}
     query = str(data.get('query') or '').strip()
     panel = str(data.get('panel') or '').strip()

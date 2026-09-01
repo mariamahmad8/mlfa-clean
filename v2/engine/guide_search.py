@@ -1,8 +1,9 @@
-"""Semantic search over the authored Hub and security guides."""
+"""Sentence-based semantic search over the authored Hub guides."""
 
 from __future__ import annotations
 
 import math
+import re
 import threading
 from dataclasses import dataclass
 from pathlib import Path
@@ -15,24 +16,27 @@ from adapters import openai_client
 
 GUIDE_TEMPLATE = Path(__file__).resolve().parents[1] / "templates" / "home.html"
 ALLOWED_PANELS = {"how-to", "security"}
+_SENTENCE_BREAK = re.compile(r"(?<=[.!?])\s+")
+_ABBREVIATION = re.compile(r"\b(?:e\.g|i\.e|Mr|Mrs|Ms|Dr|vs|etc|U\.S)\.", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
-class GuideChunk:
+class GuideSentence:
     panel: str
     anchor: str
     heading_index: int
     title: str
     section_title: str
     text: str
+    source_order: int
 
     @property
     def embedding_text(self) -> str:
         return (
             f"Guide: {self.panel}\n"
             f"Section: {self.section_title}\n"
-            f"Answer heading: {self.title}\n"
-            f"Instructions: {self.text}"
+            f"Topic: {self.title}\n"
+            f"Sentence: {self.text}"
         )
 
 
@@ -40,10 +44,57 @@ def _clean_text(value: str) -> str:
     return " ".join((value or "").split())
 
 
-def load_guide_chunks(template_path: Path = GUIDE_TEMPLATE) -> list[GuideChunk]:
-    """Split each guide section into heading-sized searchable answers."""
+def split_sentences(text: str) -> list[str]:
+    """Split prose at sentence boundaries without adding a language dependency."""
+    clean = _clean_text(text)
+    if not clean:
+        return []
+
+    protected: dict[str, str] = {}
+
+    def protect(match: re.Match) -> str:
+        token = f"__ABBR_{len(protected)}__"
+        protected[token] = match.group(0)
+        return token
+
+    safe = _ABBREVIATION.sub(protect, clean)
+    sentences = []
+    for part in _SENTENCE_BREAK.split(safe):
+        for token, original in protected.items():
+            part = part.replace(token, original)
+        part = _clean_text(part)
+        if part:
+            sentences.append(part)
+    return sentences
+
+
+def _content_units_after_heading(heading) -> list[str]:
+    """Preserve list items and table rows as independent sentence candidates."""
+    units: list[str] = []
+    for sibling in heading.next_siblings:
+        name = getattr(sibling, "name", None)
+        if name in {"h2", "h3"}:
+            break
+        if not hasattr(sibling, "get_text"):
+            continue
+        if name in {"ul", "ol"}:
+            nodes = sibling.find_all("li", recursive=False)
+        elif name == "table":
+            nodes = sibling.find_all("tr")
+        else:
+            nodes = [sibling]
+        for node in nodes:
+            value = _clean_text(node.get_text(" ", strip=True))
+            if value:
+                units.append(value)
+    return units
+
+
+def load_guide_sentences(template_path: Path = GUIDE_TEMPLATE) -> list[GuideSentence]:
+    """Read the guide and turn every authored sentence into one search chunk."""
     soup = BeautifulSoup(template_path.read_text(encoding="utf-8"), "html.parser")
-    chunks: list[GuideChunk] = []
+    chunks: list[GuideSentence] = []
+    source_order = 0
 
     for panel_node in soup.select(".page-panel[data-panel]"):
         panel = panel_node.get("data-panel", "")
@@ -55,34 +106,32 @@ def load_guide_chunks(template_path: Path = GUIDE_TEMPLATE) -> list[GuideChunk]:
             headings = section.find_all(["h2", "h3"], recursive=False)
             if not anchor or not headings:
                 continue
-
             section_title = _clean_text(headings[0].get_text(" ", strip=True))
-            for heading_index, heading in enumerate(headings):
-                content_parts: list[str] = []
-                for sibling in heading.next_siblings:
-                    sibling_name = getattr(sibling, "name", None)
-                    if sibling_name in {"h2", "h3"}:
-                        break
-                    if hasattr(sibling, "get_text"):
-                        content_parts.append(sibling.get_text(" ", strip=True))
 
+            for heading_index, heading in enumerate(headings):
                 title = _clean_text(heading.get_text(" ", strip=True))
-                text = _clean_text(" ".join(content_parts))
-                if not text:
-                    text = f"Open {section_title} for details about {title}."
-                chunks.append(
-                    GuideChunk(
+                sentences = [
+                    sentence
+                    for unit in _content_units_after_heading(heading)
+                    for sentence in split_sentences(unit)
+                ]
+                if not sentences:
+                    sentences = [f"Open {section_title} for details about {title}."]
+
+                for sentence in sentences:
+                    chunks.append(GuideSentence(
                         panel=panel,
                         anchor=anchor,
                         heading_index=heading_index,
                         title=title,
                         section_title=section_title,
-                        text=text,
-                    )
-                )
+                        text=sentence,
+                        source_order=source_order,
+                    ))
+                    source_order += 1
 
-    if not chunks:
-        raise RuntimeError("No searchable guide sections were found.")
+    if not chunks or {chunk.panel for chunk in chunks} != ALLOWED_PANELS:
+        raise RuntimeError("Both searchable guide panels must contain authored sentences.")
     return chunks
 
 
@@ -100,34 +149,37 @@ def dot_product(left: list[float], right: list[float]) -> float:
     return sum(a * b for a, b in zip(left, right))
 
 
-def rank_chunks(
-    chunks: list[GuideChunk],
-    chunk_vectors: list[list[float]],
+def rank_sentences(
+    sentences: list[GuideSentence],
+    sentence_vectors: list[list[float]],
     query_vector: list[float],
     panel: str,
-) -> list[tuple[GuideChunk, float]]:
-    """Rank chunks by cosine similarity, highest score first."""
+) -> list[tuple[GuideSentence, float]]:
+    """Rank individual sentences by normalized dot product."""
     query = normalized(query_vector)
-    ranked = []
-    for chunk, vector in zip(chunks, chunk_vectors):
-        if chunk.panel == panel:
-            ranked.append((chunk, dot_product(normalized(vector), query)))
+    ranked = [
+        (sentence, dot_product(vector, query))
+        for sentence, vector in zip(sentences, sentence_vectors)
+        if sentence.panel == panel
+    ]
     return sorted(ranked, key=lambda item: item[1], reverse=True)
 
 
 class SemanticGuideSearch:
-    """Build and cache guide embeddings, then embed only each new question."""
+    """Embed the guide once per process/template version, then answer questions."""
 
     def __init__(
         self,
         embedder: Callable[[list[str]], list[list[float]]] = openai_client.embed_texts,
+        answerer: Callable[[str, list[str]], str] = openai_client.answer_guide_question,
         template_path: Path = GUIDE_TEMPLATE,
     ) -> None:
         self._embedder = embedder
+        self._answerer = answerer
         self._template_path = template_path
         self._lock = threading.Lock()
         self._template_mtime: float | None = None
-        self._chunks: list[GuideChunk] = []
+        self._sentences: list[GuideSentence] = []
         self._vectors: list[list[float]] = []
 
     def _ensure_index(self) -> None:
@@ -139,15 +191,18 @@ class SemanticGuideSearch:
             template_mtime = self._template_path.stat().st_mtime
             if self._vectors and self._template_mtime == template_mtime:
                 return
-            chunks = load_guide_chunks(self._template_path)
-            vectors = self._embedder([chunk.embedding_text for chunk in chunks])
-            if len(vectors) != len(chunks):
-                raise RuntimeError("Guide embedding count did not match the guide index.")
-            self._chunks = chunks
-            self._vectors = vectors
+            sentences = load_guide_sentences(self._template_path)
+            vectors: list[list[float]] = []
+            for start in range(0, len(sentences), 128):
+                batch = sentences[start:start + 128]
+                vectors.extend(self._embedder([sentence.embedding_text for sentence in batch]))
+            if len(vectors) != len(sentences):
+                raise RuntimeError("Guide embedding count did not match the sentence index.")
+            self._sentences = sentences
+            self._vectors = [normalized(vector) for vector in vectors]
             self._template_mtime = template_mtime
 
-    def search(self, query: str, panel: str, limit: int = 3) -> list[dict]:
+    def search(self, query: str, panel: str, limit: int = 8) -> list[dict]:
         clean_query = _clean_text(query)
         if not clean_query:
             raise ValueError("A question is required.")
@@ -156,25 +211,32 @@ class SemanticGuideSearch:
 
         self._ensure_index()
         query_vector = self._embedder([clean_query])[0]
-        ranked = rank_chunks(self._chunks, self._vectors, query_vector, panel)
+        ranked = rank_sentences(
+            self._sentences,
+            self._vectors,
+            query_vector,
+            panel,
+        )
+        selected = ranked[:max(1, min(limit, 12))]
+        if not selected:
+            return []
 
-        results = []
-        for chunk, score in ranked[: max(1, min(limit, 5))]:
-            answer = chunk.text
-            if len(answer) > 420:
-                answer = answer[:417].rsplit(" ", 1)[0] + "..."
-            results.append(
-                {
-                    "panel": chunk.panel,
-                    "anchor": chunk.anchor,
-                    "heading_index": chunk.heading_index,
-                    "title": chunk.title,
-                    "section_title": chunk.section_title,
-                    "answer": answer,
-                    "score": round(score, 4),
-                }
-            )
-        return results
+        # Preserve the guide's original order so procedural steps remain readable.
+        context = [
+            sentence.text
+            for sentence, _ in sorted(selected, key=lambda item: item[0].source_order)
+        ]
+        answer = self._answerer(clean_query, context)
+        source, score = selected[0]
+        return [{
+            "panel": source.panel,
+            "anchor": source.anchor,
+            "heading_index": source.heading_index,
+            "title": source.title,
+            "section_title": source.section_title,
+            "answer": answer,
+            "score": round(score, 4),
+        }]
 
 
 guide_search = SemanticGuideSearch()
