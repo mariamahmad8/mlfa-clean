@@ -153,7 +153,7 @@
         }
         .search-answer {
             display: none;
-            width: min(700px, 100%);
+            width: min(780px, 100%);
             margin: -8px auto 28px;
         }
         .search-answer.visible { display: block; }
@@ -166,20 +166,22 @@
         .search-answer-mark {
             display: grid;
             place-items: center;
-            width: 30px;
-            height: 30px;
-            flex: 0 0 30px;
-            border-radius: 9px;
-            background: var(--mlfa-teal);
-            color: #fff;
+            width: 28px;
+            height: 28px;
+            flex: 0 0 28px;
+            border: 1px solid rgba(9, 73, 59, 0.24);
+            border-radius: 50%;
+            background: rgba(9, 73, 59, 0.06);
+            color: var(--mlfa-teal);
         }
         .search-answer-mark svg { width: 15px; height: 15px; }
         .search-assistant-bubble {
-            padding: 17px 19px 14px;
-            border: 1px solid #d8ddd7;
-            border-radius: 12px;
-            background: linear-gradient(135deg, #ffffff 0%, #f8faf8 100%);
-            box-shadow: 0 8px 24px rgba(20, 55, 46, 0.07);
+            padding: 15px 18px 13px 20px;
+            border: 0;
+            border-left: 3px solid var(--mlfa-teal);
+            border-radius: 0;
+            background: linear-gradient(90deg, rgba(9, 73, 59, 0.055) 0%, rgba(9, 73, 59, 0.018) 58%, transparent 100%);
+            box-shadow: none;
         }
         .search-answer-label {
             color: var(--mlfa-teal);
@@ -208,23 +210,32 @@
             gap: 6px 10px;
             margin-top: 13px;
             padding-top: 10px;
-            border-top: 1px solid #e3e8e4;
+            border-top: 1px solid rgba(9, 73, 59, 0.12);
             color: var(--text-soft);
             font-size: 10.5px;
         }
         .search-answer-source strong { color: var(--text-muted); font-weight: 650; }
         .search-answer-link {
             margin-left: auto;
-            padding: 0;
-            border: 0;
-            background: transparent;
+            padding: 4px 9px;
+            border: 1px solid rgba(9, 73, 59, 0.2);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.28);
             color: var(--mlfa-teal);
             font: inherit;
             font-weight: 700;
             cursor: pointer;
         }
-        .search-answer-link:hover { text-decoration: underline; }
-        .search-answer-empty .search-answer-mark { background: var(--text-soft); }
+        .search-answer-link:hover { background: rgba(9, 73, 59, 0.07); }
+        .search-answer-empty .search-answer-mark {
+            border-color: rgba(112, 107, 98, 0.22);
+            background: rgba(112, 107, 98, 0.07);
+            color: var(--text-soft);
+        }
+        .search-answer-empty .search-assistant-bubble {
+            border-left-color: var(--text-soft);
+            background: linear-gradient(90deg, rgba(112, 107, 98, 0.055), transparent 85%);
+        }
         .search-answer.search-answer-loading {
             width: 48px;
             margin-top: 10px;
