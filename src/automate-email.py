@@ -2268,7 +2268,7 @@ def handle_internal_reply(msg):
     if not clean_reply_text:
         print("   WARNING: Reply appears to be empty. Not sending.")
         try:
-            tag_email(msg, ['internal_note'], replyTag=False)
+            tag_email(msg, [], replyTag=False)
             _move_message_by_internal_tag(msg, "internal_note", context="internal note")
         except Exception:
             pass
@@ -2281,7 +2281,7 @@ def handle_internal_reply(msg):
     if internal_prefix and clean_reply_text[:len(internal_prefix)].lower() == internal_prefix.lower():
         print("   INFO: Internal reply marked [INTERNAL]; keeping internal only.")
         try:
-            tag_email(msg, ['internal_note'], replyTag=False)
+            tag_email(msg, [], replyTag=False)
             _move_message_by_internal_tag(msg, "internal_note", context="internal note")
         except Exception:
             pass
@@ -2291,7 +2291,7 @@ def handle_internal_reply(msg):
     if external_prefix and clean_reply_text[:len(external_prefix)].lower() != external_prefix.lower():
         print("   INFO: Internal reply missing [EXTERNAL]; keeping internal only.")
         try:
-            tag_email(msg, ['internal_note'], replyTag=False)
+            tag_email(msg, [], replyTag=False)
             _move_message_by_internal_tag(msg, "internal_note", context="internal note")
         except Exception:
             pass
@@ -2302,7 +2302,7 @@ def handle_internal_reply(msg):
     if not outbound_text:
         print("   WARNING: [EXTERNAL] prefix found but no outbound content provided.")
         try:
-            tag_email(msg, ['internal_note'], replyTag=False)
+            tag_email(msg, [], replyTag=False)
             _move_message_by_internal_tag(msg, "internal_note", context="internal note")
         except Exception:
             pass
@@ -2324,7 +2324,7 @@ def handle_internal_reply(msg):
         final_reply.send()
         print(f"   Sent reply to original sender: {original_msg.sender.address}")
         try:
-            tag_email(msg, ['internal_reply_sent'], replyTag=False)
+            tag_email(msg, [], replyTag=False)
             _move_message_by_internal_tag(msg, "internal_reply_sent", context="internal reply sent")
         except Exception:
             pass
