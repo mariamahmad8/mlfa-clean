@@ -1,7 +1,9 @@
-# Email Data Security Rollout
+# Email Data Security and Operations
 
-This rollout keeps Microsoft 365 as the authoritative email store while
-avoiding a sudden dependency on live Graph requests.
+Application-level queue encryption is implemented. Microsoft 365 remains the
+authoritative email store, and the encrypted PostgreSQL queue is the only place
+where the Hub temporarily persists email bodies. The staged procedure below is
+retained for deployment verification, recovery, and future environment setup.
 
 ## OpenAI governance gate
 

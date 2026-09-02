@@ -107,8 +107,8 @@
                             <div class="stat-value">${s.total_queued}</div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-label">Rejected / dismissed</div>
-                            <div class="stat-value">${s.total_rejected + s.total_dismissed}</div>
+                            <div class="stat-label">Rejected<span class="info-tip" tabindex="0" aria-label="About rejected emails">i<span class="info-content">Emails a reviewer rejected in the Hub. They are moved to Trash without a reply or forward. This count matters because an increase can point to emails being sorted incorrectly or category rules that need clarification.</span></span></div>
+                            <div class="stat-value">${s.all_time.rejected || 0}</div>
                         </div>
                     </div>
                 </div>

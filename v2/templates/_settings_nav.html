@@ -62,8 +62,7 @@
             box.style.left = left + 'px';
             box.style.top = top + 'px';
         }
-        document.addEventListener('mouseover', (e) => {
-            const tip = e.target.closest('.info-tip');
+        function showTooltip(tip) {
             if (!tip) return;
             const content = tip.querySelector('.info-content');
             if (!content) return;
@@ -74,11 +73,19 @@
             box.style.left = '-9999px';
             box.style.top = '0';
             requestAnimationFrame(() => positionTooltip(tip, box));
+        }
+        document.addEventListener('mouseover', (e) => {
+            const tip = e.target.closest('.info-tip');
+            showTooltip(tip);
         });
         document.addEventListener('mouseout', (e) => {
             const tip = e.target.closest('.info-tip');
             if (!tip) return;
             if (floating) floating.classList.remove('visible');
+        });
+        document.addEventListener('focusin', (e) => showTooltip(e.target.closest('.info-tip')));
+        document.addEventListener('focusout', (e) => {
+            if (e.target.closest('.info-tip') && floating) floating.classList.remove('visible');
         });
     })();
 </script>

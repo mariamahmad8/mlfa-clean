@@ -1283,7 +1283,7 @@
                 <p>Last-write-wins. Whichever admin saves last overwrites the other's changes. There's no locking, no conflict detection. In practice: coordinate before major category edits.</p>
 
                 <h3>Is anything encrypted at rest?</h3>
-                <p>Railway's managed Postgres provides at-rest encryption by default. However, the classification snapshots (reasoning + name_sender fields) sit in plaintext in the pending_queue column. Encryption of those specific fields is on the roadmap.</p>
+                <p>Yes. Railway's managed Postgres provides at-rest encryption, and the Hub also encrypts sensitive approval-queue data at the application layer. Temporary email bodies and classification details are stored as unreadable ciphertext, with the encryption key kept separately as a sealed Railway variable.</p>
 
                 <h3>Does the hub retain email data after a queue entry is deleted?</h3>
                 <p>The queue row is deleted immediately on Approve/Reject/Dismiss. But Postgres backups managed by Railway may retain a copy for the backup retention window. If you need to guarantee no lingering copies, MLFA should coordinate backup retention with Railway directly.</p>
@@ -1719,15 +1719,14 @@
                 <p>When enabled, OpenAI receives the classification prompt and relevant email text. OpenAI does not receive Microsoft mailbox credentials or permission to operate the mailbox.</p>
 
                 <h3>PostgreSQL</h3>
-                <p>PostgreSQL currently stores temporary approval-queue snapshots and classification information in addition to configuration and audit information.</p>
-                <p>This supports reviewer access and temporary resilience if Microsoft Graph is unavailable, but it creates a second location containing email information.</p>
-                <p>The Hub is therefore being migrated toward:</p>
+                <p>PostgreSQL stores configuration and audit information, plus encrypted temporary approval-queue records and classification information.</p>
+                <p>The encrypted database is the only place where the Hub temporarily persists email bodies. Microsoft 365 remains the authoritative source, and the Hub does not use any other persistent store for email bodies.</p>
+                <p>This temporary encrypted copy supports reviewer access and resilience if Microsoft Graph is unavailable. The implemented storage controls include:</p>
                 <ul>
                   <li>Encrypted temporary queue records</li>
                   <li>Automatic expiration</li>
                   <li>Minimal stored metadata</li>
                   <li>Live Microsoft 365 body retrieval</li>
-                  <li>No new full email-body duplication in the final mode</li>
                 </ul>
 
                 <h3>Reviewer browser</h3>
@@ -1848,9 +1847,9 @@
               <!-- 10. ENCRYPTION -->
               <section id="sec-encryption">
                 <h2>10. Database encryption</h2>
-                <p>The Hub is updated to encrypt temporary email information stored in PostgreSQL while messages wait for review. The encryption key is stored separately as a sealed Railway variable.</p>
+                <p>The Hub encrypts temporary email information stored in PostgreSQL while messages wait for review. This encrypted database is the only place where the Hub temporarily persists email bodies, and the encryption key is stored separately as a sealed Railway variable.</p>
                 <p>For example, if someone obtained only the database or a database backup, they would see unreadable ciphertext instead of a legal email's sender, subject, body, and classification. An authorized reviewer can still read the email because the Hub verifies their Microsoft login, MFA, role, and inbox access before decrypting the information.</p>
-                <p>The encryption foundation has been deployed and is currently undergoing final production verification before existing plaintext queue records are converted and removed.</p>
+                <p>This application-level encryption is implemented. Temporary queue records expire according to the configured retention period, while the complete original email remains in Microsoft 365.</p>
               </section>
 
               <!-- 11. POSTURE -->
@@ -1873,9 +1872,10 @@
                   <li>Deterministic mailbox actions</li>
                   <li><code>store=False</code> on OpenAI classification requests</li>
                   <li>Per-inbox AI opt-out</li>
+                  <li>Application-encrypted temporary email bodies</li>
                   <li>Encrypted database backup</li>
                   <li>Versioned encryption-key support</li>
-                  <li>Tested staged migration design</li>
+                  <li>Automatic queue-record expiration</li>
                 </ul>
               </section>
             </div>

@@ -46,7 +46,7 @@ critical production security configuration is missing.
 - Move inline scripts/styles into static assets and remove `unsafe-inline` from CSP
 - Separate the web and email-worker processes into different Railway services
 - Review and minimize Microsoft Graph/O365 application permissions
-- Encrypt or minimize stored email bodies and define retention/deletion rules
+- Periodically verify encrypted temporary email-body storage and retention/deletion rules
 - Add dependency vulnerability scanning, secret scanning, and automated tests in CI
 - Configure database backups, restore testing, access alerts, and audit retention
 - Arrange an independent penetration test before broad production use

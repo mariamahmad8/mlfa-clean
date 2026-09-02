@@ -578,6 +578,11 @@ input[type="checkbox"], input[type="radio"] {
   transform: scale(1.15);
   background-color: var(--mlfa-orange);
 }
+.info-tip:focus-visible {
+  outline: 2px solid var(--mlfa-orange);
+  outline-offset: 3px;
+  opacity: 1;
+}
 .info-tip .info-content { display: none; }
 
 /* The floating tooltip that appears on hover.
