@@ -701,6 +701,7 @@
                 <ul>
                   <li><strong>Internal reply bridge</strong> — an advanced routing feature. When enabled, staff can reply to a forwarded email with an <code>[EXTERNAL]</code> prefix and the system relays their reply back to the original sender. Leave off unless MLFA staff use this workflow.</li>
                   <li><strong>AI behavior</strong> — the raw GPT prompt sent for every email in this inbox. Advanced. Editable but risky — this is what the classifier "thinks" is its job.</li>
+                  <li><strong>Required JSON output</strong> — the system automatically appends the required JSON response format to every inbox prompt. You do not need to copy or maintain it when adding an inbox, and it cannot be removed through the AI prompt fields.</li>
                 </ul>
                 <h3>Stats</h3>
                 <p>The Stats button on each inbox row opens a dashboard showing: emails handled today vs total, rejected/dismissed counts, average processing time, and estimated time saved vs manual work. Includes a 14-day chart of emails handled per day.</p>
@@ -918,7 +919,8 @@
                 <ol>
                   <li><strong>Inbox <code>system_preamble</code></strong> — the intro text from Settings → Inboxes → Edit → AI behavior. Explains what MLFA is and what this inbox does.</li>
                   <li><strong>All active category rules</strong> — each category's key + label + rule text.</li>
-                  <li><strong>Inbox <code>global_guidelines</code></strong> — the closing rules, including the required JSON output schema.</li>
+                  <li><strong>Inbox <code>global_guidelines</code></strong> — optional closing rules for this inbox.</li>
+                  <li><strong>Required JSON output schema</strong> — appended automatically by the system for every inbox, after the editable guidelines.</li>
                 </ol>
                 <p>Then a user prompt containing:</p>
                 <ul>
