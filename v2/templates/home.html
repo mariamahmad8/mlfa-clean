@@ -615,7 +615,7 @@
                   <li>Make sure the <strong>Automation</strong> toggle is set to <strong>Off</strong>.</li>
                   <li>Select an email in the <strong>Pending review</strong> queue.</li>
                   <li>Select <strong>Approve</strong> if the email has been classified correctly according to the rules set for this inbox.</li>
-                  <li>Select <strong>Reject</strong> if the email has not been classified correctly. This often means a rule is unclear or not specific enough. Enter a required note explaining why the classification is incorrect. The note is stored in the audit log so staff can use it to improve the rules; it does not currently train the system automatically or send a ticket to Mariam.</li>
+                  <li>Select <strong>Reject</strong> if the email has not been classified correctly. This often means a rule is unclear or not specific enough. Enter a required note explaining why the classification is incorrect. The note is stored in the audit log and emailed to Mariam so it can be used to improve the rules. It does not currently train the system automatically.</li>
                 </ol>
                 <h3>Layout</h3>
                 <ul>
@@ -1270,7 +1270,7 @@
                 <p>Router forces the email into the review queue as a safety guardrail — even if automation is on. This prevents auto-processing something the system doesn't have a plan for.</p>
 
                 <h3>Can I make the AI learn from my rejections?</h3>
-                <p>Not yet. Rejection reasons are logged in the audit log but not currently fed back into the classifier. This is on the roadmap (RAG / memory of past corrections) but not built.</p>
+                <p>Not automatically. Rejection reasons are logged in the audit log and emailed to Mariam for review, but they are not currently fed directly into the classifier.</p>
 
                 <h3>What if two staff members open the same queued email at the same time?</h3>
                 <p>Whoever clicks Approve/Reject/Dismiss first wins. The other person will see it disappear from their queue on the next auto-refresh.</p>
