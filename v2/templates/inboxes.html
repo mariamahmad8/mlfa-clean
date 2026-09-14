@@ -207,12 +207,12 @@
                 <!-- General: which mailbox, and what to call it -->
                 <div class="tab-panel active" data-panel="general">
                     <div class="field field-top" id="cloneRow" style="display:none;">
-                        <label class="form-label" for="fCloneSource">Clone from<span class="info-tip">i<span class="info-content">Copies the other inbox's categories, recipients, and reply wording into this new one, so you don't set it all up again. It doesn't copy the email address, ignored senders, or AI wording. It's a one-time copy, so later changes over there won't show up here.</span></span></label>
+                        <label class="form-label" for="fCloneSource">Setup template<span class="info-tip">i<span class="info-content">Uses an existing inbox as a complete starting template, including its categories, recipients, reply wording, System preamble, and Global guidelines. The required JSON output format is always added automatically.</span></span></label>
                         <div class="field-control">
-                            <select class="form-select w-sel" id="fCloneSource">
-                                <option value="">Start blank</option>
+                            <select class="form-select w-sel" id="fCloneSource" onchange="handleSetupTemplateChange()">
+                                <option value="">Guided blank template</option>
                             </select>
-                            <div class="form-hint">Optional. Saves rebuilding the same rules by hand.</div>
+                            <div class="form-hint">The info@mlfa.org template is selected by default. The guided blank option provides fill-in-the-blank AI instructions.</div>
                         </div>
                     </div>
                     <div class="field">
@@ -322,10 +322,10 @@
                         </div>
                     </div>
                     <div class="field field-top">
-                        <label class="form-label" for="fGuidelines">Global guidelines<span class="info-tip">i<span class="info-content">The closing of those instructions: rules that apply to every category, plus the format the AI has to answer in. Changing the format part can stop this inbox working.</span></span></label>
+                        <label class="form-label" for="fGuidelines">Global guidelines<span class="info-tip">i<span class="info-content">Optional closing rules that apply to every category. The required JSON response format is added automatically by the system and cannot be removed.</span></span></label>
                         <div class="field-control">
                             <textarea class="form-textarea" id="fGuidelines" style="min-height: 96px;"></textarea>
-                            <div class="form-hint">Closing rules and the required JSON output format.</div>
+                            <div class="form-hint">The required JSON output format is appended automatically.</div>
                         </div>
                     </div>
                 </div>
@@ -475,13 +475,45 @@
 
         // Backfill is now a plain inline number input — no radio sync needed.
 
+        const GUIDED_PREAMBLE = `You are an email routing assistant for [ORGANIZATION NAME].
+
+This inbox is used for [DESCRIBE THE MAILBOX'S PURPOSE AND AUDIENCE].
+
+Classify incoming emails according to the active category rules below. Base each decision on the sender's intent and the full context of the message, not keywords alone.
+
+Identify the sender's name when it is reasonably clear. Set needs_personal_reply to true when [DESCRIBE WHEN A STAFF MEMBER SHOULD PERSONALLY RESPOND].`;
+
+        const GUIDED_GUIDELINES = `Apply these rules to every email in this inbox:
+
+- [ADD ANY RULE THAT OVERRIDES INDIVIDUAL CATEGORIES]
+- [DESCRIBE HOW FOLLOW-UPS OR EXISTING CONVERSATIONS SHOULD BE HANDLED]
+- [DESCRIBE WHEN MULTIPLE CATEGORIES MAY OR MAY NOT APPLY]
+- [ADD ANY SPECIAL PRIVACY, ESCALATION, OR ROUTING REQUIREMENTS]
+
+Use only the active categories configured for this inbox. The required JSON output format is appended automatically by the system.`;
+
+        function handleSetupTemplateChange() {
+            const selectedId = document.getElementById('fCloneSource').value;
+            const source = inboxes.find(ib => String(ib.id) === String(selectedId));
+            document.getElementById('fPreamble').value = source
+                ? (source.system_preamble || GUIDED_PREAMBLE)
+                : GUIDED_PREAMBLE;
+            document.getElementById('fGuidelines').value = source
+                ? (source.global_guidelines || GUIDED_GUIDELINES)
+                : GUIDED_GUIDELINES;
+            markDirty();
+        }
+
         function openAddModal() {
             document.getElementById('modalTitle').textContent = 'Add inbox';
             document.getElementById('fInboxId').value = '';
             const cloneSel = document.getElementById('fCloneSource');
-            cloneSel.innerHTML = '<option value="">Start blank</option>' +
-                inboxes.map(ib => `<option value="${ib.id}">${escapeHtml(ib.display_name)}</option>`).join('');
-            cloneSel.value = '';
+            cloneSel.innerHTML = '<option value="">Guided blank template</option>' +
+                inboxes.map(ib => `<option value="${ib.id}">Use ${escapeHtml(ib.display_name)} as template</option>`).join('');
+            const infoTemplate = inboxes.find(ib =>
+                String(ib.email_to_watch || '').trim().toLowerCase() === 'info@mlfa.org'
+            );
+            cloneSel.value = infoTemplate ? String(infoTemplate.id) : '';
             document.getElementById('cloneRow').style.display = 'grid';
             document.getElementById('inboxMetaLine').style.display = 'none';
             document.getElementById('fDisplayName').value = '';
@@ -496,8 +528,7 @@
             document.getElementById('fInternalBridge').checked = false;
             document.getElementById('fInternalPrefix').value = '[INTERNAL]';
             document.getElementById('fExternalPrefix').value = '[EXTERNAL]';
-            document.getElementById('fPreamble').value = '';
-            document.getElementById('fGuidelines').value = '';
+            handleSetupTemplateChange();
             switchInboxTab('general');
             updateInboxBadges();
             document.getElementById('modal').style.display = 'flex';

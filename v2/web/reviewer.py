@@ -730,7 +730,7 @@ def approve_email(email_id):
 
             # If reviewer left a comment, send a notification email summarizing the action
             if reviewer_comment:
-                notify_to = os.getenv('REVIEW_NOTIFY_EMAIL', '')
+                notify_to = os.getenv('REVIEW_NOTIFY_EMAIL', 'mariam.ahmad@pairsys.ai').strip()
                 if notify_to:
                     try:
                         safe_reviewer = html.escape(str(session.get('user_email', 'unknown')), quote=True)
@@ -770,13 +770,15 @@ def approve_email(email_id):
 @reviewer_bp.route('/api/emails/<email_id>/reject', methods=['POST'])
 @login_required
 def reject_email(email_id):
-    """Reject a queued email — move to Trash, log the reason."""
+    """Reject a queued email — move to Trash, notify, and log the reason."""
     inbox = _get_current_inbox()
     if inbox is None:
         return jsonify({"error": "No active inbox"}), 400
 
     data = request.get_json(silent=True) or {}
-    reason = data.get('reason', '')
+    reason = (data.get('reason') or '').strip()
+    if not reason:
+        return jsonify({"error": "A rejection reason is required."}), 400
 
     # Claim first: a second click must not trash-and-log the same email twice.
     with queue_storage.claim_pending(inbox.id, email_id) as claimed:
@@ -788,9 +790,35 @@ def reject_email(email_id):
 
         raw_msg = o365.fetch_message_safely(inbox, email_id)
         if raw_msg is not None:
+            normalized_msg = o365.normalize_message(raw_msg)
             o365.remove_email_tags(raw_msg, ['PAIRActioned/queued'])
             o365.move_to_trash(inbox, raw_msg)
             o365.tag_email(raw_msg, ['dismissed'])
+
+            notify_to = os.getenv('REVIEW_NOTIFY_EMAIL', 'mariam.ahmad@pairsys.ai').strip()
+            if notify_to:
+                try:
+                    classification = queue_storage.decode_payload(claimed).get('classification') or {}
+                    categories = ', '.join(classification.get('categories') or []) or 'none'
+                    safe_reviewer = html.escape(str(session.get('user_email', 'unknown')), quote=True)
+                    safe_reason = html.escape(reason, quote=True)
+                    safe_categories = html.escape(categories, quote=True)
+                    safe_subject = html.escape(normalized_msg.subject, quote=True)
+                    safe_sender = html.escape(normalized_msg.sender, quote=True)
+                    o365.send_email(
+                        inbox,
+                        to=notify_to,
+                        subject=f"[Review] Rejected: {normalized_msg.subject}",
+                        body_html=(
+                            f"<p><strong>Reviewer:</strong> {safe_reviewer}</p>"
+                            f"<p><strong>Reason:</strong> {safe_reason}</p>"
+                            f"<p><strong>Categories:</strong> {safe_categories}</p>"
+                            f"<p><strong>Subject:</strong> {safe_subject}</p>"
+                            f"<p><strong>From:</strong> {safe_sender}</p>"
+                        ),
+                    )
+                except Exception as e:
+                    log_event("review.notification_failed", level="ERROR", error=e)
 
         audit_storage.log_event(
             inbox_id=inbox.id,

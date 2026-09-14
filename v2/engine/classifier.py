@@ -17,6 +17,23 @@ from models.ClassificationResult import ClassificationResult
 from adapters import openai_client
 
 
+REQUIRED_JSON_OUTPUT = """REQUIRED OUTPUT FORMAT:
+Return one valid JSON object only, with no markdown or additional text:
+{
+  "categories": ["active_category_key"],
+  "all_recipients": ["name@example.org"],
+  "needs_personal_reply": false,
+  "reason": {"active_category_key": "brief justification"},
+  "escalation_reason": "",
+  "amount_detected": null,
+  "name_sender": null
+}
+Use only active category keys defined above. `all_recipients` must be an array
+and may be empty. `needs_personal_reply` must be a boolean. `reason` must be an
+object. `amount_detected` must be a number or null. `name_sender` must be a
+string or null. Include every field even when its value is empty, false, or null."""
+
+
 def build_system_prompt(inbox: InboxConfig, rules: List[CategoryRule]) -> str:
     """
     Assemble the full classification prompt for one message.
@@ -62,6 +79,8 @@ ROUTING RULES & RECIPIENTS:
 {rules_section}
 
 {guidelines}
+
+{REQUIRED_JSON_OUTPUT}
 """
 
 

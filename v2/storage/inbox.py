@@ -65,11 +65,19 @@ def save_inbox(inbox: InboxConfig) -> None:
                 INSERT INTO inboxes (
                     email_to_watch, display_name, automation_mode,
                     blocked_senders, skip_sender_pairs, send_to_openai,
-                    retention_days
+                    retention_days, system_preamble, global_guidelines,
+                    internal_domains, backfill_days, use_thread_context,
+                    internal_reply_bridge_enabled,
+                    internal_reply_external_prefix,
+                    internal_reply_internal_prefix
                 ) VALUES (
                     :email_to_watch, :display_name, :automation_mode,
                     :blocked_senders, :skip_sender_pairs, :send_to_openai,
-                    :retention_days
+                    :retention_days, :system_preamble, :global_guidelines,
+                    :internal_domains, :backfill_days, :use_thread_context,
+                    :internal_reply_bridge_enabled,
+                    :internal_reply_external_prefix,
+                    :internal_reply_internal_prefix
                 )
                 """
             ),
@@ -81,6 +89,14 @@ def save_inbox(inbox: InboxConfig) -> None:
                 "skip_sender_pairs": json.dumps(inbox.skip_sender_pairs),
                 "send_to_openai": inbox.send_to_openai,
                 "retention_days": inbox.retention_days,
+                "system_preamble": inbox.system_preamble,
+                "global_guidelines": inbox.global_guidelines,
+                "internal_domains": json.dumps(inbox.internal_domains),
+                "backfill_days": inbox.backfill_days,
+                "use_thread_context": inbox.use_thread_context,
+                "internal_reply_bridge_enabled": inbox.internal_reply_bridge_enabled,
+                "internal_reply_external_prefix": inbox.internal_reply_external_prefix,
+                "internal_reply_internal_prefix": inbox.internal_reply_internal_prefix,
             },
         )
         session.commit()
