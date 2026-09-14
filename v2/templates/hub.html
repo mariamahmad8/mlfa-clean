@@ -11,7 +11,7 @@
     <style>
         .hub-body {
             display: grid;
-            grid-template-columns: 380px 1fr;
+            grid-template-columns: minmax(440px, 34vw) 1fr;
             gap: 0;
             height: calc(100vh - 56px);
         }
@@ -23,17 +23,18 @@
         }
 
         .queue-header {
-            padding: 16px 20px;
-            border-bottom: 1px solid var(--line-soft);
+            padding: 18px 20px;
+            border-bottom: 2px solid var(--mlfa-teal);
+            background: var(--accent-soft);
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
         .queue-header h3 {
             margin: 0;
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--text-muted);
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--mlfa-teal);
             text-transform: uppercase;
             letter-spacing: 0.05em;
         }
@@ -176,6 +177,10 @@
             transition: transform 0.2s ease;
         }
         .switch.on::after { transform: translateX(14px); }
+
+        @media (max-width: 800px) {
+            .hub-body { grid-template-columns: minmax(280px, 42vw) 1fr; }
+        }
     </style>
 </head>
 <body>

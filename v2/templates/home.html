@@ -256,7 +256,7 @@
         .panel-back:hover { border-color: var(--mlfa-teal); color: var(--text); }
 
         /* ---- Landing tiles --------------------------------------------------- */
-        .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; }
+        .tiles { display: grid; grid-template-columns: 1fr 1.18fr 1fr; gap: 16px; align-items: stretch; }
         .tile {
             position: relative;
             display: flex; flex-direction: column;
@@ -301,6 +301,14 @@
             transition: opacity 0.18s ease;
         }
         .tile:hover .tile-stat { opacity: 1; }
+        .tile[data-open="how-to"] { padding: 28px 26px 24px; }
+        .tile[data-open="how-to"] .tile-icon { width: 48px; height: 48px; }
+        .tile[data-open="how-to"] .tile-icon svg { width: 25px; height: 25px; }
+        .tile[data-open="how-to"] .tile-title { font-size: 17px; }
+
+        @media (max-width: 800px) {
+            .tiles { grid-template-columns: 1fr; }
+        }
 
         .guide-layout {
             display: grid;
@@ -448,8 +456,10 @@
             <p class="hero-sub rise">
                 The MLFA Email Classifier connects to your Microsoft 365 inboxes and sorts each
                 incoming message into a category, then files, forwards, or replies to it
-                according to the rules you set. Messages that require a person wait in the Hub
-                for review, and every action is recorded in the audit log.
+                according to the rules you set. Before full automation is implemented, you can
+                manually test these rules and review each email in the Hub. When you’re confident
+                that the system is working the way you want, you can turn on full automation with
+                the click of a button!
             </p>
             <p class="hero-signed rise">Signed in as {{ current_email }}</p>
         </div>
@@ -463,19 +473,19 @@
             <a class="tile" href="/hub">
                 <span class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.1"/><circle cx="12" cy="3.7" r="1.9"/><circle cx="12" cy="20.3" r="1.9"/><circle cx="3.7" cy="12" r="1.9"/><circle cx="20.3" cy="12" r="1.9"/><path d="M12 5.6v3.3M12 15.1v3.3M5.6 12h3.3M15.1 12h3.3"/></svg></span>
                 <span class="tile-title">The Hub</span>
-                <span class="tile-desc">Emails waiting for someone to approve, reject, or dismiss.</span>
+                <span class="tile-desc">When automation is turned off, emails will wait here for a reviewer to approve, reject, or dismiss.</span>
                 <span class="tile-stat" id="queueStat">Checking...</span>
             </a>
             <button type="button" class="tile" data-open="how-to">
                 <span class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.9S10.1 5 6.5 5c-1 0-1.8.1-2.3.2v13.3c.5-.1 1.3-.2 2.3-.2 3.6 0 5.5 1.9 5.5 1.9Z"/><path d="M12 6.9S13.9 5 17.5 5c1 0 1.8.1 2.3.2v13.3c-.5-.1-1.3-.2-2.3-.2-3.6 0-5.5 1.9-5.5 1.9Z"/></svg></span>
                 <span class="tile-title">How the Email Classifier works</span>
-                <span class="tile-desc">How email gets sorted and how reviewers use the Hub when manual review is needed.</span>
+                <span class="tile-desc">Learn how to manage this tool. This guide includes instructions for creating and editing sorting logic, how and when to use the Hub, and more.</span>
                 <span class="tile-stat">Read the guide</span>
             </button>
             <button type="button" class="tile" data-open="security">
                 <span class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.6" y="10.3" width="14.8" height="10.1" rx="2.3"/><path d="M8.3 10.3V7.5a3.7 3.7 0 0 1 7.4 0v2.8"/><path d="M12 14.2v2.6"/></svg></span>
                 <span class="tile-title">Security</span>
-                <span class="tile-desc">How email is stored and protected, and what each role can see.</span>
+                <span class="tile-desc">Read about how emails are protected and privacy is restricted depending on your user role.</span>
                 <span class="tile-stat">Read more</span>
             </button>
         </div>
@@ -538,8 +548,8 @@
               <!-- OVERVIEW -->
               <section id="overview">
                 <h2>How the Email Classifier works</h2>
-                <p class="lede">The MLFA Email Classifier is this website and its complete email-processing system. It watches connected inboxes, uses GPT to sort each incoming email into a category, and follows the rules configured for that category.</p>
-                <p>Everything is configurable. You control which categories exist, what happens when an email matches each one, who receives forwarded messages, and which automatic reply is sent. Non-technical staff can adjust this behavior through the Email Classifier website without changing code.</p>
+                <p class="lede">The system connects to Microsoft 365 mailboxes and uses GPT/AI to sort, tag, and process emails.</p>
+                <p>Everything is configurable. You control which categories exist, where each email goes, who receives forwarded messages, and what automatic replies are sent. Non-technical staff can adjust this behavior through the Email Classifier website without changing code.</p>
                 <div class="callout note"><strong>Prefer a visual tour?</strong> <a href="https://www.youtube.com/watch?v=R-gc66toM3I" target="_blank" rel="noopener noreferrer">Watch the complete system walkthrough on YouTube.</a></div>
                 <h3>The three pieces</h3>
                 <ol>
@@ -599,7 +609,14 @@
               <!-- HUB PAGE -->
               <section id="hub-page">
                 <h2>Review queue (the Hub)</h2>
-                <p class="lede">The Hub is the Email Classifier's manual review page. If automation is off for an inbox, every incoming email enters this queue so a reviewer can approve, reject, or dismiss it. If automation is on, only emails that cannot be matched safely are queued.</p>
+                <p class="lede">You can test your rules for classifying emails here before fully implementing automation in your mailbox. When the Automation toggle is off, emails from your Microsoft inbox will appear here, and reviewers can manually approve or reject how the system classifies them.</p>
+                <h3>How to use the Hub</h3>
+                <ol>
+                  <li>Make sure the <strong>Automation</strong> toggle is set to <strong>Off</strong>.</li>
+                  <li>Select an email in the <strong>Pending review</strong> queue.</li>
+                  <li>Select <strong>Approve</strong> if the email has been classified correctly according to the rules set for this inbox.</li>
+                  <li>Select <strong>Reject</strong> if the email has not been classified correctly. This often means a rule is unclear or not specific enough. Enter a required note explaining why the classification is incorrect. The note is stored in the audit log so staff can use it to improve the rules; it does not currently train the system automatically or send a ticket to Mariam.</li>
+                </ol>
                 <h3>Layout</h3>
                 <ul>
                   <li><strong>Left panel</strong> — list of pending emails. Newest at top. Each row shows sender name, subject snippet, category tag.</li>
