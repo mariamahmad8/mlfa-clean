@@ -131,13 +131,30 @@
         .stats-hero .h-text strong { color: var(--mlfa-teal); font-weight: 700; }
         .prompt-lock-label { white-space: nowrap; }
         .prompt-lock-icon {
-            width: 15px;
-            height: 15px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 16px;
+            height: 16px;
             color: var(--text-soft);
             flex: 0 0 auto;
         }
         .prompt-lock-icon svg { display: block; width: 100%; height: 100%; }
-        .required-json-row details { margin-top: 2px; }
+        .dense-modal .required-json-row { align-items: start; }
+        .dense-modal .required-json-row.field-top > .form-label {
+            min-height: 20px;
+            padding-top: 0;
+            line-height: 20px;
+        }
+        .required-json-row details { margin: 0; }
+        .required-json-row summary {
+            min-height: 20px;
+            color: var(--mlfa-teal);
+            font-size: 13px;
+            font-weight: 600;
+            line-height: 20px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -344,7 +361,7 @@
                         </label>
                         <div class="field-control">
                             <details>
-                                <summary style="cursor: pointer; color: var(--mlfa-teal); font-size: 13px; font-weight: 600;">View required JSON format</summary>
+                                <summary>View required JSON format</summary>
                                 <pre style="max-height: 220px; overflow: auto; white-space: pre-wrap; margin: 8px 0 0; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-2); color: var(--text-muted); font-size: 12px;">{{ required_json_output }}</pre>
                             </details>
                         </div>
