@@ -6,4 +6,4 @@ python-dotenv==1.2.2
 openai>=1.0.0
 beautifulsoup4==4.12.2
 requests==2.34.2
-pytz==2024.1
+pytz==2026.3.post1
