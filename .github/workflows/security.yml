@@ -16,7 +16,7 @@ jobs:
     name: Audit Python dependencies
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pypa/gh-action-pip-audit@v1.1.0
         with:
           inputs: requirements.txt
@@ -25,7 +25,7 @@ jobs:
     name: Scan Git history for secrets
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: gitleaks/gitleaks-action@v2.3.9
