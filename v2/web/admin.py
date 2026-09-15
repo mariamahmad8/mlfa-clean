@@ -138,7 +138,10 @@ def settings_home():
 def settings_inboxes():
     r = _require_settings_access_or_redirect()
     if r: return r
-    return render_template("inboxes.html")
+    return render_template(
+        "inboxes.html",
+        required_json_output=classifier.REQUIRED_JSON_OUTPUT,
+    )
 
 
 @admin_bp.route("/settings/categories")

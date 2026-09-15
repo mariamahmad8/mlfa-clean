@@ -738,6 +738,7 @@ def approve_email(email_id):
                         safe_categories = html.escape(str(plan.tag or 'none'), quote=True)
                         safe_subject = html.escape(normalized_msg.subject, quote=True)
                         safe_sender = html.escape(normalized_msg.sender, quote=True)
+                        safe_email_body = html.escape(normalized_msg.body or '', quote=True)
                         o365.send_email(
                             inbox,
                             to=notify_to,
@@ -748,6 +749,8 @@ def approve_email(email_id):
                                 f"<p><strong>Categories:</strong> {safe_categories}</p>"
                                 f"<p><strong>Subject:</strong> {safe_subject}</p>"
                                 f"<p><strong>From:</strong> {safe_sender}</p>"
+                                f"<p><strong>Email body:</strong></p>"
+                                f"<div style=\"white-space:pre-wrap\">{safe_email_body}</div>"
                             ),
                         )
                     except Exception as e:
@@ -805,6 +808,7 @@ def reject_email(email_id):
                     safe_categories = html.escape(categories, quote=True)
                     safe_subject = html.escape(normalized_msg.subject, quote=True)
                     safe_sender = html.escape(normalized_msg.sender, quote=True)
+                    safe_email_body = html.escape(normalized_msg.body or '', quote=True)
                     o365.send_email(
                         inbox,
                         to=notify_to,
@@ -815,6 +819,8 @@ def reject_email(email_id):
                             f"<p><strong>Categories:</strong> {safe_categories}</p>"
                             f"<p><strong>Subject:</strong> {safe_subject}</p>"
                             f"<p><strong>From:</strong> {safe_sender}</p>"
+                            f"<p><strong>Email body:</strong></p>"
+                            f"<div style=\"white-space:pre-wrap\">{safe_email_body}</div>"
                         ),
                     )
                 except Exception as e:

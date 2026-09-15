@@ -681,7 +681,7 @@
                 </ul>
                 <h3>Adding or editing an inbox</h3>
                 <p>To add an inbox, open <strong>Settings → Inboxes</strong> and select <strong>+ Add inbox</strong>. The <strong>info@mlfa.org</strong> setup template is selected automatically when it is available. Enter the new Microsoft 365 mailbox address and display name, review the settings, and save.</p>
-                <div class="callout note"><strong>What the template includes</strong>The setup template copies the System preamble, Global guidelines, existing categories, recipients, and reply templates from info@mlfa.org. The required JSON output format is appended automatically by the system. For a completely different workflow, choose <strong>Guided blank template</strong>. It provides fill-in-the-blank System preamble and Global guidelines instead of empty fields.</div>
+                <div class="callout note"><strong>What the template includes</strong>The setup template copies the System preamble, Global guidelines, existing categories, recipients, reply templates, filters, conversation settings, retention settings, and reply-bridge settings from info@mlfa.org. The new mailbox address and display name are entered separately, and automation starts off for safety. The required JSON output format appears beneath the editable prompt fields as a locked system requirement. For a completely different workflow, choose <strong>Guided blank template</strong>. It provides fill-in-the-blank System preamble and Global guidelines instead of empty fields.</div>
                 <p>Clicking Add or Edit opens a modal with sections:</p>
                 <h4>Basics</h4>
                 <ul>
@@ -703,7 +703,7 @@
                 <ul>
                   <li><strong>Internal reply bridge</strong> — an advanced routing feature. When enabled, staff can reply to a forwarded email with an <code>[EXTERNAL]</code> prefix and the system relays their reply back to the original sender. Leave off unless MLFA staff use this workflow.</li>
                   <li><strong>AI behavior</strong> — the raw GPT prompt sent for every email in this inbox. Advanced. Editable but risky — this is what the classifier "thinks" is its job.</li>
-                  <li><strong>Required JSON output</strong> — the system automatically appends the required JSON response format to every inbox prompt. You do not need to copy or maintain it when adding an inbox, and it cannot be removed through the AI prompt fields.</li>
+                  <li><strong>Required JSON output</strong> — displayed beneath the editable prompt fields in a locked, read-only box. The system includes it in every inbox prompt, so you do not need to copy or maintain it.</li>
                 </ul>
                 <h3>Stats</h3>
                 <p>The Stats button on each inbox row opens a dashboard showing: emails handled today vs total, rejected/dismissed counts, average processing time, and estimated time saved vs manual work. Includes a 14-day chart of emails handled per day.</p>

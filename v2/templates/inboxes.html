@@ -328,6 +328,13 @@
                             <div class="form-hint">The required JSON output format is appended automatically.</div>
                         </div>
                     </div>
+                    <div class="field field-top">
+                        <label class="form-label" for="fRequiredJson">Required JSON output <span class="badge">Locked</span></label>
+                        <div class="field-control">
+                            <textarea class="form-textarea" id="fRequiredJson" readonly aria-readonly="true" style="min-height: 220px; background: var(--panel-2); color: var(--text-muted);">{{ required_json_output }}</textarea>
+                            <div class="form-hint">This system requirement is included in every inbox prompt and cannot be edited or removed.</div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -495,12 +502,23 @@ Use only the active categories configured for this inbox. The required JSON outp
         function handleSetupTemplateChange() {
             const selectedId = document.getElementById('fCloneSource').value;
             const source = inboxes.find(ib => String(ib.id) === String(selectedId));
+            document.getElementById('fAutomation').checked = false;
+            document.getElementById('fBlocked').value = source ? (source.blocked_senders || []).join('\n') : '';
+            document.getElementById('fInternalDomains').value = source ? (source.internal_domains || []).join('\n') : '';
+            document.getElementById('fBackfill').value = source ? (source.backfill_days ?? 2) : 2;
+            document.getElementById('fUseThreadContext').checked = source ? source.use_thread_context !== false : true;
+            document.getElementById('fSendToOpenAI').checked = source ? source.send_to_openai !== false : true;
+            document.getElementById('fRetention').value = source ? (source.retention_days ?? 30) : 30;
+            document.getElementById('fInternalBridge').checked = source ? !!source.internal_reply_bridge_enabled : false;
+            document.getElementById('fInternalPrefix').value = source ? (source.internal_reply_internal_prefix || '[INTERNAL]') : '[INTERNAL]';
+            document.getElementById('fExternalPrefix').value = source ? (source.internal_reply_external_prefix || '[EXTERNAL]') : '[EXTERNAL]';
             document.getElementById('fPreamble').value = source
                 ? (source.system_preamble || GUIDED_PREAMBLE)
                 : GUIDED_PREAMBLE;
             document.getElementById('fGuidelines').value = source
                 ? (source.global_guidelines || GUIDED_GUIDELINES)
                 : GUIDED_GUIDELINES;
+            updateInboxBadges();
             markDirty();
         }
 
