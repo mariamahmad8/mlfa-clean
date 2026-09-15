@@ -129,6 +129,15 @@
             white-space: normal;
         }
         .stats-hero .h-text strong { color: var(--mlfa-teal); font-weight: 700; }
+        .prompt-lock-label { white-space: nowrap; }
+        .prompt-lock-icon {
+            width: 15px;
+            height: 15px;
+            color: var(--text-soft);
+            flex: 0 0 auto;
+        }
+        .prompt-lock-icon svg { display: block; width: 100%; height: 100%; }
+        .required-json-row details { margin-top: 2px; }
     </style>
 </head>
 <body>
@@ -325,14 +334,16 @@
                         <label class="form-label" for="fGuidelines">Global guidelines<span class="info-tip">i<span class="info-content">Optional closing rules that apply to every category. The required JSON response format is added automatically by the system and cannot be removed.</span></span></label>
                         <div class="field-control">
                             <textarea class="form-textarea" id="fGuidelines" style="min-height: 96px;"></textarea>
-                            <div class="form-hint">The required JSON output format is appended automatically.</div>
                         </div>
                     </div>
-                    <div class="field field-top">
-                        <label class="form-label">Required JSON output <span class="badge">Locked</span></label>
+                    <div class="field field-top required-json-row">
+                        <label class="form-label prompt-lock-label">Required JSON
+                            <span class="prompt-lock-icon" role="img" aria-label="Locked" title="Locked">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+                            </span>
+                        </label>
                         <div class="field-control">
-                            <div class="form-hint">The system automatically includes a locked JSON response format in every inbox prompt.</div>
-                            <details style="margin-top: 8px;">
+                            <details>
                                 <summary style="cursor: pointer; color: var(--mlfa-teal); font-size: 13px; font-weight: 600;">View required JSON format</summary>
                                 <pre style="max-height: 220px; overflow: auto; white-space: pre-wrap; margin: 8px 0 0; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-2); color: var(--text-muted); font-size: 12px;">{{ required_json_output }}</pre>
                             </details>
@@ -500,7 +511,7 @@ Identify the sender's name when it is reasonably clear. Set needs_personal_reply
 - [DESCRIBE WHEN MULTIPLE CATEGORIES MAY OR MAY NOT APPLY]
 - [ADD ANY SPECIAL PRIVACY, ESCALATION, OR ROUTING REQUIREMENTS]
 
-Use only the active categories configured for this inbox. The required JSON output format is appended automatically by the system.`;
+Use only the active categories configured for this inbox.`;
 
         function withoutLegacyJsonInstructions(value) {
             return String(value || '').split(/\n*\s*(?:Return a JSON object with:|REQUIRED OUTPUT FORMAT:)/i)[0].trimEnd();
