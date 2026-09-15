@@ -362,7 +362,7 @@ def clone_inbox(source_id):
         blocked_senders=list(source.blocked_senders or []),
         skip_sender_pairs=list(source.skip_sender_pairs or []),
         system_preamble=source.system_preamble,
-        global_guidelines=source.global_guidelines,
+        global_guidelines=classifier.without_legacy_json_instructions(source.global_guidelines),
         internal_domains=list(source.internal_domains or []),
         backfill_days=source.backfill_days,
         use_thread_context=source.use_thread_context,

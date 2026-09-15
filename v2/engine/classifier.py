@@ -8,6 +8,7 @@ That structure mirrors the original 1,080-line hardcoded prompt but now
 it's built dynamically from database rows.
 """
 
+import re
 from typing import List
 
 from models.InboxConfig import InboxConfig
@@ -32,6 +33,16 @@ Use only active category keys defined above. `all_recipients` must be an array
 and may be empty. `needs_personal_reply` must be a boolean. `reason` must be an
 object. `amount_detected` must be a number or null. `name_sender` must be a
 string or null. Include every field even when its value is empty, false, or null."""
+
+
+def without_legacy_json_instructions(guidelines: str) -> str:
+    """Remove an older editable JSON-output block now enforced by the system."""
+    return re.split(
+        r"\n*\s*(?:Return a JSON object with:|REQUIRED OUTPUT FORMAT:)",
+        guidelines or "",
+        maxsplit=1,
+        flags=re.IGNORECASE,
+    )[0].rstrip()
 
 
 def build_system_prompt(inbox: InboxConfig, rules: List[CategoryRule]) -> str:

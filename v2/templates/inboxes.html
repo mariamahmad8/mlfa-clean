@@ -329,10 +329,13 @@
                         </div>
                     </div>
                     <div class="field field-top">
-                        <label class="form-label" for="fRequiredJson">Required JSON output <span class="badge">Locked</span></label>
+                        <label class="form-label">Required JSON output <span class="badge">Locked</span></label>
                         <div class="field-control">
-                            <textarea class="form-textarea" id="fRequiredJson" readonly aria-readonly="true" style="min-height: 220px; background: var(--panel-2); color: var(--text-muted);">{{ required_json_output }}</textarea>
-                            <div class="form-hint">This system requirement is included in every inbox prompt and cannot be edited or removed.</div>
+                            <div class="form-hint">The system automatically includes a locked JSON response format in every inbox prompt.</div>
+                            <details style="margin-top: 8px;">
+                                <summary style="cursor: pointer; color: var(--mlfa-teal); font-size: 13px; font-weight: 600;">View required JSON format</summary>
+                                <pre style="max-height: 220px; overflow: auto; white-space: pre-wrap; margin: 8px 0 0; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-2); color: var(--text-muted); font-size: 12px;">{{ required_json_output }}</pre>
+                            </details>
                         </div>
                     </div>
                 </div>
@@ -499,6 +502,10 @@ Identify the sender's name when it is reasonably clear. Set needs_personal_reply
 
 Use only the active categories configured for this inbox. The required JSON output format is appended automatically by the system.`;
 
+        function withoutLegacyJsonInstructions(value) {
+            return String(value || '').split(/\n*\s*(?:Return a JSON object with:|REQUIRED OUTPUT FORMAT:)/i)[0].trimEnd();
+        }
+
         function handleSetupTemplateChange() {
             const selectedId = document.getElementById('fCloneSource').value;
             const source = inboxes.find(ib => String(ib.id) === String(selectedId));
@@ -516,7 +523,7 @@ Use only the active categories configured for this inbox. The required JSON outp
                 ? (source.system_preamble || GUIDED_PREAMBLE)
                 : GUIDED_PREAMBLE;
             document.getElementById('fGuidelines').value = source
-                ? (source.global_guidelines || GUIDED_GUIDELINES)
+                ? (withoutLegacyJsonInstructions(source.global_guidelines) || GUIDED_GUIDELINES)
                 : GUIDED_GUIDELINES;
             updateInboxBadges();
             markDirty();
