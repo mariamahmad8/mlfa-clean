@@ -1075,20 +1075,25 @@ input[type="checkbox"], input[type="radio"] {
   gap: 16px;
   margin-bottom: 20px;
 }
-.copy-dialog-head .modal-title { margin: 0; }
-.copy-dialog-close {
+.copy-dialog-head .modal-title {
+  margin: 0;
+  font-family: var(--font);
+  font-size: 14.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+.copy-dialog .modal-close {
   appearance: none;
-  border: 0;
   background: transparent;
+  border: none;
   color: var(--text-muted);
   cursor: pointer;
-  font-size: 20px;
+  font-size: 18px;
   line-height: 1;
-  padding: 6px 8px;
-  margin-top: 4px;
-  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  border-radius: 4px;
 }
-.copy-dialog-close:hover { background: var(--panel-2); color: var(--text); }
+.copy-dialog .modal-close:hover { background: var(--panel-2); color: var(--text); }
 .copy-dialog .modal-actions { border-top: 0; padding-top: 0; }
 
 /* Badges */
