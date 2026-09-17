@@ -6,7 +6,7 @@ Endpoints:
   /login, /logout
   /api/emails    → list pending emails for review
   /api/emails/<id>/approve     → execute the action plan
-  /api/emails/<id>/reject      → move to trash
+  /api/emails/<id>/reject      → move to the Rejected folder
   /api/emails/<id>/dismiss     → mark read, no action
   /api/emails/approve_all      → approve everything in the queue
   /api/settings/automation     → toggle automation mode per inbox
@@ -773,7 +773,7 @@ def approve_email(email_id):
 @reviewer_bp.route('/api/emails/<email_id>/reject', methods=['POST'])
 @login_required
 def reject_email(email_id):
-    """Reject a queued email — move to Trash, notify, and log the reason."""
+    """Reject a queued email — move to Inbox/Rejected, notify, and log."""
     inbox = _get_current_inbox()
     if inbox is None:
         return jsonify({"error": "No active inbox"}), 400
@@ -783,20 +783,22 @@ def reject_email(email_id):
     if not reason:
         return jsonify({"error": "A rejection reason is required."}), 400
 
-    # Claim first: a second click must not trash-and-log the same email twice.
-    with queue_storage.claim_pending(inbox.id, email_id) as claimed:
-        if claimed is None:
-            return jsonify({
-                "status": "already_handled",
-                "error": "This email was already handled.",
-            }), 409
+    try:
+        # Claim first: a second click must not move-and-log the same email twice.
+        with queue_storage.claim_pending(inbox.id, email_id) as claimed:
+            if claimed is None:
+                return jsonify({
+                    "status": "already_handled",
+                    "error": "This email was already handled.",
+                }), 409
 
-        raw_msg = o365.fetch_message_safely(inbox, email_id)
-        if raw_msg is not None:
+            raw_msg = o365.fetch_message_safely(inbox, email_id)
+            if raw_msg is None or not o365.move_to_rejected(inbox, raw_msg):
+                raise _AbortClaim()
+
             normalized_msg = o365.normalize_message(raw_msg)
             o365.remove_email_tags(raw_msg, ['PAIRActioned/queued'])
-            o365.move_to_trash(inbox, raw_msg)
-            o365.tag_email(raw_msg, ['dismissed'])
+            o365.tag_email(raw_msg, ['PAIRActioned/rejected'])
 
             notify_to = os.getenv('REVIEW_NOTIFY_EMAIL', 'mariam.ahmad@pairsys.ai').strip()
             if notify_to:
@@ -826,13 +828,15 @@ def reject_email(email_id):
                 except Exception as e:
                     log_event("review.notification_failed", level="ERROR", error=e)
 
-        audit_storage.log_event(
-            inbox_id=inbox.id,
-            email_id=email_id,
-            action="rejected",
-            actor=session.get('user_email', 'unknown'),
-            comment=reason,
-        )
+            audit_storage.log_event(
+                inbox_id=inbox.id,
+                email_id=email_id,
+                action="rejected",
+                actor=session.get('user_email', 'unknown'),
+                comment=reason,
+            )
+    except _AbortClaim:
+        return jsonify({"error": "The email could not be moved to the Rejected folder."}), 500
     return jsonify({"status": "rejected"})
 
 

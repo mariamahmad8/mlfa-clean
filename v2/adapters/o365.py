@@ -350,7 +350,7 @@ def move_to_trash(inbox: InboxConfig, msg) -> bool:
     """
     Move a message to the Deleted Items folder.
 
-    Used for auto_reply, delete_internal categories, and reviewer rejections.
+    Used for auto_reply and delete_internal categories.
     """
     try:
         mailbox = get_mailbox(inbox)
@@ -365,6 +365,11 @@ def move_to_trash(inbox: InboxConfig, msg) -> bool:
             inbox_db_id=inbox.id,
         )
         return False
+
+
+def move_to_rejected(inbox: InboxConfig, msg) -> bool:
+    """Move a reviewer-rejected message to Inbox/Rejected, creating it if needed."""
+    return move_to_folder(inbox, msg, ["Rejected"])
 
 
 def send_email(inbox: InboxConfig, to: str, subject: str, body_html: str) -> None:

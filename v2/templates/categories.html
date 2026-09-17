@@ -64,6 +64,12 @@
         .drag-handle { cursor: grab; color: var(--text-soft); user-select: none; text-align: center; font-size: 14px; line-height: 1; }
         .drag-handle:active { cursor: grabbing; }
         .drag-handle:hover { color: var(--text-muted); }
+        .copy-rule-list { max-height: 340px; overflow-y: auto; border: 1px solid var(--line); border-radius: 3px; }
+        .copy-rule-item { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--line-soft); cursor: pointer; }
+        .copy-rule-item:last-child { border-bottom: 0; }
+        .copy-rule-item:hover { background: var(--panel-hover); }
+        .copy-rule-name { font-weight: 600; }
+        .copy-rule-meta { color: var(--text-muted); font-size: 11.5px; margin-top: 2px; }
     </style>
 </head>
 <body>
@@ -78,6 +84,7 @@
 
         <div class="toolbar">
             <select class="form-select" id="inboxSelect" onchange="loadRules()" style="max-width: 300px;"></select>
+            <button class="btn" onclick="openCopyModal()">Copy from another inbox</button>
             <button class="btn primary" onclick="openAddModal()">+ Add category</button>
         </div>
 
@@ -226,22 +233,124 @@
         </div>
     </div>
 
+    <div class="modal-backdrop dense-backdrop" id="copyModal" style="display:none;">
+        <div class="modal settings-modal dense-modal" style="max-width:680px;">
+            <div class="modal-topbar">
+                <div class="dm-head">
+                    <h3 class="modal-title">Copy categories</h3>
+                    <div class="dm-head-right">
+                        <button class="modal-close" onclick="closeCopyModal()" aria-label="Close">×</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="field">
+                    <label class="form-label" for="copySourceInbox">Copy from</label>
+                    <select class="form-select w-sel" id="copySourceInbox" onchange="loadCopyRules()"></select>
+                </div>
+                <div class="sub-head">Select categories</div>
+                <div class="copy-rule-list" id="copyRuleList"></div>
+                <div class="form-hint" style="margin-top:8px;">Copied categories are independent. Existing categories with the same internal key are skipped.</div>
+            </div>
+            <div class="modal-footer">
+                <span class="footer-status" id="copyStatus"></span>
+                <button class="btn" onclick="closeCopyModal()">Cancel</button>
+                <button class="btn primary" id="copyRulesBtn" onclick="copySelectedRules()">Copy selected</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let currentInboxId = null;
+        let inboxes = [];
         let rules = [];
         let recipients = [];
         let templates = [];
+        let availableCopyRules = [];
 
         async function loadInboxes() {
             const res = await fetch('/api/inboxes');
             if (!res.ok) return;
-            const inboxes = await res.json();
+            inboxes = await res.json();
             const sel = document.getElementById('inboxSelect');
             sel.innerHTML = inboxes.map(ib => `<option value="${ib.id}">${escapeHtml(ib.display_name)}</option>`).join('');
             if (inboxes.length) {
                 currentInboxId = inboxes[0].id;
                 await loadRules();
             }
+        }
+
+        async function openCopyModal() {
+            if (!currentInboxId || inboxes.length < 2) {
+                notify('Add another inbox before copying categories', 'error');
+                return;
+            }
+            const source = document.getElementById('copySourceInbox');
+            const choices = inboxes.filter(inbox => String(inbox.id) !== String(currentInboxId));
+            source.innerHTML = choices.map(inbox =>
+                `<option value="${inbox.id}">${escapeHtml(inbox.display_name)} — ${escapeHtml(inbox.email_to_watch)}</option>`
+            ).join('');
+            const infoInbox = choices.find(inbox =>
+                String(inbox.email_to_watch || '').trim().toLowerCase() === 'info@mlfa.org'
+            );
+            if (infoInbox) source.value = String(infoInbox.id);
+            document.getElementById('copyStatus').textContent = '';
+            document.getElementById('copyModal').style.display = 'flex';
+            await loadCopyRules();
+        }
+
+        function closeCopyModal() {
+            document.getElementById('copyModal').style.display = 'none';
+        }
+
+        async function loadCopyRules() {
+            const sourceId = document.getElementById('copySourceInbox').value;
+            const list = document.getElementById('copyRuleList');
+            list.innerHTML = '<div class="text-muted text-small" style="padding:12px;">Loading…</div>';
+            const res = await fetch(`/api/inboxes/${sourceId}/rules`);
+            if (!res.ok) {
+                list.innerHTML = '<div class="text-muted text-small" style="padding:12px;">Could not load categories.</div>';
+                return;
+            }
+            availableCopyRules = await res.json();
+            const existingKeys = new Set(rules.map(rule => rule.key));
+            list.innerHTML = availableCopyRules.length ? availableCopyRules.map(rule => {
+                const exists = existingKeys.has(rule.key);
+                return `<label class="copy-rule-item">
+                    <input type="checkbox" class="copyRuleCheck" value="${rule.id}" ${exists ? 'disabled' : 'checked'}>
+                    <span>
+                        <span class="copy-rule-name">${escapeHtml(rule.label)}</span>
+                        <span class="copy-rule-meta">${escapeHtml(rule.key)}${exists ? ' · already exists' : ''}</span>
+                    </span>
+                </label>`;
+            }).join('') : '<div class="text-muted text-small" style="padding:12px;">This inbox has no categories.</div>';
+        }
+
+        async function copySelectedRules() {
+            const sourceId = document.getElementById('copySourceInbox').value;
+            const ruleIds = Array.from(document.querySelectorAll('.copyRuleCheck:checked')).map(box => Number(box.value));
+            if (!ruleIds.length) {
+                notify('Select at least one category', 'error');
+                return;
+            }
+            const button = document.getElementById('copyRulesBtn');
+            button.disabled = true;
+            const res = await fetch(`/api/inboxes/${currentInboxId}/copy_rules`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ source_inbox_id: Number(sourceId), rule_ids: ruleIds }),
+            });
+            let data = {};
+            try { data = await res.json(); } catch (_) {}
+            button.disabled = false;
+            if (!res.ok) {
+                notify(data.error || 'Could not copy categories', 'error');
+                return;
+            }
+            closeCopyModal();
+            await loadRules();
+            const skipped = (data.skipped || []).length;
+            notify(`Copied ${(data.copied || []).length} categor${(data.copied || []).length === 1 ? 'y' : 'ies'}${skipped ? `; skipped ${skipped} existing` : ''}`);
         }
 
         async function loadRules() {

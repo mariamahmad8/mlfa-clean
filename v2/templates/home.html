@@ -638,7 +638,7 @@
                   <thead><tr><th>Button</th><th>What it does</th></tr></thead>
                   <tbody>
                     <tr><td><strong>Approve</strong></td><td>Executes the AI's plan. Sends the reply, forwards to the recipients, tags with <code>PAIRActioned/&lt;category&gt;</code>, moves to the destination folder. The email disappears from the queue.</td></tr>
-                    <tr><td><strong>Reject</strong></td><td>Moves the email to Trash. You'll be asked for a reason (required). The reason gets logged for future improvement of the classifier. Nothing else happens.</td></tr>
+                    <tr><td><strong>Reject</strong></td><td>Moves the email to the Rejected folder, creating it automatically if needed. You'll be asked for a reason (required). The reason gets logged for future improvement of the classifier. Nothing else happens.</td></tr>
                     <tr><td><strong>Dismiss</strong></td><td>Silently drops the email — marks read, no forward, no reply. Used for spam / off-topic emails you don't want to trash but also don't want to act on.</td></tr>
                     <tr><td><strong>Approve all pending</strong></td><td>Approves every email currently in the queue. Use with caution.</td></tr>
                   </tbody>
@@ -834,7 +834,7 @@
                     <tr><td>Auto</td><td>The AI handled the email autonomously without human review.</td></tr>
                     <tr><td>Queued</td><td>The AI put the email in the review queue for a person.</td></tr>
                     <tr><td>Approved</td><td>A reviewer clicked Approve. The action plan ran.</td></tr>
-                    <tr><td>Rejected</td><td>A reviewer rejected the email. Moved to Trash.</td></tr>
+                    <tr><td>Rejected</td><td>A reviewer rejected the email. Moved to the Rejected folder.</td></tr>
                     <tr><td>Dismissed</td><td>A reviewer decided the email needed no action.</td></tr>
                     <tr><td>Created / Updated / Deleted</td><td>A staff member changed a rule, template, recipient, or user.</td></tr>
                   </tbody>
@@ -1133,7 +1133,7 @@
                 <h3>How entries are cleared</h3>
                 <ul>
                   <li><strong>Approve</strong> — the plan runs (reply, forward, tag, move), then the queue row is deleted.</li>
-                  <li><strong>Reject</strong> — the email is moved to Trash and the queue row is deleted.</li>
+                  <li><strong>Reject</strong> — the email is moved to the Rejected folder and the queue row is deleted.</li>
                   <li><strong>Dismiss</strong> — the email is marked read and the queue row is deleted.</li>
                   <li><strong>TTL cleanup (planned)</strong> — a scheduled job clears entries older than the inbox's <em>Retention days</em> setting.</li>
                 </ul>
@@ -1280,7 +1280,7 @@
                 <p>Whoever clicks Approve/Reject/Dismiss first wins. The other person will see it disappear from their queue on the next auto-refresh.</p>
 
                 <h3>Do rejected emails come back?</h3>
-                <p>Rejected emails are moved to Outlook's Deleted Items folder and tagged so the worker skips them on future polls. They won't be re-processed unless someone manually removes the tag and moves them back.</p>
+                <p>Rejected emails are moved to an automatically created Rejected folder and tagged so the worker skips them on future polls. They won't be re-processed unless someone manually removes the tag and moves them back.</p>
 
                 <h3>Does the worker poll the Junk / Spam folder?</h3>
                 <p>Yes, if you've configured it to. Both the Inbox and JunkEmail folders have their own delta tokens (<code>delta_token_inbox</code> and <code>delta_token_junk</code>). Set up per inbox. Junk polling is optional — the majority of MLFA inboxes only poll Inbox.</p>

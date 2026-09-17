@@ -153,10 +153,10 @@ def update_inbox(inbox: InboxConfig) -> None:
 
 def delete_inbox(inbox_id: int) -> None:
     """
-    Delete an inbox row by id. Also strip this inbox_id from every user's
-    assigned_inbox_ids array so users don't hold stale references.
-    Note: category_rules with this inbox_id must be deleted first because
-    of the foreign-key constraint.
+    Delete an inbox and all inbox-scoped data in one transaction.
+
+    These tables predate ON DELETE CASCADE, so every dependent row must be
+    removed explicitly before the inbox row. User assignments are cleaned too.
     """
     session = get_db_session()
     try:
@@ -174,10 +174,14 @@ def delete_inbox(inbox_id: int) -> None:
             """),
             {"inbox_id": inbox_id},
         )
-        session.execute(
-            text("DELETE FROM inboxes WHERE id = :inbox_id"),
-            {"inbox_id": inbox_id},
-        )
+        params = {"inbox_id": inbox_id}
+        session.execute(text("DELETE FROM pending_queue WHERE inbox_id = :inbox_id"), params)
+        session.execute(text("DELETE FROM audit_log WHERE inbox_id = :inbox_id"), params)
+        session.execute(text("DELETE FROM category_rule_recipients WHERE inbox_id = :inbox_id"), params)
+        session.execute(text("DELETE FROM category_rules WHERE inbox_id = :inbox_id"), params)
+        session.execute(text("DELETE FROM reply_templates WHERE inbox_id = :inbox_id"), params)
+        session.execute(text("DELETE FROM recipients WHERE inbox_id = :inbox_id"), params)
+        session.execute(text("DELETE FROM inboxes WHERE id = :inbox_id"), params)
         session.commit()
     finally:
         session.close()

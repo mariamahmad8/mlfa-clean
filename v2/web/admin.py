@@ -12,6 +12,7 @@ Plus two special endpoints:
 """
 
 import os
+from dataclasses import replace
 from typing import Optional
 from flask import Blueprint, request, jsonify, session, render_template, redirect, url_for, send_from_directory
 from functools import wraps
@@ -425,17 +426,132 @@ def clone_inbox(source_id):
 @admin_bp.route("/api/inboxes/<int:inbox_id>", methods=["DELETE"])
 @admin_required
 def delete_inbox(inbox_id):
-    # Delete all rules for this inbox first (foreign key constraint)
-    rules = rules_storage.get_rules_for_inbox(inbox_id)
-    for rule in rules:
-        rules_storage.delete_rule(rule.id)
     existing = inbox_storage.get_inbox(inbox_id)
+    if not existing:
+        return jsonify({"error": "Not found"}), 404
     inbox_storage.delete_inbox(inbox_id)
-    if existing:
-        _audit("inbox_deleted", f"inbox:{existing.email_to_watch}", f"Display: {existing.display_name}")
-    else:
-        _audit("inbox_deleted", f"inbox_id:{inbox_id}")
+    _audit("inbox_deleted", f"inbox:{existing.email_to_watch}", f"Display: {existing.display_name}")
     return jsonify({"status": "deleted"})
+
+
+@admin_bp.route("/api/inboxes/<int:inbox_id>/copy_rules", methods=["POST"])
+@settings_access_required
+@inbox_scoped
+def copy_rules(inbox_id):
+    """Copy selected independent rules and their dependencies into an existing inbox."""
+    data = request.get_json() or {}
+    try:
+        source_id = int(data.get("source_inbox_id"))
+        requested_ids = {int(value) for value in (data.get("rule_ids") or [])}
+    except (TypeError, ValueError):
+        return jsonify({"error": "A valid source inbox and rule selection are required"}), 400
+
+    if source_id == inbox_id:
+        return jsonify({"error": "Choose a different source inbox"}), 400
+    if not _current_user_can_access(source_id):
+        return jsonify({"error": "You don't have access to the source inbox"}), 403
+    if not requested_ids:
+        return jsonify({"error": "Select at least one category"}), 400
+
+    source_rules = [
+        rule for rule in rules_storage.get_rules_for_inbox(source_id)
+        if rule.id in requested_ids
+    ]
+    if len(source_rules) != len(requested_ids):
+        return jsonify({"error": "One or more selected categories were not found"}), 404
+
+    destination_rules = rules_storage.get_rules_for_inbox(inbox_id)
+    existing_keys = {rule.key for rule in destination_rules}
+    next_priority = max((rule.priority for rule in destination_rules), default=0) + 1
+
+    source_templates = {
+        template.id: template
+        for template in templates_storage.get_templates_for_inbox(source_id)
+    }
+    destination_templates = templates_storage.get_templates_for_inbox(inbox_id)
+    template_cache = {}
+
+    source_recipients = {
+        recipient.id: recipient
+        for recipient in recipients_storage.get_recipients_for_inbox(source_id)
+    }
+    destination_recipients = {
+        recipient.email.strip().lower(): recipient
+        for recipient in recipients_storage.get_recipients_for_inbox(inbox_id)
+    }
+
+    def destination_template_id(source_template_id):
+        if source_template_id is None:
+            return None
+        if source_template_id in template_cache:
+            return template_cache[source_template_id]
+        source_template = source_templates.get(source_template_id)
+        if source_template is None:
+            return None
+        matching = next((
+            template for template in destination_templates
+            if template.name_template == source_template.name_template
+            and template.body_html == source_template.body_html
+        ), None)
+        if matching:
+            new_id = matching.id
+        else:
+            new_id = templates_storage.save_template(replace(
+                source_template, id=None, inbox_id=inbox_id, created_at=None
+            ))
+        template_cache[source_template_id] = new_id
+        return new_id
+
+    copied = []
+    skipped = []
+    for source_rule in source_rules:
+        if source_rule.key in existing_keys:
+            skipped.append(source_rule.key)
+            continue
+
+        recipient_ids = []
+        recipient_emails = list(source_rule.emails_to_forward or [])
+        if source_rule.recipient_links_migrated:
+            recipient_emails = []
+            for source_recipient_id in source_rule.recipient_ids:
+                source_recipient = source_recipients.get(source_recipient_id)
+                if source_recipient is None:
+                    continue
+                email_key = source_recipient.email.strip().lower()
+                destination_recipient = destination_recipients.get(email_key)
+                if destination_recipient is None:
+                    new_id = recipients_storage.save_recipient(replace(
+                        source_recipient, id=None, inbox_id=inbox_id, created_at=None
+                    ))
+                    destination_recipient = replace(
+                        source_recipient, id=new_id, inbox_id=inbox_id
+                    )
+                    destination_recipients[email_key] = destination_recipient
+                recipient_ids.append(destination_recipient.id)
+                if destination_recipient.active:
+                    recipient_emails.append(destination_recipient.email)
+
+        copied_rule = replace(
+            source_rule,
+            id=None,
+            inbox_id=inbox_id,
+            priority=next_priority,
+            reply_template_id=destination_template_id(source_rule.reply_template_id),
+            reply_template_personal_id=destination_template_id(source_rule.reply_template_personal_id),
+            recipient_ids=recipient_ids,
+            emails_to_forward=recipient_emails,
+        )
+        rules_storage.save_rule(copied_rule)
+        copied.append(source_rule.key)
+        existing_keys.add(source_rule.key)
+        next_priority += 1
+        _audit(
+            "rule_created",
+            f"rule:{source_rule.key}",
+            f"Copied from inbox_id {source_id}; label: {source_rule.label}",
+            inbox_id=inbox_id,
+        )
+    return jsonify({"status": "copied", "copied": copied, "skipped": skipped})
 
 
 # ---------------------------------------------------------------------------

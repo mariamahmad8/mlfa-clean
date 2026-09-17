@@ -544,22 +544,29 @@
         }
 
         async function loadAutomation() {
-            const res = await fetch('/api/settings/automation');
+            const inboxId = currentInboxId;
+            const suffix = inboxId ? `?inbox_id=${inboxId}` : '';
+            const res = await fetch(`/api/settings/automation${suffix}`);
             if (!res.ok) return;
             const data = await res.json();
+            // Ignore a late response if the reviewer switched inboxes meanwhile.
+            if (inboxId !== currentInboxId) return;
             const sw = document.getElementById('automationSwitch');
             if (data.automationEnabled) sw.classList.add('on');
             else sw.classList.remove('on');
         }
 
         async function toggleAutomation() {
+            const inboxId = currentInboxId;
+            if (!inboxId) return;
             const sw = document.getElementById('automationSwitch');
             const enabled = !sw.classList.contains('on');
-            await fetch('/api/settings/automation', {
+            const res = await apiCall('/api/settings/automation', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ automationEnabled: enabled }),
+                body: JSON.stringify({ inbox_id: inboxId, automationEnabled: enabled }),
             });
+            if (!res || inboxId !== currentInboxId) return;
             if (enabled) sw.classList.add('on');
             else sw.classList.remove('on');
             notify(enabled ? 'Automation enabled' : 'Automation disabled');
