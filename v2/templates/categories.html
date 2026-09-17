@@ -52,7 +52,19 @@
         }
 
 
-        .rule-row { display: grid; grid-template-columns: 24px 40px minmax(0, 1.2fr) minmax(0, 220px) 80px 100px 160px; gap: 12px; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line-soft); background: var(--panel); cursor: default; }
+        .rule-table-header, .rule-row { display: grid; grid-template-columns: 24px 40px minmax(0, 1.2fr) minmax(0, 220px) 80px 100px 160px; gap: 12px; align-items: center; }
+        .rule-table-header {
+            padding: 9px 16px;
+            border-bottom: 1px solid var(--line);
+            background: var(--panel-2);
+            color: var(--text-muted);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.055em;
+            text-transform: uppercase;
+        }
+        .rule-table-header span:last-child { padding-left: 2px; }
+        .rule-row { padding: 12px 16px; border-bottom: 1px solid var(--line-soft); background: var(--panel); cursor: default; }
         .rule-row:last-child { border-bottom: none; }
         .rule-row:hover { background: var(--panel-hover); }
         .rule-row.dragging { opacity: 0.5; }
@@ -84,11 +96,22 @@
 
         <div class="toolbar">
             <select class="form-select" id="inboxSelect" onchange="loadRules()" style="max-width: 300px;"></select>
-            <button class="btn" onclick="openCopyModal()">Copy from another inbox</button>
-            <button class="btn primary" onclick="openAddModal()">+ Add category</button>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <button class="btn" onclick="openCopyModal()">Copy from another inbox</button>
+                <button class="btn primary" onclick="openAddModal()">+ Add category</button>
+            </div>
         </div>
 
-        <div class="card" style="padding: 0;">
+        <div class="card" style="padding: 0; overflow-x: auto;">
+            <div class="rule-table-header" aria-hidden="true">
+                <span></span>
+                <span>#</span>
+                <span>Category</span>
+                <span>Destination folder</span>
+                <span>Forwarding</span>
+                <span>Status</span>
+                <span>Actions</span>
+            </div>
             <div id="rulesList"></div>
         </div>
         <div id="empty" class="empty-state" style="display:none;">No rules yet for this inbox.</div>
