@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" href="/mlfa-favicon.png?v=2">
     <meta name="csrf-token" content="{{ csrf_token }}">
     <script src="/static/security.js?v=2"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Nunito+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="/static/shared.css?v=13">
+    <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Nunito+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="/static/shared.css?v=14">
     <style>
         /* Category-modal extras on top of the shared .dense-modal system
            (see shared.css). Only the recipient picker and the rules table
@@ -235,27 +235,20 @@
         </div>
     </div>
 
-    <div class="modal-backdrop dense-backdrop" id="copyModal" style="display:none;">
-        <div class="modal settings-modal dense-modal" style="max-width:680px;">
-            <div class="modal-topbar">
-                <div class="dm-head">
-                    <h3 class="modal-title">Copy categories</h3>
-                    <div class="dm-head-right">
-                        <button class="modal-close" onclick="closeCopyModal()" aria-label="Close">×</button>
-                    </div>
-                </div>
+    <div class="modal-backdrop" id="copyModal" style="display:none;">
+        <div class="modal copy-dialog" style="max-width:680px;">
+            <div class="copy-dialog-head">
+                <h3 class="modal-title">Copy categories</h3>
+                <button class="copy-dialog-close" onclick="closeCopyModal()" aria-label="Close">×</button>
             </div>
-            <div class="modal-body">
-                <div class="field">
-                    <label class="form-label" for="copySourceInbox">Copy from</label>
-                    <select class="form-select w-sel" id="copySourceInbox" onchange="loadCopyRules()"></select>
-                </div>
-                <div class="sub-head">Select categories</div>
-                <div class="copy-rule-list" id="copyRuleList"></div>
-                <div class="form-hint" style="margin-top:8px;">Copied categories are independent. Existing categories with the same internal key are skipped.</div>
+            <div class="form-group">
+                <label class="form-label" for="copySourceInbox">Copy from</label>
+                <select class="form-select" id="copySourceInbox" onchange="loadCopyRules()"></select>
             </div>
-            <div class="modal-footer">
-                <span class="footer-status" id="copyStatus"></span>
+            <div class="sub-head">Select categories</div>
+            <div class="copy-rule-list" id="copyRuleList"></div>
+            <div class="form-hint" style="margin-top:8px;">Copied categories are independent. Existing categories with the same internal key are skipped.</div>
+            <div class="modal-actions">
                 <button class="btn" onclick="closeCopyModal()">Cancel</button>
                 <button class="btn primary" id="copyRulesBtn" onclick="copySelectedRules()">Copy selected</button>
             </div>
@@ -296,7 +289,6 @@
                 String(inbox.email_to_watch || '').trim().toLowerCase() === 'info@mlfa.org'
             );
             if (infoInbox) source.value = String(infoInbox.id);
-            document.getElementById('copyStatus').textContent = '';
             document.getElementById('copyModal').style.display = 'flex';
             await loadCopyRules();
         }

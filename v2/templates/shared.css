@@ -1067,6 +1067,30 @@ input[type="checkbox"], input[type="radio"] {
   border-top: 1px solid var(--line-soft);
 }
 
+/* Lightweight picker dialogs used by the cross-inbox copy workflows. */
+.copy-dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.copy-dialog-head .modal-title { margin: 0; }
+.copy-dialog-close {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+  padding: 6px 8px;
+  margin-top: 4px;
+  border-radius: var(--radius-sm);
+}
+.copy-dialog-close:hover { background: var(--panel-2); color: var(--text); }
+.copy-dialog .modal-actions { border-top: 0; padding-top: 0; }
+
 /* Badges */
 .badge {
   display: inline-block;
