@@ -429,7 +429,16 @@ def delete_inbox(inbox_id):
     existing = inbox_storage.get_inbox(inbox_id)
     if not existing:
         return jsonify({"error": "Not found"}), 404
-    inbox_storage.delete_inbox(inbox_id)
+    try:
+        inbox_storage.delete_inbox(inbox_id)
+    except Exception as exc:
+        log_security_event(
+            "admin.inbox_delete_failed",
+            level="ERROR",
+            error=exc,
+            inbox_db_id=inbox_id,
+        )
+        return jsonify({"error": "The inbox could not be deleted. No data was removed."}), 500
     _audit("inbox_deleted", f"inbox:{existing.email_to_watch}", f"Display: {existing.display_name}")
     return jsonify({"status": "deleted"})
 

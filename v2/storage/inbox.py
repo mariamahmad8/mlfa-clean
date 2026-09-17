@@ -167,10 +167,10 @@ def delete_inbox(inbox_id: int) -> None:
                 SET assigned_inbox_ids = COALESCE(
                     (SELECT jsonb_agg(value)
                      FROM jsonb_array_elements(assigned_inbox_ids) AS value
-                     WHERE value <> to_jsonb(:inbox_id::int)),
+                     WHERE value <> to_jsonb(CAST(:inbox_id AS integer))),
                     '[]'::jsonb
                 )
-                WHERE assigned_inbox_ids @> to_jsonb(ARRAY[:inbox_id::int])
+                WHERE assigned_inbox_ids @> to_jsonb(ARRAY[CAST(:inbox_id AS integer)])
             """),
             {"inbox_id": inbox_id},
         )
