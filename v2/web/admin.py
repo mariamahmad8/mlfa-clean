@@ -745,6 +745,55 @@ def create_recipient(inbox_id):
     return jsonify({"status": "created"}), 201
 
 
+@admin_bp.route("/api/inboxes/<int:inbox_id>/copy_recipients", methods=["POST"])
+@settings_access_required
+@inbox_scoped
+def copy_recipients(inbox_id):
+    """Copy selected recipients into an existing inbox, deduplicated by email."""
+    data = request.get_json() or {}
+    try:
+        source_id = int(data.get("source_inbox_id"))
+        requested_ids = {int(value) for value in (data.get("recipient_ids") or [])}
+    except (TypeError, ValueError):
+        return jsonify({"error": "A valid source inbox and recipient selection are required"}), 400
+    if source_id == inbox_id:
+        return jsonify({"error": "Choose a different source inbox"}), 400
+    if not _current_user_can_access(source_id):
+        return jsonify({"error": "You don't have access to the source inbox"}), 403
+    if not requested_ids:
+        return jsonify({"error": "Select at least one recipient"}), 400
+
+    source_items = [
+        recipient for recipient in recipients_storage.get_recipients_for_inbox(source_id)
+        if recipient.id in requested_ids
+    ]
+    if len(source_items) != len(requested_ids):
+        return jsonify({"error": "One or more selected recipients were not found"}), 404
+
+    existing_emails = {
+        recipient.email.strip().lower()
+        for recipient in recipients_storage.get_recipients_for_inbox(inbox_id)
+    }
+    copied, skipped = [], []
+    for recipient in source_items:
+        email_key = recipient.email.strip().lower()
+        if email_key in existing_emails:
+            skipped.append(recipient.email)
+            continue
+        recipients_storage.save_recipient(replace(
+            recipient, id=None, inbox_id=inbox_id, created_at=None
+        ))
+        copied.append(recipient.email)
+        existing_emails.add(email_key)
+        _audit(
+            "recipient_created",
+            f"recipient:{recipient.email}",
+            f"Copied from inbox_id {source_id}; label: {recipient.label_recipient}",
+            inbox_id=inbox_id,
+        )
+    return jsonify({"status": "copied", "copied": copied, "skipped": skipped})
+
+
 @admin_bp.route("/api/recipients/<int:recipient_id>", methods=["PATCH"])
 @settings_access_required
 def update_recipient(recipient_id):
@@ -828,6 +877,55 @@ def create_template(inbox_id):
     templates_storage.save_template(new)
     _audit("template_created", f"template:{new.name_template}", inbox_id=inbox_id)
     return jsonify({"status": "created"}), 201
+
+
+@admin_bp.route("/api/inboxes/<int:inbox_id>/copy_templates", methods=["POST"])
+@settings_access_required
+@inbox_scoped
+def copy_templates(inbox_id):
+    """Copy selected reply templates, deduplicated by template name."""
+    data = request.get_json() or {}
+    try:
+        source_id = int(data.get("source_inbox_id"))
+        requested_ids = {int(value) for value in (data.get("template_ids") or [])}
+    except (TypeError, ValueError):
+        return jsonify({"error": "A valid source inbox and template selection are required"}), 400
+    if source_id == inbox_id:
+        return jsonify({"error": "Choose a different source inbox"}), 400
+    if not _current_user_can_access(source_id):
+        return jsonify({"error": "You don't have access to the source inbox"}), 403
+    if not requested_ids:
+        return jsonify({"error": "Select at least one reply template"}), 400
+
+    source_items = [
+        template for template in templates_storage.get_templates_for_inbox(source_id)
+        if template.id in requested_ids
+    ]
+    if len(source_items) != len(requested_ids):
+        return jsonify({"error": "One or more selected templates were not found"}), 404
+
+    existing_names = {
+        template.name_template.strip().lower()
+        for template in templates_storage.get_templates_for_inbox(inbox_id)
+    }
+    copied, skipped = [], []
+    for template in source_items:
+        name_key = template.name_template.strip().lower()
+        if name_key in existing_names:
+            skipped.append(template.name_template)
+            continue
+        templates_storage.save_template(replace(
+            template, id=None, inbox_id=inbox_id, created_at=None
+        ))
+        copied.append(template.name_template)
+        existing_names.add(name_key)
+        _audit(
+            "template_created",
+            f"template:{template.name_template}",
+            f"Copied from inbox_id {source_id}",
+            inbox_id=inbox_id,
+        )
+    return jsonify({"status": "copied", "copied": copied, "skipped": skipped})
 
 
 @admin_bp.route("/api/templates/<int:template_id>", methods=["PATCH"])

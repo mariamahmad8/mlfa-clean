@@ -8,6 +8,13 @@
     <meta name="csrf-token" content="{{ csrf_token }}">
     <script src="/static/security.js?v=2"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Nunito+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="/static/shared.css?v=13">
+    <style>
+        .copy-list { max-height: 340px; overflow-y: auto; border: 1px solid var(--line); border-radius: var(--radius-sm); }
+        .copy-item { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--line-soft); cursor: pointer; }
+        .copy-item:last-child { border-bottom: 0; }
+        .copy-item:hover { background: var(--panel-hover); }
+        .copy-meta { color: var(--text-muted); font-size: 12px; margin-top: 2px; }
+    </style>
 </head>
 <body>
     {% set active_nav = 'settings' %}
@@ -21,7 +28,10 @@
 
         <div class="toolbar">
             <select class="form-select" id="inboxSelect" onchange="loadRecipients()" style="max-width: 300px;"></select>
-            <button class="btn primary" onclick="openAddModal()">+ Add recipient</button>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <button class="btn" onclick="openCopyModal()">Copy from another inbox</button>
+                <button class="btn primary" onclick="openAddModal()">+ Add recipient</button>
+            </div>
         </div>
 
         <table class="data-table">
@@ -71,17 +81,82 @@
         </div>
     </div>
 
+    <div class="modal-backdrop" id="copyModal" style="display:none;">
+        <div class="modal" style="max-width:680px;">
+            <h3 class="modal-title">Copy recipients</h3>
+            <div class="form-group">
+                <label class="form-label" for="copySourceInbox">Copy from</label>
+                <select class="form-select" id="copySourceInbox" onchange="loadCopyItems()"></select>
+            </div>
+            <div class="copy-list" id="copyList"></div>
+            <div class="form-hint" style="margin-top:8px;">Recipients already present with the same email address are skipped.</div>
+            <div class="modal-actions">
+                <button class="btn" onclick="closeCopyModal()">Cancel</button>
+                <button class="btn primary" id="copyBtn" onclick="copySelected()">Copy selected</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let currentInboxId = null;
+        let inboxes = [];
         let recipients = [];
+        let copyItems = [];
 
         async function loadInboxes() {
             const res = await fetch('/api/inboxes');
             if (!res.ok) return;
-            const inboxes = await res.json();
+            inboxes = await res.json();
             const sel = document.getElementById('inboxSelect');
             sel.innerHTML = inboxes.map(ib => `<option value="${ib.id}">${escapeHtml(ib.display_name)}</option>`).join('');
             if (inboxes.length) { currentInboxId = inboxes[0].id; await loadRecipients(); }
+        }
+
+        async function openCopyModal() {
+            const choices = inboxes.filter(inbox => String(inbox.id) !== String(currentInboxId));
+            if (!choices.length) { notify('Add another inbox before copying recipients', 'error'); return; }
+            const source = document.getElementById('copySourceInbox');
+            source.innerHTML = choices.map(inbox => `<option value="${inbox.id}">${escapeHtml(inbox.display_name)} — ${escapeHtml(inbox.email_to_watch)}</option>`).join('');
+            const infoInbox = choices.find(inbox => String(inbox.email_to_watch || '').trim().toLowerCase() === 'info@mlfa.org');
+            if (infoInbox) source.value = String(infoInbox.id);
+            document.getElementById('copyModal').style.display = 'flex';
+            await loadCopyItems();
+        }
+
+        function closeCopyModal() { document.getElementById('copyModal').style.display = 'none'; }
+
+        async function loadCopyItems() {
+            const sourceId = document.getElementById('copySourceInbox').value;
+            const list = document.getElementById('copyList');
+            list.innerHTML = '<div class="text-muted text-small" style="padding:12px;">Loading…</div>';
+            const res = await fetch(`/api/inboxes/${sourceId}/recipients`);
+            if (!res.ok) { list.innerHTML = '<div class="text-muted text-small" style="padding:12px;">Could not load recipients.</div>'; return; }
+            copyItems = await res.json();
+            const existing = new Set(recipients.map(item => item.email.trim().toLowerCase()));
+            list.innerHTML = copyItems.length ? copyItems.map(item => {
+                const duplicate = existing.has(item.email.trim().toLowerCase());
+                return `<label class="copy-item">
+                    <input type="checkbox" class="copyCheck" value="${item.id}" ${duplicate ? 'disabled' : 'checked'}>
+                    <span><strong>${escapeHtml(item.label_recipient)}</strong><div class="copy-meta">${escapeHtml(item.email)}${duplicate ? ' · already exists' : ''}</div></span>
+                </label>`;
+            }).join('') : '<div class="text-muted text-small" style="padding:12px;">This inbox has no recipients.</div>';
+        }
+
+        async function copySelected() {
+            const ids = Array.from(document.querySelectorAll('.copyCheck:checked')).map(box => Number(box.value));
+            if (!ids.length) { notify('Select at least one recipient', 'error'); return; }
+            const button = document.getElementById('copyBtn');
+            button.disabled = true;
+            const res = await fetch(`/api/inboxes/${currentInboxId}/copy_recipients`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ source_inbox_id: Number(document.getElementById('copySourceInbox').value), recipient_ids: ids }),
+            });
+            const data = await res.json().catch(() => ({}));
+            button.disabled = false;
+            if (!res.ok) { notify(data.error || 'Could not copy recipients', 'error'); return; }
+            closeCopyModal();
+            await loadRecipients();
+            notify(`Copied ${(data.copied || []).length} recipient${(data.copied || []).length === 1 ? '' : 's'}`);
         }
 
         async function loadRecipients() {

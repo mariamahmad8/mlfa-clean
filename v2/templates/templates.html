@@ -21,6 +21,11 @@
         .chip-insert:hover { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
         .chip-insert:active { cursor: grabbing; }
         .form-textarea.drag-over { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+        .copy-list { max-height: 340px; overflow-y: auto; border: 1px solid var(--line); border-radius: var(--radius-sm); }
+        .copy-item { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--line-soft); cursor: pointer; }
+        .copy-item:last-child { border-bottom: 0; }
+        .copy-item:hover { background: var(--panel-hover); }
+        .copy-meta { color: var(--text-muted); font-size: 12px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     </style>
 </head>
 <body>
@@ -35,7 +40,10 @@
 
         <div class="toolbar">
             <select class="form-select" id="inboxSelect" onchange="loadTemplates()" style="max-width: 300px;"></select>
-            <button class="btn primary" onclick="openAddModal()">+ Add template</button>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <button class="btn" onclick="openCopyModal()">Copy from another inbox</button>
+                <button class="btn primary" onclick="openAddModal()">+ Add template</button>
+            </div>
         </div>
 
         <table class="data-table">
@@ -99,17 +107,82 @@
         </div>
     </div>
 
+    <div class="modal-backdrop" id="copyModal" style="display:none;">
+        <div class="modal" style="max-width:680px;">
+            <h3 class="modal-title">Copy reply templates</h3>
+            <div class="form-group">
+                <label class="form-label" for="copySourceInbox">Copy from</label>
+                <select class="form-select" id="copySourceInbox" onchange="loadCopyItems()"></select>
+            </div>
+            <div class="copy-list" id="copyList"></div>
+            <div class="form-hint" style="margin-top:8px;">Templates already present with the same name are skipped.</div>
+            <div class="modal-actions">
+                <button class="btn" onclick="closeCopyModal()">Cancel</button>
+                <button class="btn primary" id="copyBtn" onclick="copySelected()">Copy selected</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let currentInboxId = null;
+        let inboxes = [];
         let templates = [];
+        let copyItems = [];
 
         async function loadInboxes() {
             const res = await fetch('/api/inboxes');
             if (!res.ok) return;
-            const inboxes = await res.json();
+            inboxes = await res.json();
             const sel = document.getElementById('inboxSelect');
             sel.innerHTML = inboxes.map(ib => `<option value="${ib.id}">${escapeHtml(ib.display_name)}</option>`).join('');
             if (inboxes.length) { currentInboxId = inboxes[0].id; await loadTemplates(); }
+        }
+
+        async function openCopyModal() {
+            const choices = inboxes.filter(inbox => String(inbox.id) !== String(currentInboxId));
+            if (!choices.length) { notify('Add another inbox before copying templates', 'error'); return; }
+            const source = document.getElementById('copySourceInbox');
+            source.innerHTML = choices.map(inbox => `<option value="${inbox.id}">${escapeHtml(inbox.display_name)} — ${escapeHtml(inbox.email_to_watch)}</option>`).join('');
+            const infoInbox = choices.find(inbox => String(inbox.email_to_watch || '').trim().toLowerCase() === 'info@mlfa.org');
+            if (infoInbox) source.value = String(infoInbox.id);
+            document.getElementById('copyModal').style.display = 'flex';
+            await loadCopyItems();
+        }
+
+        function closeCopyModal() { document.getElementById('copyModal').style.display = 'none'; }
+
+        async function loadCopyItems() {
+            const sourceId = document.getElementById('copySourceInbox').value;
+            const list = document.getElementById('copyList');
+            list.innerHTML = '<div class="text-muted text-small" style="padding:12px;">Loading…</div>';
+            const res = await fetch(`/api/inboxes/${sourceId}/templates`);
+            if (!res.ok) { list.innerHTML = '<div class="text-muted text-small" style="padding:12px;">Could not load templates.</div>'; return; }
+            copyItems = await res.json();
+            const existing = new Set(templates.map(item => item.name_template.trim().toLowerCase()));
+            list.innerHTML = copyItems.length ? copyItems.map(item => {
+                const duplicate = existing.has(item.name_template.trim().toLowerCase());
+                return `<label class="copy-item">
+                    <input type="checkbox" class="copyCheck" value="${item.id}" ${duplicate ? 'disabled' : 'checked'}>
+                    <span><strong>${escapeHtml(item.name_template)}</strong><div class="copy-meta">${escapeHtml(stripHtml(item.body_html).slice(0, 120))}${duplicate ? ' · already exists' : ''}</div></span>
+                </label>`;
+            }).join('') : '<div class="text-muted text-small" style="padding:12px;">This inbox has no reply templates.</div>';
+        }
+
+        async function copySelected() {
+            const ids = Array.from(document.querySelectorAll('.copyCheck:checked')).map(box => Number(box.value));
+            if (!ids.length) { notify('Select at least one reply template', 'error'); return; }
+            const button = document.getElementById('copyBtn');
+            button.disabled = true;
+            const res = await fetch(`/api/inboxes/${currentInboxId}/copy_templates`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ source_inbox_id: Number(document.getElementById('copySourceInbox').value), template_ids: ids }),
+            });
+            const data = await res.json().catch(() => ({}));
+            button.disabled = false;
+            if (!res.ok) { notify(data.error || 'Could not copy templates', 'error'); return; }
+            closeCopyModal();
+            await loadTemplates();
+            notify(`Copied ${(data.copied || []).length} template${(data.copied || []).length === 1 ? '' : 's'}`);
         }
 
         async function loadTemplates() {
