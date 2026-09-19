@@ -224,6 +224,12 @@
         let inboxes = [];
         let reviewCategories = [];
 
+        function inboxApiUrl(path) {
+            if (!currentInboxId) return path;
+            const separator = path.includes('?') ? '&' : '?';
+            return `${path}${separator}inbox_id=${encodeURIComponent(currentInboxId)}`;
+        }
+
         async function loadInboxes() {
             try {
                 const res = await fetch('/api/my_inboxes');
@@ -292,7 +298,8 @@
         }
 
         async function dismissById(emailId) {
-            const res = await apiCall(`/api/emails/${emailId}/dismiss`, { method: 'POST' });
+            const path = `/api/emails/${encodeURIComponent(emailId)}/dismiss`;
+            const res = await apiCall(inboxApiUrl(path), { method: 'POST' });
             if (!res) return;
             if (currentEmail?.id === emailId) currentEmail = null;
             await loadPending();
@@ -478,7 +485,8 @@
             setActionsBusy(true, 'Approving…');
             let res;
             try {
-                res = await apiCall(`/api/emails/${justId}/approve`, {
+                const path = `/api/emails/${encodeURIComponent(justId)}/approve`;
+                res = await apiCall(inboxApiUrl(path), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ comment }),
@@ -499,7 +507,8 @@
             setActionsBusy(true);
             let res;
             try {
-                res = await apiCall(`/api/emails/${justId}/reject`, {
+                const path = `/api/emails/${encodeURIComponent(justId)}/reject`;
+                res = await apiCall(inboxApiUrl(path), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ reason }),
@@ -518,7 +527,8 @@
             setActionsBusy(true);
             let res;
             try {
-                res = await apiCall(`/api/emails/${justId}/dismiss`, { method: 'POST' });
+                const path = `/api/emails/${encodeURIComponent(justId)}/dismiss`;
+                res = await apiCall(inboxApiUrl(path), { method: 'POST' });
             } finally {
                 setActionsBusy(false);
             }
@@ -533,7 +543,7 @@
             setActionsBusy(true);
             let res;
             try {
-                res = await apiCall('/api/emails/approve_all', { method: 'POST' });
+                res = await apiCall(inboxApiUrl('/api/emails/approve_all'), { method: 'POST' });
             } finally {
                 setActionsBusy(false);
             }
