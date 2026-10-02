@@ -171,7 +171,7 @@ def configure_security(app) -> dict:
             not user
             or not user.active
             or user.id != session.get("user_id")
-            or user.role_user not in {"admin", "owner", "reviewer"}
+            or user.role_user not in {"admin", "restricted_admin", "owner", "reviewer"}
         ):
             session.clear()
             if request.path.startswith("/api/"):

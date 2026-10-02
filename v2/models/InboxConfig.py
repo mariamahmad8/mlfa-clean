@@ -19,5 +19,6 @@ class InboxConfig:
     internal_reply_bridge_enabled: bool = False
     internal_reply_external_prefix: str = "[EXTERNAL]"
     internal_reply_internal_prefix: str = "[INTERNAL]"
+    protected: bool = False
     delta_token_inbox: Optional[str] = None
     delta_token_junk: Optional[str] = None

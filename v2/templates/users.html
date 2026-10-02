@@ -52,19 +52,20 @@
             </div>
 
             <div class="form-group">
-                <label class="form-label">Role<span class="info-tip">i<span class="info-content"><b>Reviewer:</b> approves or rejects email waiting in the hub. <b>Owner:</b> the same, plus editing settings (categories, recipients, replies) for the inboxes they're assigned. <b>Admin:</b> everything, including managing users.</span></span></label>
+                <label class="form-label">Role<span class="info-tip">i<span class="info-content"><b>Reviewer:</b> approves or rejects assigned email. <b>Owner:</b> also edits assigned inbox settings. <b>Restricted Admin:</b> edits all inbox settings and rules, but cannot read protected email in the Hub unless assigned. <b>Admin:</b> everything, including users and all protected email.</span></span></label>
                 <select class="form-select" id="fRole">
                     <option value="reviewer">Reviewer</option>
+                    <option value="restricted_admin">Restricted Admin</option>
                     <option value="owner">Owner</option>
                     <option value="admin">Admin</option>
                 </select>
-                <div class="form-hint">Reviewers only work the queue. Owners edit settings for their assigned inboxes. Admins can do everything.</div>
+                <div class="form-hint">Restricted Admins can edit every inbox's rules, but protected Hub email must be explicitly assigned.</div>
             </div>
 
             <div class="form-group" id="assignedInboxesRow">
-                <label class="form-label">Assigned inboxes<span class="info-tip">i<span class="info-content">For reviewers and owners, tick the inboxes they should be able to see. Admins see every inbox no matter what's ticked here.</span></span></label>
+                <label class="form-label">Assigned inboxes<span class="info-tip">i<span class="info-content">For Restricted Admins, assignments grant access to protected inboxes. Owners and Reviewers only see assigned inboxes. Full Admins always see everything.</span></span></label>
                 <div id="fAssignedList" style="border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 8px; max-height: 180px; overflow-y: auto;"></div>
-                <div class="form-hint">Reviewers only see queues from checked inboxes. Admins always see everything regardless.</div>
+                <div class="form-hint">Check Maria or Arshia's protected inbox only for people who may read it.</div>
             </div>
 
             <div class="form-group">
@@ -173,6 +174,7 @@
         function roleBadge(r) {
             // Same pill classes as the header chip — see .role-pill in shared.css
             if (r === 'admin') return '<span class="role-pill role-admin">Admin</span>';
+            if (r === 'restricted_admin') return '<span class="role-pill role-admin">Restricted Admin</span>';
             if (r === 'owner') return '<span class="role-pill role-owner">Owner</span>';
             return '<span class="role-pill role-reviewer">Reviewer</span>';
         }

@@ -191,7 +191,7 @@
     </div>
     {% endset %}
     {% set header_extra %}
-        {% if current_role in ['admin', 'owner'] %}
+        {% if current_role in ['admin', 'restricted_admin', 'owner'] %}
         <div class="automation-toggle">
             <span>Automation</span>
             <div class="switch" id="automationSwitch" onclick="toggleAutomation()"></div>

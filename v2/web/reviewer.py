@@ -332,11 +332,12 @@ def logout():
 
 def _accessible_inboxes():
     """Return list of inboxes the current user can access.
-    Admins see all. Reviewers only see their assigned ones."""
+    Full admins see all. Restricted admins see every normal inbox plus any
+    protected inbox explicitly assigned to them. Other roles see assignments."""
     all_inboxes = inbox_storage.get_active_inboxes()
-    if session.get('role') == 'admin':
+    role = session.get('role')
+    if role == 'admin':
         return all_inboxes
-    # Reviewer — filter to assigned only
     user_email = session.get('user_email')
     if not user_email:
         return []
@@ -344,6 +345,8 @@ def _accessible_inboxes():
     if not user:
         return []
     assigned = set(user.assigned_inbox_ids or [])
+    if role == 'restricted_admin':
+        return [ib for ib in all_inboxes if not ib.protected or ib.id in assigned]
     return [ib for ib in all_inboxes if ib.id in assigned]
 
 
@@ -943,7 +946,7 @@ def get_automation_setting():
 @reviewer_bp.route('/api/settings/automation', methods=['POST'])
 @login_required
 def update_automation_setting():
-    if session.get('role') not in {'admin', 'owner'}:
+    if session.get('role') not in {'admin', 'restricted_admin', 'owner'}:
         return jsonify({"error": "Admin or owner access required"}), 403
     """Toggle automation mode. If turning ON, also process anything already queued."""
     inbox = _get_current_inbox()
@@ -1014,6 +1017,9 @@ def _get_current_inbox():
                 return inbox_storage.get_inbox(req_id)
         except Exception:
             pass
+        # Never silently substitute another mailbox for an unauthorized or
+        # invalid inbox id. Callers will return their normal no-access error.
+        return None
     return accessible[0] if accessible else None
 
 

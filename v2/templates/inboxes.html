@@ -239,6 +239,14 @@
                         <label class="form-label" for="fDisplayName">Display name<span class="info-tip">i<span class="info-content">The name shown around the hub. It's only a label. Changing it doesn't affect how email is handled.</span></span></label>
                         <input class="form-input w-txt" id="fDisplayName" placeholder="MLFA Info Inbox">
                     </div>
+                    {% if session.get('role') == 'admin' %}
+                    <div class="field">
+                        <label class="form-check"><input type="checkbox" id="fProtected"> Protected inbox</label>
+                        <div class="form-hint">Only full admins and users explicitly assigned to this inbox can access it.</div>
+                    </div>
+                    {% else %}
+                    <input type="hidden" id="fProtected">
+                    {% endif %}
                 </div>
 
                 <!-- Automation: how much the system does on its own -->
@@ -386,7 +394,7 @@
             document.getElementById('empty').style.display = inboxes.length ? 'none' : 'block';
             tbody.innerHTML = inboxes.map(ib => `
                 <tr>
-                    <td><strong>${escapeHtml(ib.display_name)}</strong></td>
+                    <td><strong>${escapeHtml(ib.display_name)}</strong>${ib.protected ? ' <span class="badge">Protected</span>' : ''}</td>
                     <td>${escapeHtml(ib.email_to_watch)}</td>
                     <td>${ib.automation_mode ? '<span class="badge success">Auto</span>' : '<span class="badge">Manual</span>'}</td>
                     <td class="text-muted text-small">${(ib.blocked_senders || []).length} blocked</td>
@@ -556,6 +564,7 @@ Use only the active categories configured for this inbox.`;
             document.getElementById('cloneRow').style.display = 'grid';
             document.getElementById('inboxMetaLine').style.display = 'none';
             document.getElementById('fDisplayName').value = '';
+            document.getElementById('fProtected').checked = false;
             document.getElementById('fEmail').value = '';
             document.getElementById('fAutomation').checked = false;
             document.getElementById('fBlocked').value = '';
@@ -583,6 +592,7 @@ Use only the active categories configured for this inbox.`;
             document.getElementById('fInboxId').value = ib.id;
             document.getElementById('cloneRow').style.display = 'none';
             document.getElementById('fDisplayName').value = ib.display_name || '';
+            document.getElementById('fProtected').checked = !!ib.protected;
             document.getElementById('fEmail').value = ib.email_to_watch || '';
             document.getElementById('fAutomation').checked = !!ib.automation_mode;
             document.getElementById('fBlocked').value = (ib.blocked_senders || []).join('\n');
@@ -615,6 +625,7 @@ Use only the active categories configured for this inbox.`;
             const status = document.getElementById('footerStatus');
             const payload = {
                 display_name: document.getElementById('fDisplayName').value,
+                protected: document.getElementById('fProtected').checked,
                 email_to_watch: document.getElementById('fEmail').value,
                 automation_mode: document.getElementById('fAutomation').checked,
                 blocked_senders: document.getElementById('fBlocked').value.split('\n').map(s => s.trim()).filter(Boolean),

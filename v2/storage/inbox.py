@@ -24,6 +24,7 @@ def _from_row(row) -> InboxConfig:
         internal_reply_bridge_enabled=row.get("internal_reply_bridge_enabled", False),
         internal_reply_external_prefix=row.get("internal_reply_external_prefix", "[EXTERNAL]"),
         internal_reply_internal_prefix=row.get("internal_reply_internal_prefix", "[INTERNAL]"),
+        protected=row.get("protected", False),
         delta_token_inbox=row.get("delta_token_inbox"),
         delta_token_junk=row.get("delta_token_junk"),
     )
@@ -70,6 +71,7 @@ def save_inbox(inbox: InboxConfig) -> None:
                     internal_reply_bridge_enabled,
                     internal_reply_external_prefix,
                     internal_reply_internal_prefix
+                    , protected
                 ) VALUES (
                     :email_to_watch, :display_name, :automation_mode,
                     :blocked_senders, :skip_sender_pairs, :send_to_openai,
@@ -78,6 +80,7 @@ def save_inbox(inbox: InboxConfig) -> None:
                     :internal_reply_bridge_enabled,
                     :internal_reply_external_prefix,
                     :internal_reply_internal_prefix
+                    , :protected
                 )
                 """
             ),
@@ -97,6 +100,7 @@ def save_inbox(inbox: InboxConfig) -> None:
                 "internal_reply_bridge_enabled": inbox.internal_reply_bridge_enabled,
                 "internal_reply_external_prefix": inbox.internal_reply_external_prefix,
                 "internal_reply_internal_prefix": inbox.internal_reply_internal_prefix,
+                "protected": inbox.protected,
             },
         )
         session.commit()
@@ -125,6 +129,7 @@ def update_inbox(inbox: InboxConfig) -> None:
                     internal_reply_bridge_enabled = :internal_reply_bridge_enabled,
                     internal_reply_external_prefix = :internal_reply_external_prefix,
                     internal_reply_internal_prefix = :internal_reply_internal_prefix
+                    , protected = :protected
                 WHERE id = :id
             """),
             {
@@ -144,6 +149,7 @@ def update_inbox(inbox: InboxConfig) -> None:
                 "internal_reply_bridge_enabled": inbox.internal_reply_bridge_enabled,
                 "internal_reply_external_prefix": inbox.internal_reply_external_prefix,
                 "internal_reply_internal_prefix": inbox.internal_reply_internal_prefix,
+                "protected": inbox.protected,
             },
         )
         session.commit()

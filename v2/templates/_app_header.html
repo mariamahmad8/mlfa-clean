@@ -9,9 +9,10 @@
   Settings is only linked for admins and owners — the /settings routes redirect
   reviewers away, so linking it for them would be a dead end.
 #}
-{% set role_names = {'admin': 'Administrator', 'owner': 'Owner', 'reviewer': 'Reviewer'} %}
+{% set role_names = {'admin': 'Administrator', 'restricted_admin': 'Restricted Admin', 'owner': 'Owner', 'reviewer': 'Reviewer'} %}
 {% set role_caps = {
     'admin': 'Full access to all inboxes, settings, and users',
+    'restricted_admin': 'All inbox settings; protected email content only when assigned',
     'owner': 'Settings and review for assigned inboxes',
     'reviewer': 'Review queue only, no settings access',
 } %}
@@ -24,7 +25,7 @@
     <nav class="main-nav" aria-label="Primary">
         <a href="/" class="nav-link{% if active_nav == 'home' %} active{% endif %}">Home</a>
         <a href="/hub" class="nav-link{% if active_nav == 'hub' %} active{% endif %}">Hub</a>
-        {% if current_role in ['admin', 'owner'] %}
+        {% if current_role in ['admin', 'restricted_admin', 'owner'] %}
         <a href="/settings" class="nav-link{% if active_nav == 'settings' %} active{% endif %}">Settings</a>
         {% endif %}
     </nav>

@@ -37,7 +37,7 @@ from engine import classifier, router
 
 
 admin_bp = Blueprint("admin", __name__)
-VALID_USER_ROLES = {"admin", "owner", "reviewer"}
+VALID_USER_ROLES = {"admin", "restricted_admin", "owner", "reviewer"}
 
 
 # ---------------------------------------------------------------------------
@@ -56,7 +56,7 @@ def _require_settings_access_or_redirect():
     Reviewers get sent back to the hub."""
     if not session.get("logged_in"):
         return redirect(url_for("reviewer.login"))
-    if session.get("role") not in {"admin", "owner"}:
+    if session.get("role") not in {"admin", "restricted_admin", "owner"}:
         return redirect(url_for("reviewer.index"))
     return None
 
@@ -72,10 +72,12 @@ def _require_admin_or_redirect():
 
 def _accessible_inbox_ids():
     """Set of inbox ids the current user is allowed to touch.
-    Admins → all active inboxes. Owners + reviewers → their assigned ids only."""
+    Full and restricted admins may configure all inboxes. The restricted-admin
+    boundary applies to email content in the reviewer hub, not settings.
+    Owners/reviewers see assignments."""
     role = session.get("role")
     all_inboxes = inbox_storage.get_active_inboxes()
-    if role == "admin":
+    if role in {"admin", "restricted_admin"}:
         return {ib.id for ib in all_inboxes}
     user_email = session.get("user_email")
     if not user_email:
@@ -228,7 +230,7 @@ def settings_access_required(f):
     def decorated(*args, **kwargs):
         if not session.get("logged_in"):
             return jsonify({"error": "Authentication required"}), 401
-        if session.get("role") not in {"admin", "owner"}:
+        if session.get("role") not in {"admin", "restricted_admin", "owner"}:
             return jsonify({"error": "Settings access required"}), 403
         return f(*args, **kwargs)
     return decorated
@@ -237,7 +239,7 @@ def settings_access_required(f):
 def inbox_scoped(f):
     """Decorator for routes that touch a specific inbox_id (in the URL).
     Enforces that owners can only touch their assigned inboxes.
-    Admins pass through unchanged."""
+    Full admins pass through unchanged."""
     @wraps(f)
     def decorated(*args, **kwargs):
         if not session.get("logged_in"):
@@ -258,7 +260,7 @@ def inbox_scoped(f):
 @admin_bp.route("/api/inboxes", methods=["GET"])
 @settings_access_required
 def list_inboxes():
-    """Admins see all; owners see only their assigned inboxes."""
+    """Return only the inboxes the current user may access."""
     inboxes = inbox_storage.get_active_inboxes()
     if session.get("role") != "admin":
         allowed = _accessible_inbox_ids()
@@ -301,6 +303,7 @@ def create_inbox():
         internal_reply_bridge_enabled=bool(data.get("internal_reply_bridge_enabled", False)),
         internal_reply_external_prefix=data.get("internal_reply_external_prefix", "[EXTERNAL]"),
         internal_reply_internal_prefix=data.get("internal_reply_internal_prefix", "[INTERNAL]"),
+        protected=bool(data.get("protected", False)),
     )
     inbox_storage.save_inbox(new)
     _audit("inbox_created", f"inbox:{new.email_to_watch}", f"Display: {new.display_name}")
@@ -336,6 +339,9 @@ def update_inbox(inbox_id):
     inbox.internal_reply_bridge_enabled = bool(data.get("internal_reply_bridge_enabled", inbox.internal_reply_bridge_enabled))
     inbox.internal_reply_external_prefix = data.get("internal_reply_external_prefix", inbox.internal_reply_external_prefix)
     inbox.internal_reply_internal_prefix = data.get("internal_reply_internal_prefix", inbox.internal_reply_internal_prefix)
+    # Only a full administrator may change the privacy boundary.
+    if session.get("role") == "admin":
+        inbox.protected = bool(data.get("protected", inbox.protected))
     inbox_storage.update_inbox(inbox)
     _audit("inbox_updated", f"inbox:{inbox.email_to_watch}", f"Display: {inbox.display_name}", inbox_id=inbox.id)
     return jsonify({"status": "updated"})
@@ -372,6 +378,7 @@ def clone_inbox(source_id):
         internal_reply_bridge_enabled=source.internal_reply_bridge_enabled,
         internal_reply_external_prefix=source.internal_reply_external_prefix,
         internal_reply_internal_prefix=source.internal_reply_internal_prefix,
+        protected=False,
     )
     inbox_storage.save_inbox(new_inbox)
 
@@ -1288,6 +1295,7 @@ def _inbox_to_dict(inbox):
         "internal_reply_bridge_enabled": inbox.internal_reply_bridge_enabled,
         "internal_reply_external_prefix": inbox.internal_reply_external_prefix,
         "internal_reply_internal_prefix": inbox.internal_reply_internal_prefix,
+        "protected": inbox.protected,
     }
 
 
