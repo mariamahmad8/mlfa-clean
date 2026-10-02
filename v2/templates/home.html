@@ -583,14 +583,19 @@
               <!-- ROLES -->
               <section id="roles">
                 <h2>Roles &amp; permissions</h2>
-                <p>Every user has one of three roles.</p>
+                <p>Every user has one of four roles. <strong>Restricted Admin</strong> is an administrative role; it is not the same as Reviewer.</p>
                 <table>
                   <thead><tr><th>Role</th><th>Can do</th><th>Cannot do</th></tr></thead>
                   <tbody>
                     <tr>
                       <td><strong>Admin</strong></td>
-                      <td>Everything. All inboxes, all settings, user management, category rules, audit logs, automation toggle.</td>
+                      <td>Everything. All Hub email, all inbox settings, user management, category rules, audit logs, automation, and protected-inbox access.</td>
                       <td>Nothing is restricted.</td>
+                    </tr>
+                    <tr>
+                      <td><strong>Restricted Admin</strong></td>
+                      <td>Can add, clone, and delete inboxes; edit settings, categories, recipients, templates, and automation for every inbox; view audit history; and view the Users page. In the Hub, can review every normal inbox and only the protected inboxes explicitly granted to them.</td>
+                      <td>Cannot see, open, approve, reject, or dismiss manual-review email from an unassigned protected inbox. Cannot add, edit, delete, activate, or change the role of any user—including themselves. Cannot turn protection on or off.</td>
                     </tr>
                     <tr>
                       <td><strong>Owner</strong></td>
@@ -604,6 +609,16 @@
                     </tr>
                   </tbody>
                 </table>
+                <div class="callout note"><strong>How protected Hub access works</strong>An inbox marked <em>Protected</em> is still fully configurable by a Restricted Admin: they can edit its rules and all other settings. Protection applies only to email content and approval actions in the Hub. A Full Admin sees all protected Hub email. A Restricted Admin sees a protected inbox in the Hub only when that inbox is checked under their <em>Protected Hub access</em>.</div>
+                <h3>MLFA setup for Maria and Arshia</h3>
+                <ol>
+                  <li>A Full Admin marks Maria's and Arshia's inboxes as <strong>Protected</strong> under Settings → Inboxes.</li>
+                  <li>Rachel and Mariam use the <strong>Restricted Admin</strong> role. Their Protected Hub access boxes for Maria and Arshia remain unchecked.</li>
+                  <li>Maria, as a Full Admin, automatically sees all protected Hub email.</li>
+                  <li>Arshia is explicitly assigned her protected inbox, so she can read and approve its queued email.</li>
+                  <li>Rachel and Mariam can still maintain Maria's and Arshia's categories, recipients, templates, automation, and other inbox settings.</li>
+                </ol>
+                <div class="callout warn"><strong>Not just hidden buttons</strong>The server checks protected-inbox access on Hub requests. Changing a URL or manually calling the email API does not grant access.</div>
               </section>
 
               <!-- HUB PAGE -->
@@ -805,15 +820,17 @@
               <!-- USERS -->
               <section id="s-users">
                 <h2>Settings → Users</h2>
-                <p class="lede">Who can sign in to the hub, and what they can do. Admin only.</p>
+                <p class="lede">Who can sign in to the Hub and what they can do. Full Admins can make changes; Restricted Admins have read-only access to this page.</p>
                 <h3>Fields per user</h3>
                 <ul>
                   <li><strong>Email</strong> — the sign-in email. Must be exactly the address the user will authenticate with.</li>
                   <li><strong>Display name</strong> — how the user appears in the audit log.</li>
-                  <li><strong>Role</strong> — admin, owner, or reviewer (see Roles &amp; permissions above).</li>
-                  <li><strong>Assigned inboxes</strong> — for owners and reviewers only. Which mailboxes this user can access. Admins see all regardless.</li>
+                  <li><strong>Role</strong> — Full Admin, Restricted Admin, Owner, or Reviewer (see Roles &amp; permissions above).</li>
+                  <li><strong>Protected Hub access</strong> — for Restricted Admins, checked protected inboxes are the only protected email queues they may read and action. This setting does not limit their ability to edit inbox rules.</li>
+                  <li><strong>Assigned inboxes</strong> — for Owners and Reviewers, the inboxes they may access. Full Admins see everything.</li>
                   <li><strong>Active</strong> — inactive users can't sign in. Their session is invalidated on the next request.</li>
                 </ul>
+                <div class="callout note"><strong>Who can change roles?</strong>Only a Full Admin can add or modify users. Restricted Admins can inspect this page but cannot edit anyone, change their own role, or grant themselves protected Hub access.</div>
               </section>
 
               <!-- AUDIT -->
@@ -1369,7 +1386,7 @@
                 <p>Sessions time out after 30 minutes of inactivity or 8 hours absolute. Sign in again.</p>
 
                 <h3>I can't see one of my inboxes</h3>
-                <p>You're either not assigned to it (ask an admin) or your role is Reviewer with restricted access. Admins see all inboxes automatically; owners and reviewers see only their assigned ones.</p>
+                <p>Owners and Reviewers see only assigned inboxes. Restricted Admins see every normal inbox in the Hub, but a protected inbox appears only when a Full Admin grants them Protected Hub access. Full Admins see every inbox.</p>
 
                 <h3>An email arrived but isn't showing up in the queue OR the Inbox tagged folder</h3>
                 <ul>
@@ -1787,9 +1804,10 @@
                 <ul>
                   <li>Owner</li>
                   <li>Admin</li>
+                  <li>Restricted Admin</li>
                   <li>Reviewer</li>
                 </ul>
-                <p>Administrative settings require Owner or Admin authorization.</p>
+                <p>Administrative settings require Owner, Restricted Admin, or Full Admin authorization. Protected Hub email requires separate inbox access for Restricted Admins.</p>
               </section>
 
               <!-- 7. WEB -->

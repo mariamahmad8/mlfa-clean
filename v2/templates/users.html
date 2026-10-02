@@ -31,7 +31,7 @@
                 <tr>
                     <th>Email</th>
                     <th>Display name</th>
-                    <th>Role<span class="info-tip wide">i<span class="info-content"><b>Admin:</b> everything, including every inbox, all settings, users, and history. Can add and remove inboxes.<br><br><b>Owner:</b> the hub and settings for the inboxes they're assigned, so they can edit categories, recipients, and replies. Can't manage users or add and remove inboxes.<br><br><b>Reviewer:</b> approves or rejects email waiting in the hub, for the inboxes they're assigned. No settings.</span></span></th>
+                    <th>Role<span class="info-tip wide">i<span class="info-content"><b>Full Admin:</b> complete access, including all Hub email, inbox settings, and user changes.<br><br><b>Restricted Admin:</b> can add or delete inboxes and edit every inbox's settings and rules. In the Hub, they can read normal inboxes but cannot see protected inbox email unless a Full Admin explicitly grants access. They can view the Users page but cannot change users or their own role.<br><br><b>Owner:</b> Hub and settings access only for assigned inboxes. Cannot manage users or add/delete inboxes.<br><br><b>Reviewer:</b> can review email only for assigned inboxes. No settings access.<br><br><b>Important:</b> Restricted Admin and Reviewer are different roles.</span></span></th>
                     <th>Last login</th>
                     <th>Status</th>
                     {% if current_role == 'admin' %}<th>Actions</th>{% endif %}

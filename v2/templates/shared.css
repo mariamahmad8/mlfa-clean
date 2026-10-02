@@ -489,6 +489,7 @@ a:hover { color: var(--accent-hover); }
 .data-table th, .data-table td {
   padding: 12px 16px;
   text-align: left;
+  vertical-align: middle;
   border-bottom: 1px solid var(--line-soft);
 }
 .data-table th {
@@ -503,6 +504,11 @@ a:hover { color: var(--accent-hover); }
 .data-table tr:hover td { background: var(--panel-hover); }
 
 .actions-cell { display: flex; gap: 6px; }
+.data-table td.actions-cell {
+  display: table-cell;
+  white-space: nowrap;
+}
+.data-table td.actions-cell > * + * { margin-left: 6px; }
 
 /* Forms */
 .form-group { margin-bottom: 16px; }
