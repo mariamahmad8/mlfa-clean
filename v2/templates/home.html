@@ -696,6 +696,18 @@
                 </ul>
                 <h3>Adding or editing an inbox</h3>
                 <p>To add an inbox, open <strong>Settings → Inboxes</strong> and select <strong>+ Add inbox</strong>. The <strong>info@mlfa.org</strong> setup template is selected automatically when it is available. Enter the new Microsoft 365 mailbox address and display name, review the settings, and save.</p>
+                <div class="callout warn"><strong>Microsoft approval is also required</strong>Saving an inbox in the Email Classifier does not give the system permission to open that mailbox. After saving it, email MLFA IT and ask them to approve that exact mailbox for the <strong>MLFA Email Automation</strong> application. Until IT completes this step, Microsoft will return a 403 access-denied error and the inbox will not be checked.</div>
+                <h4>Request access from MLFA IT</h4>
+                <p>After saving the inbox, email MLFA IT. Replace <code>new-inbox@mlfa.org</code> with the mailbox you added:</p>
+                <blockquote>
+                  <p><strong>Subject: Approve a new mailbox for the MLFA Email Classifier</strong></p>
+                  <p>Hello,</p>
+                  <p>I added <strong>new-inbox@mlfa.org</strong> to the MLFA Email Classifier. Please approve the Email Classifier to access this mailbox in Microsoft. Access should remain limited to the approved Classifier mailboxes.</p>
+                  <p>Please let me know when access is ready so I can test the connection.</p>
+                  <p>Thank you.</p>
+                </blockquote>
+                <p>Wait for IT to confirm approval before expecting email to appear. Microsoft may take more than one hour to activate the connection after IT makes the change.</p>
+                <div class="callout note"><strong>Why this extra step exists</strong>The Classifier and Microsoft have separate settings. The Classifier records how to process the inbox; Microsoft decides whether the application may open it. Requiring IT approval prevents someone from entering an employee's address and gaining mailbox access without authorization.</div>
                 <div class="callout note"><strong>What the template includes</strong>The setup template copies the System preamble, Global guidelines, existing categories, recipients, reply templates, filters, conversation settings, retention settings, and reply-bridge settings from info@mlfa.org. The new mailbox address and display name are entered separately, and automation starts off for safety. The required JSON output format appears beneath the editable prompt fields as a locked system requirement. For a completely different workflow, choose <strong>Guided blank template</strong>. It provides fill-in-the-blank System preamble and Global guidelines instead of empty fields.</div>
                 <p>Clicking Add or Edit opens a modal with sections:</p>
                 <h4>Basics</h4>
