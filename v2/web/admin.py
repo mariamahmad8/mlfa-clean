@@ -70,6 +70,15 @@ def _require_admin_or_redirect():
     return None
 
 
+def _require_user_view_or_redirect():
+    """Allow both admin roles to view the user directory."""
+    if not session.get("logged_in"):
+        return redirect(url_for("reviewer.login"))
+    if session.get("role") not in {"admin", "restricted_admin"}:
+        return redirect(url_for("reviewer.index"))
+    return None
+
+
 def _accessible_inbox_ids():
     """Set of inbox ids the current user is allowed to touch.
     Full and restricted admins may configure all inboxes. The restricted-admin
@@ -170,8 +179,8 @@ def settings_templates():
 
 @admin_bp.route("/settings/users")
 def settings_users():
-    # Admin only — user management is a global privilege
-    r = _require_admin_or_redirect()
+    # Restricted admins may inspect users; mutations remain full-admin only.
+    r = _require_user_view_or_redirect()
     if r: return r
     return render_template("users.html")
 
@@ -229,6 +238,18 @@ def inbox_admin_required(f):
     Restricted admins are limited only from protected email content in the
     reviewer Hub; they retain operational administration of inbox settings.
     """
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get("logged_in"):
+            return jsonify({"error": "Authentication required"}), 401
+        if session.get("role") not in {"admin", "restricted_admin"}:
+            return jsonify({"error": "Admin access required"}), 403
+        return f(*args, **kwargs)
+    return decorated
+
+
+def user_view_required(f):
+    """Allow full and restricted admins to read the user directory."""
     @wraps(f)
     def decorated(*args, **kwargs):
         if not session.get("logged_in"):
@@ -1009,7 +1030,7 @@ def delete_template(template_id):
 # ---------------------------------------------------------------------------
 
 @admin_bp.route("/api/users", methods=["GET"])
-@admin_required
+@user_view_required
 def list_users():
     users = users_storage.get_all_users()
     return jsonify([_user_to_dict(u) for u in users])

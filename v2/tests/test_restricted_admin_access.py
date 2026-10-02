@@ -63,6 +63,19 @@ class RestrictedAdminAccessTests(unittest.TestCase):
             )
             self.assertEqual(operation(), "ok")
 
+    def test_restricted_admin_can_view_but_not_modify_users(self):
+        with patch.object(admin.users_storage, "get_all_users", return_value=[]), \
+             self.app.test_request_context("/"):
+            session.update(
+                logged_in=True,
+                role="restricted_admin",
+                user_email="staff@mlfa.org",
+            )
+            self.assertEqual(admin.list_users().status_code, 200)
+            response, status = admin.create_user()
+            self.assertEqual(status, 403)
+            self.assertEqual(response.get_json()["error"], "Admin access required")
+
 
 if __name__ == "__main__":
     unittest.main()

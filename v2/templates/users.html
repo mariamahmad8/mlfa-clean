@@ -17,12 +17,14 @@
         {% include '_settings_nav.html' %}
         <main class="settings-content">
         <h1 class="page-title">Users</h1>
-        <p class="page-subtitle">Manage who can sign in, their access level, and the inboxes they can review.</p>
+        <p class="page-subtitle">{% if current_role == 'admin' %}Manage who can sign in, their access level, and the inboxes they can review.{% else %}View who can sign in, their access level, and inbox access. Only a Full Admin can make changes.{% endif %}</p>
 
+        {% if current_role == 'admin' %}
         <div class="toolbar">
             <div></div>
             <button class="btn primary" onclick="openAddModal()">+ Add user</button>
         </div>
+        {% endif %}
 
         <table class="data-table">
             <thead>
@@ -32,7 +34,7 @@
                     <th>Role<span class="info-tip wide">i<span class="info-content"><b>Admin:</b> everything, including every inbox, all settings, users, and history. Can add and remove inboxes.<br><br><b>Owner:</b> the hub and settings for the inboxes they're assigned, so they can edit categories, recipients, and replies. Can't manage users or add and remove inboxes.<br><br><b>Reviewer:</b> approves or rejects email waiting in the hub, for the inboxes they're assigned. No settings.</span></span></th>
                     <th>Last login</th>
                     <th>Status</th>
-                    <th>Actions</th>
+                    {% if current_role == 'admin' %}<th>Actions</th>{% endif %}
                 </tr>
             </thead>
             <tbody id="tbody"></tbody>
@@ -80,6 +82,7 @@
     </div>
 
     <script>
+        const canManageUsers = {{ 'true' if current_role == 'admin' else 'false' }};
         let users = [];
         let allInboxes = [];
 
@@ -142,10 +145,10 @@
                     <td>${roleBadge(u.role_user)}</td>
                     <td class="text-muted text-small">${u.last_login_at ? formatCentral(u.last_login_at) : 'Never'}</td>
                     <td>${u.active ? '<span class="badge success">Active</span>' : '<span class="badge">Inactive</span>'}</td>
-                    <td class="actions-cell">
+                    ${canManageUsers ? `<td class="actions-cell">
                         <button class="btn small" onclick="openEditModal(${u.id})">Edit</button>
                         <button class="btn small danger" onclick="del(${u.id})">Delete</button>
-                    </td>
+                    </td>` : ''}
                 </tr>
             `).join('');
         }
