@@ -223,6 +223,22 @@ def admin_required(f):
     return decorated
 
 
+def inbox_admin_required(f):
+    """Allow both admin roles to create, clone, and delete inboxes.
+
+    Restricted admins are limited only from protected email content in the
+    reviewer Hub; they retain operational administration of inbox settings.
+    """
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get("logged_in"):
+            return jsonify({"error": "Authentication required"}), 401
+        if session.get("role") not in {"admin", "restricted_admin"}:
+            return jsonify({"error": "Admin access required"}), 403
+        return f(*args, **kwargs)
+    return decorated
+
+
 def settings_access_required(f):
     """Allow admins and owners; block reviewers.
     For settings CRUD that owners can perform on their assigned inboxes."""
@@ -279,7 +295,7 @@ def get_inbox(inbox_id):
 
 
 @admin_bp.route("/api/inboxes", methods=["POST"])
-@admin_required
+@inbox_admin_required
 def create_inbox():
     data = request.get_json() or {}
     try:
@@ -348,7 +364,7 @@ def update_inbox(inbox_id):
 
 
 @admin_bp.route("/api/inboxes/<int:source_id>/clone", methods=["POST"])
-@admin_required
+@inbox_admin_required
 def clone_inbox(source_id):
     """Create a new inbox by cloning an existing one's config, rules, recipients, and templates."""
     source = inbox_storage.get_inbox(source_id)
@@ -431,7 +447,7 @@ def clone_inbox(source_id):
 
 
 @admin_bp.route("/api/inboxes/<int:inbox_id>", methods=["DELETE"])
-@admin_required
+@inbox_admin_required
 def delete_inbox(inbox_id):
     existing = inbox_storage.get_inbox(inbox_id)
     if not existing:

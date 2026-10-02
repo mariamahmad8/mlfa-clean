@@ -159,7 +159,7 @@
 
         <div class="toolbar">
             <div></div>
-            {% if session.get('role') == 'admin' %}<button class="btn primary" onclick="openAddModal()">+ Add inbox</button>{% endif %}
+            {% if session.get('role') in ['admin', 'restricted_admin'] %}<button class="btn primary" onclick="openAddModal()">+ Add inbox</button>{% endif %}
         </div>
 
         <table class="data-table">
@@ -401,7 +401,7 @@
                     <td class="actions-cell">
                         <button class="btn small" onclick="openStats(${ib.id})">Stats</button>
                         <button class="btn small" onclick="openEditModal(${ib.id})">Edit</button>
-                        ${window.CURRENT_ROLE === 'admin' ? `<button class="btn small danger" onclick="deleteInbox(${ib.id})">Delete</button>` : ''}
+                        ${['admin', 'restricted_admin'].includes(window.CURRENT_ROLE) ? `<button class="btn small danger" onclick="deleteInbox(${ib.id})">Delete</button>` : ''}
                     </td>
                 </tr>
             `).join('');

@@ -52,20 +52,20 @@
             </div>
 
             <div class="form-group">
-                <label class="form-label">Role<span class="info-tip">i<span class="info-content"><b>Reviewer:</b> approves or rejects assigned email. <b>Owner:</b> also edits assigned inbox settings. <b>Restricted Admin:</b> edits all inbox settings and rules, but cannot read protected email in the Hub unless assigned. <b>Admin:</b> everything, including users and all protected email.</span></span></label>
+                <label class="form-label">Role<span class="info-tip">i<span class="info-content"><b>Reviewer:</b> approves or rejects assigned email. <b>Owner:</b> also edits assigned inbox settings. <b>Restricted Admin:</b> can add/delete inboxes and edit all settings and rules, but cannot read protected manual-review email in the Hub unless assigned. <b>Admin:</b> everything, including users and all protected email.</span></span></label>
                 <select class="form-select" id="fRole">
                     <option value="reviewer">Reviewer</option>
                     <option value="restricted_admin">Restricted Admin</option>
                     <option value="owner">Owner</option>
                     <option value="admin">Admin</option>
                 </select>
-                <div class="form-hint">Restricted Admins can edit every inbox's rules, but protected Hub email must be explicitly assigned.</div>
+                <div class="form-hint">Restricted Admins manage every inbox; only protected manual-review email in the Hub is hidden unless access is assigned.</div>
             </div>
 
             <div class="form-group" id="assignedInboxesRow">
-                <label class="form-label">Assigned inboxes<span class="info-tip">i<span class="info-content">For Restricted Admins, assignments grant access to protected inboxes. Owners and Reviewers only see assigned inboxes. Full Admins always see everything.</span></span></label>
+                <label class="form-label" id="inboxAccessLabel">Assigned inboxes</label>
                 <div id="fAssignedList" style="border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 8px; max-height: 180px; overflow-y: auto;"></div>
-                <div class="form-hint">Check Maria or Arshia's protected inbox only for people who may read it.</div>
+                <div class="form-hint" id="inboxAccessHint"></div>
             </div>
 
             <div class="form-group">
@@ -96,12 +96,40 @@
 
         function renderInboxCheckboxes(assignedIds) {
             const set = new Set((assignedIds || []).map(id => parseInt(id, 10)));
-            document.getElementById('fAssignedList').innerHTML = allInboxes.map(ib => `
+            const role = document.getElementById('fRole').value;
+            const row = document.getElementById('assignedInboxesRow');
+            const label = document.getElementById('inboxAccessLabel');
+            const hint = document.getElementById('inboxAccessHint');
+
+            if (role === 'admin') {
+                row.style.display = 'none';
+                return;
+            }
+            row.style.display = 'block';
+
+            const shownInboxes = role === 'restricted_admin'
+                ? allInboxes.filter(ib => ib.protected)
+                : allInboxes;
+            label.textContent = role === 'restricted_admin' ? 'Protected Hub access' : 'Assigned inboxes';
+            hint.textContent = role === 'restricted_admin'
+                ? 'Leave Maria and Arshia unchecked for anyone who must not read or approve their email. This does not affect settings or rule editing.'
+                : 'Owners and Reviewers can only open the inboxes checked here.';
+
+            const emptyMessage = role === 'restricted_admin'
+                ? 'No protected inboxes yet. Mark Maria and Arshia as Protected under Settings → Inboxes first.'
+                : 'No inboxes yet.';
+            document.getElementById('fAssignedList').innerHTML = shownInboxes.map(ib => `
                 <label class="form-check" style="padding: 4px 0;">
                     <input type="checkbox" class="fInboxCheck" value="${ib.id}" ${set.has(ib.id) ? 'checked' : ''}>
                     <span>${escapeHtml(ib.display_name)} <span class="text-muted text-small">(${escapeHtml(ib.email_to_watch)})</span></span>
                 </label>
-            `).join('') || '<div class="text-muted text-small">No inboxes yet.</div>';
+            `).join('') || `<div class="text-muted text-small">${emptyMessage}</div>`;
+        }
+
+        function refreshInboxAccessForRole() {
+            const checked = Array.from(document.querySelectorAll('.fInboxCheck:checked'))
+                .map(el => parseInt(el.value, 10));
+            renderInboxCheckboxes(checked);
         }
 
         function render() {
@@ -184,6 +212,7 @@
         }
 
         loadUsers();
+        document.getElementById('fRole').addEventListener('change', refreshInboxAccessForRole);
     </script>
 </body>
 </html>

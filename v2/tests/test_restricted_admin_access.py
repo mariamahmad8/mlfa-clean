@@ -50,6 +50,19 @@ class RestrictedAdminAccessTests(unittest.TestCase):
             self.assertTrue(admin._current_user_can_access(2))
             self.assertTrue(admin._current_user_can_access(3))
 
+    def test_restricted_admin_keeps_inbox_lifecycle_admin_rights(self):
+        @admin.inbox_admin_required
+        def operation():
+            return "ok"
+
+        with self.app.test_request_context("/"):
+            session.update(
+                logged_in=True,
+                role="restricted_admin",
+                user_email="staff@mlfa.org",
+            )
+            self.assertEqual(operation(), "ok")
+
 
 if __name__ == "__main__":
     unittest.main()
